@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Marketplace from "./pages/Marketplace";
 import BuyBox from "./pages/BuyBox";
+import PostDeal from "./pages/PostDeal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <BuyBox />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/post-deal" 
+        element={
+          <ProtectedRoute>
+            <PostDeal />
           </ProtectedRoute>
         } 
       />
