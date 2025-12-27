@@ -74,7 +74,7 @@ export default function Index() {
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Whether you're sourcing deals or looking for your next investment, 
-              DealMatch streamlines the process from search to close.
+              QuickLiqi streamlines the process from search to close.
             </p>
           </div>
 
@@ -249,7 +249,7 @@ export default function Index() {
               Ready to Find Your Next Deal?
             </h2>
             <p className="text-lg text-primary-foreground/80 max-w-xl mx-auto mb-8">
-              Join thousands of real estate professionals already using DealMatch to 
+              Join thousands of real estate professionals already using QuickLiqi to 
               connect, transact, and grow their portfolios.
             </p>
             <Button size="lg" variant="secondary" asChild className="text-base">

@@ -39,7 +39,7 @@ export function Navbar() {
               <Building2 className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="font-display text-xl font-semibold text-foreground">
-              DealMatch
+              QuickLiqi
             </span>
           </Link>
 
