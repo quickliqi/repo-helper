@@ -12,6 +12,7 @@ import Marketplace from "./pages/Marketplace";
 import BuyBox from "./pages/BuyBox";
 import PostDeal from "./pages/PostDeal";
 import Notifications from "./pages/Notifications";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +72,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Notifications />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/profile" 
+        element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         } 
       />
