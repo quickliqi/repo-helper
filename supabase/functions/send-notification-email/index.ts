@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -7,6 +8,28 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// In-memory rate limiter (per function instance)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_MAX = 10; // Max requests per window
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute window
+
+function checkRateLimit(identifier: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(identifier);
+  
+  if (!entry || now > entry.resetTime) {
+    rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return false;
+  }
+  
+  entry.count++;
+  return true;
+}
 
 interface NotificationEmailRequest {
   type: "match" | "deal_view" | "deal_contact";
@@ -96,8 +119,76 @@ serve(async (req) => {
   }
 
   try {
+    console.log("[SEND-NOTIFICATION-EMAIL] Received request");
+
+    // Authentication check - require valid authorization
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("[SEND-NOTIFICATION-EMAIL] No authorization header provided");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Missing authorization header" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Verify the caller is authorized (user token or service role)
+    const token = authHeader.replace("Bearer ", "");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    let userId = "service_role";
+
+    if (token !== serviceRoleKey) {
+      // Verify user token
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false },
+        global: { headers: { Authorization: authHeader } }
+      });
+
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError || !userData.user) {
+        console.error("[SEND-NOTIFICATION-EMAIL] Invalid authorization:", authError?.message);
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: Invalid token" }),
+          { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      userId = userData.user.id;
+      console.log("[SEND-NOTIFICATION-EMAIL] Request authorized for user:", userId);
+    } else {
+      console.log("[SEND-NOTIFICATION-EMAIL] Request authorized via service role key");
+    }
+
+    // Rate limiting check (by user ID or IP)
+    const clientIP = req.headers.get("x-forwarded-for") || 
+                     req.headers.get("x-real-ip") || 
+                     userId;
+    
+    if (!checkRateLimit(clientIP)) {
+      console.error("[SEND-NOTIFICATION-EMAIL] Rate limit exceeded for:", clientIP);
+      return new Response(
+        JSON.stringify({ error: "Too many requests. Please try again later." }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const data: NotificationEmailRequest = await req.json();
-    console.log("[SEND-NOTIFICATION-EMAIL] Received request:", data);
+    console.log("[SEND-NOTIFICATION-EMAIL] Email type:", data.type, "To:", data.recipientEmail);
+
+    // Input validation
+    if (!data.recipientEmail || !data.recipientEmail.includes("@")) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email address" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!data.recipientName || data.recipientName.length > 200) {
+      return new Response(
+        JSON.stringify({ error: "Invalid recipient name" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     const emailContent = getEmailContent(data);
 
@@ -116,7 +207,7 @@ serve(async (req) => {
     });
   } catch (error: any) {
     console.error("[SEND-NOTIFICATION-EMAIL] Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message || "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });

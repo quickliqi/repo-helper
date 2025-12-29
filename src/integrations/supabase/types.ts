@@ -386,6 +386,27 @@ export type Database = {
         }
         Relationships: []
       }
+      property_match_throttle: {
+        Row: {
+          last_reset_date: string | null
+          properties_created_today: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          last_reset_date?: string | null
+          properties_created_today?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          last_reset_date?: string | null
+          properties_created_today?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
