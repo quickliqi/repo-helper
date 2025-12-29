@@ -12,6 +12,8 @@ const supabaseAdmin = createClient(
   { auth: { persistSession: false } }
 );
 
+const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
@@ -32,11 +34,36 @@ serve(async (req) => {
 
     logStep("Received webhook", { hasSignature: !!signature });
 
-    // For now, we'll process events without signature verification
-    // In production, you'd verify with: stripe.webhooks.constructEvent(body, signature, webhookSecret)
-    const event = JSON.parse(body);
+    // Verify webhook signature
+    if (!signature) {
+      logStep("ERROR", { message: "Missing stripe-signature header" });
+      return new Response(JSON.stringify({ error: "Missing stripe-signature header" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
 
-    logStep("Processing event", { type: event.type });
+    if (!webhookSecret) {
+      logStep("ERROR", { message: "STRIPE_WEBHOOK_SECRET not configured" });
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logStep("Signature verification failed", { error: errorMessage });
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    logStep("Signature verified, processing event", { type: event.type, id: event.id });
 
     switch (event.type) {
       case "checkout.session.completed": {
