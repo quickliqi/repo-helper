@@ -13,6 +13,7 @@ import BuyBox from "./pages/BuyBox";
 import PostDeal from "./pages/PostDeal";
 import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ function AppRoutes() {
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
       <Route path="/marketplace" element={<Marketplace />} />
+      <Route path="/pricing" element={<Pricing />} />
       <Route 
         path="/dashboard" 
         element={
