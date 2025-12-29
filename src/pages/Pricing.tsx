@@ -1,6 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Check, Zap, Building2, CreditCard, Shield, Clock } from 'lucide-react';
+
+// Validate that a URL is from Stripe's trusted domains
+const validateStripeUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === 'checkout.stripe.com' || 
+           parsed.hostname === 'billing.stripe.com' ||
+           parsed.hostname.endsWith('.stripe.com');
+  } catch {
+    return false;
+  }
+};
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +63,10 @@ const Pricing = () => {
       if (error) throw error;
 
       if (data?.url) {
+        if (!validateStripeUrl(data.url)) {
+          toast.error('Invalid checkout URL received. Please try again.');
+          return;
+        }
         window.open(data.url, '_blank');
       }
     } catch (error) {
@@ -68,6 +84,10 @@ const Pricing = () => {
       if (error) throw error;
 
       if (data?.url) {
+        if (!validateStripeUrl(data.url)) {
+          toast.error('Invalid portal URL received. Please try again.');
+          return;
+        }
         window.open(data.url, '_blank');
       }
     } catch (error) {
