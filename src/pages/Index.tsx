@@ -54,8 +54,8 @@ export default function Index() {
                     </Link>
                   </Button>
                   <Button size="lg" variant="outline" asChild className="text-base bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
-                    <Link to="/marketplace">
-                      Browse Deals
+                    <Link to="/pricing">
+                      View Pricing
                     </Link>
                   </Button>
                 </>
@@ -252,12 +252,19 @@ export default function Index() {
               Join thousands of real estate professionals already using QuickLiqi to 
               connect, transact, and grow their portfolios.
             </p>
-            <Button size="lg" variant="secondary" asChild className="text-base">
-              <Link to="/auth?mode=signup">
-                Create Free Account
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" variant="secondary" asChild className="text-base">
+                <Link to="/auth?mode=signup">
+                  Create Free Account
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild className="text-base bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
+                <Link to="/pricing">
+                  View Pricing Plans
+                </Link>
+              </Button>
+            </div>
           </div>
         </section>
       )}

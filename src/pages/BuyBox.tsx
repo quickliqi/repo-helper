@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { SubscriptionRequired, UpgradePrompt } from '@/components/subscription/SubscriptionGate';
 import { 
   BuyBox as BuyBoxType, 
   PropertyType, 
@@ -29,7 +31,8 @@ import {
   DollarSign,
   Home,
   Loader2,
-  X
+  X,
+  Lock
 } from 'lucide-react';
 
 const PROPERTY_TYPES: PropertyType[] = ['single_family', 'multi_family', 'condo', 'townhouse', 'commercial', 'land', 'mobile_home', 'other'];
@@ -74,6 +77,8 @@ const emptyFormData: BuyBoxFormData = {
 
 export default function BuyBox() {
   const { user } = useAuth();
+  const { isSubscribed, isTrialing, isLoading: subscriptionLoading } = useSubscription();
+  const hasAccess = isSubscribed || isTrialing;
   const [buyBoxes, setBuyBoxes] = useState<BuyBoxType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -240,11 +245,34 @@ export default function BuyBox() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || subscriptionLoading) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Gate the buy box functionality for non-subscribed investors
+  if (!hasAccess) {
+    return (
+      <MainLayout>
+        <div className="bg-background min-h-screen">
+          <div className="border-b border-border bg-card">
+            <div className="container mx-auto px-4 py-8">
+              <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+                My Buy Box
+              </h1>
+              <p className="text-muted-foreground">
+                Define your investment criteria to receive matched deals automatically
+              </p>
+            </div>
+          </div>
+          <div className="container mx-auto px-4 py-12">
+            <UpgradePrompt type="investor" />
+          </div>
         </div>
       </MainLayout>
     );

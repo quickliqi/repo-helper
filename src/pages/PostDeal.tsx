@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { UpgradePrompt } from '@/components/subscription/SubscriptionGate';
 import { 
   PropertyType, 
   DealType, 
@@ -90,6 +92,7 @@ const emptyFormData: FormData = {
 
 export default function PostDeal() {
   const { user } = useAuth();
+  const { listingCredits, isLoading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>(emptyFormData);
   const [images, setImages] = useState<File[]>([]);
@@ -255,18 +258,48 @@ export default function PostDeal() {
     }
   };
 
+  // Gate posting for wholesalers without credits
+  if (!subscriptionLoading && listingCredits <= 0) {
+    return (
+      <MainLayout>
+        <div className="bg-background min-h-screen">
+          <div className="border-b border-border bg-card">
+            <div className="container mx-auto px-4 py-8">
+              <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+                Post a New Deal
+              </h1>
+              <p className="text-muted-foreground">
+                List your property and get matched with interested investors automatically
+              </p>
+            </div>
+          </div>
+          <div className="container mx-auto px-4 py-12">
+            <UpgradePrompt type="wholesaler" />
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="bg-background min-h-screen">
         {/* Header */}
         <div className="border-b border-border bg-card">
           <div className="container mx-auto px-4 py-8">
-            <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-              Post a New Deal
-            </h1>
-            <p className="text-muted-foreground">
-              List your property and get matched with interested investors automatically
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+                  Post a New Deal
+                </h1>
+                <p className="text-muted-foreground">
+                  List your property and get matched with interested investors automatically
+                </p>
+              </div>
+              <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30">
+                {listingCredits} credit{listingCredits !== 1 ? 's' : ''} remaining
+              </Badge>
+            </div>
           </div>
         </div>
 
