@@ -1,6 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
+import { SubscriptionBadge } from '@/components/subscription/SubscriptionGate';
 import { 
   Building2, 
   Bell, 
@@ -8,7 +10,8 @@ import {
   LogOut, 
   LayoutDashboard,
   Menu,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -21,8 +24,11 @@ import { useState } from 'react';
 
 export function Navbar() {
   const { user, profile, role, signOut } = useAuth();
+  const { isSubscribed, isTrialing, hasAccess } = useSubscription();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const showUpgradeButton = user && role === 'investor' && !isSubscribed && !isTrialing;
 
   const handleSignOut = async () => {
     await signOut();
@@ -75,6 +81,12 @@ export function Navbar() {
                     My Listings
                   </Link>
                 )}
+                <Link 
+                  to="/pricing" 
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Pricing
+                </Link>
               </>
             ) : (
               <>
@@ -84,6 +96,12 @@ export function Navbar() {
                 >
                   Browse Deals
                 </Link>
+                <Link 
+                  to="/pricing" 
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Pricing
+                </Link>
               </>
             )}
           </div>
@@ -92,6 +110,16 @@ export function Navbar() {
           <div className="flex items-center gap-3">
             {user ? (
               <>
+                {/* Upgrade button for free investors */}
+                {showUpgradeButton && (
+                  <Button size="sm" asChild className="hidden sm:inline-flex">
+                    <Link to="/pricing">
+                      <Sparkles className="h-4 w-4 mr-1" />
+                      Upgrade
+                    </Link>
+                  </Button>
+                )}
+
                 {/* Notifications */}
                 <Button variant="ghost" size="icon" className="relative" asChild>
                   <Link to="/notifications">
@@ -110,7 +138,10 @@ export function Navbar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <div className="px-2 py-1.5">
-                      <p className="text-sm font-medium">{profile?.full_name || 'User'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{profile?.full_name || 'User'}</p>
+                        <SubscriptionBadge />
+                      </div>
                       <p className="text-xs text-muted-foreground capitalize">{role}</p>
                     </div>
                     <DropdownMenuSeparator />

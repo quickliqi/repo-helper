@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { Property, Match, BuyBox } from '@/types/database';
 import { PropertyCard } from '@/components/properties/PropertyCard';
+import { SubscriptionRequired, UpgradePrompt } from '@/components/subscription/SubscriptionGate';
 import { 
   TrendingUp, 
   Building2, 
@@ -15,15 +17,20 @@ import {
   ArrowRight,
   Target,
   Eye,
-  Loader2
+  Loader2,
+  Lock,
+  CreditCard
 } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, profile, role } = useAuth();
+  const { isSubscribed, isTrialing, listingCredits, hasAccess } = useSubscription();
   const [matches, setMatches] = useState<Match[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [buyBoxes, setBuyBoxes] = useState<BuyBox[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const investorHasAccess = isSubscribed || isTrialing;
 
   useEffect(() => {
     if (user) {
@@ -141,8 +148,8 @@ export default function Dashboard() {
               </div>
 
               {/* Quick Actions */}
-              <div className="flex gap-4">
-                <Button asChild>
+              <div className="flex gap-4 flex-wrap">
+                <Button asChild disabled={!investorHasAccess}>
                   <Link to="/buy-box">
                     <Plus className="h-4 w-4 mr-2" />
                     {buyBoxes.length === 0 ? 'Create Buy Box' : 'Manage Buy Box'}
@@ -151,19 +158,30 @@ export default function Dashboard() {
                 <Button variant="outline" asChild>
                   <Link to="/marketplace">Browse Marketplace</Link>
                 </Button>
+                {!investorHasAccess && (
+                  <Button variant="secondary" asChild>
+                    <Link to="/pricing">
+                      <Lock className="h-4 w-4 mr-2" />
+                      Upgrade to Unlock
+                    </Link>
+                  </Button>
+                )}
               </div>
 
               {/* Recent Matches */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-display text-xl font-semibold">Recent Matches</h2>
-                  {matches.length > 0 && (
+                  {matches.length > 0 && investorHasAccess && (
                     <Button variant="ghost" size="sm" asChild>
                       <Link to="/matches">View All <ArrowRight className="ml-1 h-4 w-4" /></Link>
                     </Button>
                   )}
                 </div>
-                {matches.length === 0 ? (
+                
+                {!investorHasAccess ? (
+                  <UpgradePrompt type="investor" />
+                ) : matches.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
                       <TrendingUp className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
@@ -186,7 +204,7 @@ export default function Dashboard() {
             // Wholesaler Dashboard
             <div className="space-y-8">
               {/* Stats */}
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid md:grid-cols-4 gap-4">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Active Listings</CardTitle>
@@ -214,16 +232,34 @@ export default function Dashboard() {
                     <div className="text-2xl font-bold">{properties.length}</div>
                   </CardContent>
                 </Card>
+                <Card className="border-accent/30">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Listing Credits</CardTitle>
+                    <CreditCard className="h-4 w-4 text-accent" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-accent">{listingCredits}</div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Quick Actions */}
-              <div className="flex gap-4">
-                <Button asChild>
-                  <Link to="/post-deal">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Post New Deal
-                  </Link>
-                </Button>
+              <div className="flex gap-4 flex-wrap">
+                {listingCredits > 0 ? (
+                  <Button asChild>
+                    <Link to="/post-deal">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Post New Deal
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild variant="secondary">
+                    <Link to="/pricing">
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Buy Credits to Post
+                    </Link>
+                  </Button>
+                )}
                 <Button variant="outline" asChild>
                   <Link to="/buyer-demand">View Buyer Demand</Link>
                 </Button>
