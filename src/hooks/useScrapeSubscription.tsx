@@ -28,14 +28,34 @@ export function ScrapeSubscriptionProvider({ children }: { children: ReactNode }
   });
 
   const fetchScrapeSubscription = useCallback(async () => {
-    if (!user || role !== 'investor') {
+    // Only fetch if user is authenticated and is an investor
+    if (!user?.id || role !== 'investor') {
       setStatus(prev => ({ ...prev, isLoading: false }));
       return;
     }
 
     try {
+      // Get current session to ensure we have a valid token
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        setStatus(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('check-scrape-subscription');
-      if (error) throw error;
+      
+      if (error) {
+        // Handle gracefully - user might not have subscription
+        console.error('Error fetching scrape subscription:', error);
+        setStatus({
+          isSubscribed: false,
+          creditsRemaining: 0,
+          creditsUsed: 0,
+          periodEnd: null,
+          isLoading: false,
+        });
+        return;
+      }
 
       setStatus({
         isSubscribed: data?.subscribed || false,
@@ -46,14 +66,6 @@ export function ScrapeSubscriptionProvider({ children }: { children: ReactNode }
       });
     } catch (error) {
       console.error('Error fetching scrape subscription:', error);
-      setStatus(prev => ({ ...prev, isLoading: false }));
-    }
-  }, [user, role]);
-
-  useEffect(() => {
-    if (user && role === 'investor') {
-      fetchScrapeSubscription();
-    } else {
       setStatus({
         isSubscribed: false,
         creditsRemaining: 0,
@@ -62,7 +74,31 @@ export function ScrapeSubscriptionProvider({ children }: { children: ReactNode }
         isLoading: false,
       });
     }
-  }, [user, role, fetchScrapeSubscription]);
+  }, [user?.id, role]);
+
+  useEffect(() => {
+    if (user?.id && role === 'investor') {
+      fetchScrapeSubscription();
+    } else if (role && role !== 'investor') {
+      // User has a role but not investor - stop loading
+      setStatus({
+        isSubscribed: false,
+        creditsRemaining: 0,
+        creditsUsed: 0,
+        periodEnd: null,
+        isLoading: false,
+      });
+    } else if (!user) {
+      // No user - stop loading
+      setStatus({
+        isSubscribed: false,
+        creditsRemaining: 0,
+        creditsUsed: 0,
+        periodEnd: null,
+        isLoading: false,
+      });
+    }
+  }, [user?.id, role, fetchScrapeSubscription]);
 
   const hasCredits = useCallback(() => {
     return status.isSubscribed && status.creditsRemaining > 0;
