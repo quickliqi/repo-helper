@@ -23,6 +23,36 @@ const logStep = (step: string, details?: any) => {
   console.log(`[STRIPE-WEBHOOK] ${step}`, details ? JSON.stringify(details) : "");
 };
 
+// Helper function to send confirmation email
+async function sendConfirmationEmail(
+  email: string,
+  type: "subscription" | "credits",
+  amount: number,
+  quantity?: number,
+  planName?: string
+) {
+  try {
+    const response = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-purchase-confirmation`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+        },
+        body: JSON.stringify({ email, type, amount, quantity, planName }),
+      }
+    );
+    if (!response.ok) {
+      logStep("Failed to send confirmation email", { status: response.status });
+    } else {
+      logStep("Confirmation email sent", { email, type });
+    }
+  } catch (err) {
+    logStep("Error sending confirmation email", { error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -99,6 +129,17 @@ serve(async (req) => {
           }, { onConflict: "user_id" });
 
           logStep("Subscription created/updated", { userId: user.id, status: subscription.status });
+
+          // Send confirmation email
+          if (customerEmail) {
+            await sendConfirmationEmail(
+              customerEmail,
+              "subscription",
+              session.amount_total || 4900,
+              undefined,
+              "Investor Pro"
+            );
+          }
         } else if (session.mode === "payment") {
           // Handle listing credit purchase
           const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
@@ -109,7 +150,7 @@ serve(async (req) => {
             .from("listing_credits")
             .select("*")
             .eq("user_id", user.id)
-            .single();
+            .maybeSingle();
 
           if (existingCredits) {
             await supabaseAdmin
@@ -138,6 +179,16 @@ serve(async (req) => {
           });
 
           logStep("Listing credits added", { userId: user.id, quantity });
+
+          // Send confirmation email
+          if (customerEmail) {
+            await sendConfirmationEmail(
+              customerEmail,
+              "credits",
+              session.amount_total || 1000,
+              quantity
+            );
+          }
         }
         break;
       }
@@ -152,7 +203,7 @@ serve(async (req) => {
           .from("subscriptions")
           .select("user_id")
           .eq("stripe_customer_id", customerId)
-          .single();
+          .maybeSingle();
 
         if (subRecord) {
           await supabaseAdmin.from("subscriptions").update({
