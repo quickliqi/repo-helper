@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, Zap, Target, TrendingUp, Lock, ExternalLink, CheckCircle, AlertCircle, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Loader2, Search, Zap, Target, TrendingUp, Lock, ExternalLink, CheckCircle, AlertCircle, Bookmark, BookmarkCheck, ArrowRightCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useSearchParams, Navigate } from 'react-router-dom';
 
 interface ScrapedDeal {
@@ -46,6 +47,8 @@ export default function Scraper() {
   const [results, setResults] = useState<ScrapedDeal[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [savingDeals, setSavingDeals] = useState<Set<string>>(new Set());
+  const [convertingDeals, setConvertingDeals] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
   // Redirect non-investors
   if (role && role !== 'investor') {
@@ -165,6 +168,46 @@ export default function Scraper() {
       setSavingDeals(prev => {
         const newSet = new Set(prev);
         newSet.delete(dealId || String(index));
+        return newSet;
+      });
+    }
+  };
+
+  const handleConvertToListing = async (dealId: string, deal: ScrapedDeal) => {
+    setConvertingDeals(prev => new Set(prev).add(dealId));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('convert-scrape-to-listing', {
+        body: { 
+          scrape_result_id: dealId,
+          overrides: {
+            title: `${deal.bedrooms} Bed ${deal.property_type?.replace(/_/g, ' ')} in ${deal.city}`,
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Listing Created!",
+          description: "Deal has been converted to a marketplace listing.",
+        });
+        // Navigate to the new listing
+        navigate(`/marketplace`);
+      } else {
+        throw new Error(data?.error || "Failed to convert deal");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Conversion Failed",
+        description: error.message || "Failed to convert deal to listing",
+        variant: "destructive",
+      });
+    } finally {
+      setConvertingDeals(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(dealId);
         return newSet;
       });
     }
@@ -373,20 +416,15 @@ export default function Scraper() {
                             <Badge className="bg-primary/10 text-primary">
                               {deal.match_score}% Match
                             </Badge>
-                            {deal.id && (
+                            {deal.id && !deal.is_saved && (
                               <Button
                                 size="sm"
-                                variant={deal.is_saved ? "secondary" : "outline"}
+                                variant="outline"
                                 onClick={() => handleSaveDeal(deal.id!, index)}
-                                disabled={deal.is_saved || savingDeals.has(deal.id || String(index))}
+                                disabled={savingDeals.has(deal.id || String(index))}
                               >
                                 {savingDeals.has(deal.id || String(index)) ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : deal.is_saved ? (
-                                  <>
-                                    <BookmarkCheck className="h-4 w-4 mr-1" />
-                                    Saved
-                                  </>
                                 ) : (
                                   <>
                                     <Bookmark className="h-4 w-4 mr-1" />
@@ -394,6 +432,29 @@ export default function Scraper() {
                                   </>
                                 )}
                               </Button>
+                            )}
+                            {deal.id && deal.is_saved && (
+                              <>
+                                <Badge variant="secondary" className="flex items-center gap-1">
+                                  <BookmarkCheck className="h-3 w-3" />
+                                  Saved
+                                </Badge>
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleConvertToListing(deal.id!, deal)}
+                                  disabled={convertingDeals.has(deal.id)}
+                                >
+                                  {convertingDeals.has(deal.id) ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <ArrowRightCircle className="h-4 w-4 mr-1" />
+                                      Post to Marketplace
+                                    </>
+                                  )}
+                                </Button>
+                              </>
                             )}
                           </div>
                         </div>

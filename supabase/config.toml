@@ -35,3 +35,6 @@ verify_jwt = true
 
 [functions.save-scraped-deal]
 verify_jwt = true
+
+[functions.convert-scrape-to-listing]
+verify_jwt = true
