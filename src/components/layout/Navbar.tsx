@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Sparkles,
-  Scan
+  Scan,
+  ShieldCheck
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -167,6 +168,14 @@ export function Navbar() {
                         Profile
                       </Link>
                     </DropdownMenuItem>
+                    {role === 'admin' && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" className="cursor-pointer">
+                          <ShieldCheck className="mr-2 h-4 w-4" />
+                          Admin Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
