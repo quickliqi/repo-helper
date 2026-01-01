@@ -105,12 +105,31 @@ export default function Dashboard() {
         {/* Header */}
         <div className="border-b border-border bg-card">
           <div className="container mx-auto px-4 py-8">
-            <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-              Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}
-            </h1>
-            <p className="text-muted-foreground capitalize">
-              {role} Dashboard
-            </p>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+                  Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}
+                </h1>
+                <p className="text-muted-foreground">
+                  {role === 'investor' 
+                    ? "Your matched deals and investment opportunities await."
+                    : "Manage your listings and connect with qualified buyers."}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary">
+                {role === 'investor' ? (
+                  <>
+                    <TrendingUp className="h-5 w-5" />
+                    <span className="font-medium">Investor Account</span>
+                  </>
+                ) : (
+                  <>
+                    <Building2 className="h-5 w-5" />
+                    <span className="font-medium">Wholesaler Account</span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
