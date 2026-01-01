@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -37,7 +37,8 @@ import {
   X,
   Loader2,
   Plus,
-  Sparkles
+  Sparkles,
+  Shield
 } from 'lucide-react';
 
 const PROPERTY_TYPES: PropertyType[] = ['single_family', 'multi_family', 'condo', 'townhouse', 'commercial', 'land', 'mobile_home', 'other'];
@@ -91,7 +92,7 @@ const emptyFormData: FormData = {
 };
 
 export default function PostDeal() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { listingCredits, isLoading: subscriptionLoading, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>(emptyFormData);
@@ -270,6 +271,51 @@ export default function PostDeal() {
       setIsSubmitting(false);
     }
   };
+
+  // Gate posting for unverified wholesalers
+  const isVerified = profile?.verification_status === 'approved' || profile?.is_verified;
+  
+  if (!subscriptionLoading && !isVerified) {
+    return (
+      <MainLayout>
+        <div className="bg-background min-h-screen">
+          <div className="border-b border-border bg-card">
+            <div className="container mx-auto px-4 py-8">
+              <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+                Post a New Deal
+              </h1>
+              <p className="text-muted-foreground">
+                Complete identity verification to post deals
+              </p>
+            </div>
+          </div>
+          <div className="container mx-auto px-4 py-12 max-w-lg">
+            <Card className="text-center">
+              <CardHeader>
+                <div className="flex justify-center mb-4">
+                  <div className="rounded-full bg-primary/10 p-6">
+                    <Shield className="h-12 w-12 text-primary" />
+                  </div>
+                </div>
+                <CardTitle>Verification Required</CardTitle>
+                <CardDescription>
+                  To protect our community and ensure deal accountability, all wholesalers must verify their identity before posting deals.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild size="lg">
+                  <Link to="/verify">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Get Verified Now
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   // Gate posting for wholesalers without credits
   if (!subscriptionLoading && listingCredits <= 0) {

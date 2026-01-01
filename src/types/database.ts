@@ -3,6 +3,7 @@ export type PropertyType = 'single_family' | 'multi_family' | 'condo' | 'townhou
 export type DealType = 'fix_and_flip' | 'buy_and_hold' | 'wholesale' | 'subject_to' | 'seller_finance' | 'other';
 export type PropertyCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'distressed';
 export type PropertyStatus = 'active' | 'under_contract' | 'pending' | 'sold' | 'withdrawn';
+export type VerificationStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Profile {
   id: string;
@@ -15,8 +16,25 @@ export interface Profile {
   city?: string;
   state?: string;
   is_verified: boolean;
+  verification_status?: VerificationStatus;
+  verified_at?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface VerificationRequest {
+  id: string;
+  user_id: string;
+  document_type: string;
+  document_url: string;
+  selfie_url?: string;
+  status: VerificationStatus;
+  admin_notes?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  created_at: string;
+  updated_at: string;
+  profile?: Profile;
 }
 
 export interface UserRole {

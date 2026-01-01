@@ -13,11 +13,13 @@ import {
   DollarSign,
   Activity,
   Loader2,
-  ShieldCheck
+  ShieldCheck,
+  Shield
 } from 'lucide-react';
 import { AdminPaymentHistory } from '@/components/admin/AdminPaymentHistory';
 import { AdminSubscriptions } from '@/components/admin/AdminSubscriptions';
 import { AdminAnalytics } from '@/components/admin/AdminAnalytics';
+import { AdminVerifications } from '@/components/admin/AdminVerifications';
 
 interface PlatformStats {
   totalUsers: number;
@@ -194,10 +196,14 @@ export default function Admin() {
 
           {/* Tabs for different views */}
           <Tabs defaultValue="analytics" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+            <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
               <TabsTrigger value="analytics" className="gap-2">
                 <TrendingUp className="h-4 w-4" />
                 Analytics
+              </TabsTrigger>
+              <TabsTrigger value="verifications" className="gap-2">
+                <Shield className="h-4 w-4" />
+                Verifications
               </TabsTrigger>
               <TabsTrigger value="subscriptions" className="gap-2">
                 <CreditCard className="h-4 w-4" />
@@ -211,6 +217,10 @@ export default function Admin() {
 
             <TabsContent value="analytics">
               <AdminAnalytics />
+            </TabsContent>
+
+            <TabsContent value="verifications">
+              <AdminVerifications />
             </TabsContent>
 
             <TabsContent value="subscriptions">

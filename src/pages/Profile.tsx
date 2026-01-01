@@ -190,11 +190,23 @@ export default function Profile() {
                   <Badge variant="secondary" className="capitalize">
                     {role}
                   </Badge>
-                  {profile?.is_verified && (
-                    <Badge variant="default" className="gap-1">
+                  {profile?.verification_status === 'approved' || profile?.is_verified ? (
+                    <Badge variant="default" className="gap-1 bg-green-600">
                       <Shield className="h-3 w-3" />
                       Verified
                     </Badge>
+                  ) : profile?.verification_status === 'pending' ? (
+                    <Badge variant="secondary" className="gap-1">
+                      <Shield className="h-3 w-3" />
+                      Pending Verification
+                    </Badge>
+                  ) : (
+                    <Button asChild size="sm" variant="outline">
+                      <a href="/verify">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Get Verified
+                      </a>
+                    </Button>
                   )}
                 </div>
               </div>
