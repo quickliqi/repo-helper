@@ -161,6 +161,24 @@ export function AdminVerifications() {
 
       if (error) throw error;
 
+      // Create in-app notification for the user
+      const notificationTitle = status === 'approved' 
+        ? 'Verification Approved!' 
+        : 'Verification Request Rejected';
+      
+      const notificationMessage = status === 'approved'
+        ? 'Congratulations! Your identity has been verified. You now have full access to all platform features.'
+        : `Your verification request was not approved.${adminNotes ? ` Reason: ${adminNotes}` : ' Please review the requirements and submit again.'}`;
+
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: selectedRequest.user_id,
+          title: notificationTitle,
+          message: notificationMessage,
+          type: 'verification',
+        });
+
       // Send email notification
       try {
         await supabase.functions.invoke('send-verification-email', {

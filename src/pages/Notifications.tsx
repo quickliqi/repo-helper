@@ -17,7 +17,10 @@ import {
   TrendingUp,
   Info,
   Loader2,
-  Trash2
+  Trash2,
+  Shield,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -85,12 +88,16 @@ export default function Notifications() {
     }
   };
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: string, title: string) => {
     switch (type) {
       case 'match':
         return <TrendingUp className="h-5 w-5 text-success" />;
       case 'property':
         return <Building2 className="h-5 w-5 text-primary" />;
+      case 'verification':
+        return title.includes('Approved') 
+          ? <CheckCircle2 className="h-5 w-5 text-green-500" />
+          : <XCircle className="h-5 w-5 text-destructive" />;
       default:
         return <Info className="h-5 w-5 text-muted-foreground" />;
     }
@@ -167,9 +174,9 @@ export default function Notifications() {
                   }`}
                 >
                   <CardContent className="p-4">
-                    <div className="flex gap-4">
+                      <div className="flex gap-4">
                       <div className="flex-shrink-0 mt-1">
-                        {getNotificationIcon(notification.type)}
+                        {getNotificationIcon(notification.type, notification.title)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4">
@@ -196,6 +203,14 @@ export default function Notifications() {
                               <Button variant="outline" size="sm" asChild>
                                 <Link to={`/property/${notification.related_property_id}`}>
                                   View Deal
+                                </Link>
+                              </Button>
+                            )}
+                            {notification.type === 'verification' && (
+                              <Button variant="outline" size="sm" asChild>
+                                <Link to="/verify">
+                                  <Shield className="h-4 w-4 mr-1" />
+                                  {notification.title.includes('Rejected') ? 'Resubmit' : 'View'}
                                 </Link>
                               </Button>
                             )}
