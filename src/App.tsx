@@ -17,6 +17,7 @@ import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import Pricing from "./pages/Pricing";
 import Scraper from "./pages/Scraper";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,24 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+  
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, role, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+  
+  if (!user || role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
   }
   
   return <>{children}</>;
@@ -94,6 +113,14 @@ function AppRoutes() {
           <ProtectedRoute>
             <Scraper />
           </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin" 
+        element={
+          <AdminRoute>
+            <Admin />
+          </AdminRoute>
         } 
       />
       <Route path="*" element={<NotFound />} />
