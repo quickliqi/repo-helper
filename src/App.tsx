@@ -19,6 +19,7 @@ import Pricing from "./pages/Pricing";
 import Scraper from "./pages/Scraper";
 import Admin from "./pages/Admin";
 import Verify from "./pages/Verify";
+import PropertyDetail from "./pages/PropertyDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -116,6 +117,7 @@ function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+      <Route path="/property/:id" element={<PropertyDetail />} />
       <Route 
         path="/verify" 
         element={
