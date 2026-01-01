@@ -250,14 +250,7 @@ export default function Dashboard() {
 
               {/* Quick Actions */}
               <div className="flex gap-4 flex-wrap">
-                {profile?.verification_status !== 'approved' && !profile?.is_verified ? (
-                  <Button asChild>
-                    <Link to="/verify">
-                      <Shield className="h-4 w-4 mr-2" />
-                      Get Verified to Post
-                    </Link>
-                  </Button>
-                ) : listingCredits > 0 ? (
+                {listingCredits > 0 ? (
                   <Button asChild>
                     <Link to="/post-deal">
                       <Plus className="h-4 w-4 mr-2" />

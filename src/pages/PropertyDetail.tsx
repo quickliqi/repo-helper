@@ -60,7 +60,7 @@ export default function PropertyDetail() {
   const [hasContactedSeller, setHasContactedSeller] = useState(false);
   const [sellerEmail, setSellerEmail] = useState<string | null>(null);
 
-  const isVerified = profile?.verification_status === 'approved' || profile?.is_verified;
+  // Verification check removed - will be re-enabled with proper ID verification service later
 
   useEffect(() => {
     if (id) {
@@ -538,19 +538,6 @@ export default function PropertyDetail() {
                           <p className="text-sm text-muted-foreground mb-3">Sign in to request contact info</p>
                           <Button asChild className="w-full">
                             <Link to="/auth">Sign In</Link>
-                          </Button>
-                        </div>
-                      ) : !isVerified ? (
-                        <div className="text-center py-4">
-                          <Shield className="h-8 w-8 text-primary mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground mb-3">
-                            Verify your identity to contact sellers
-                          </p>
-                          <Button asChild className="w-full">
-                            <Link to="/verify">
-                              <Shield className="h-4 w-4 mr-2" />
-                              Get Verified
-                            </Link>
                           </Button>
                         </div>
                       ) : (
