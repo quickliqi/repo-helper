@@ -272,50 +272,7 @@ export default function PostDeal() {
     }
   };
 
-  // Gate posting for unverified wholesalers
-  const isVerified = profile?.verification_status === 'approved' || profile?.is_verified;
-  
-  if (!subscriptionLoading && !isVerified) {
-    return (
-      <MainLayout>
-        <div className="bg-background min-h-screen">
-          <div className="border-b border-border bg-card">
-            <div className="container mx-auto px-4 py-8">
-              <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-                Post a New Deal
-              </h1>
-              <p className="text-muted-foreground">
-                Complete identity verification to post deals
-              </p>
-            </div>
-          </div>
-          <div className="container mx-auto px-4 py-12 max-w-lg">
-            <Card className="text-center">
-              <CardHeader>
-                <div className="flex justify-center mb-4">
-                  <div className="rounded-full bg-primary/10 p-6">
-                    <Shield className="h-12 w-12 text-primary" />
-                  </div>
-                </div>
-                <CardTitle>Verification Required</CardTitle>
-                <CardDescription>
-                  To protect our community and ensure deal accountability, all wholesalers must verify their identity before posting deals.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild size="lg">
-                  <Link to="/verify">
-                    <Shield className="h-4 w-4 mr-2" />
-                    Get Verified Now
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
+  // Verification check removed - will be re-enabled with proper ID verification service later
 
   // Gate posting for wholesalers without credits
   if (!subscriptionLoading && listingCredits <= 0) {
