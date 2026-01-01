@@ -14,6 +14,10 @@ const supabaseAdmin = createClient(
 
 const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
 
+// Product IDs for differentiation
+const SCRAPE_PRODUCT_ID = "prod_Ti4uCt003AN32Y";
+const INVESTOR_PRO_PRODUCT_ID = "prod_TgfTWmwR82K9jw";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
@@ -112,33 +116,66 @@ serve(async (req) => {
         }
 
         if (session.mode === "subscription") {
-          // Handle investor subscription
           const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          const productId = subscription.items.data[0]?.price?.product as string;
           
-          await supabaseAdmin.from("subscriptions").upsert({
-            user_id: user.id,
-            stripe_customer_id: session.customer as string,
-            stripe_subscription_id: subscription.id,
-            status: subscription.status === "trialing" ? "trialing" : "active",
-            plan_type: "investor_pro",
-            trial_ends_at: subscription.trial_end 
-              ? new Date(subscription.trial_end * 1000).toISOString() 
-              : null,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-          }, { onConflict: "user_id" });
+          logStep("Subscription product identified", { productId });
+          
+          // Check if this is a scrape subscription
+          if (productId === SCRAPE_PRODUCT_ID) {
+            // Handle scrape subscription
+            const periodStart = new Date(subscription.current_period_start * 1000).toISOString();
+            const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+            
+            await supabaseAdmin.from("scrape_credits").upsert({
+              user_id: user.id,
+              credits_remaining: 10,
+              credits_used: 0,
+              subscription_active: true,
+              stripe_subscription_id: subscription.id,
+              current_period_start: periodStart,
+              current_period_end: periodEnd,
+            }, { onConflict: "user_id" });
 
-          logStep("Subscription created/updated", { userId: user.id, status: subscription.status });
+            logStep("Scrape subscription created", { userId: user.id });
 
-          // Send confirmation email
-          if (customerEmail) {
-            await sendConfirmationEmail(
-              customerEmail,
-              "subscription",
-              session.amount_total || 4900,
-              undefined,
-              "Investor Pro"
-            );
+            // Send confirmation email for scrape subscription
+            if (customerEmail) {
+              await sendConfirmationEmail(
+                customerEmail,
+                "subscription",
+                session.amount_total || 10000,
+                undefined,
+                "Investor Scraping Pro"
+              );
+            }
+          } else {
+            // Handle investor pro subscription
+            await supabaseAdmin.from("subscriptions").upsert({
+              user_id: user.id,
+              stripe_customer_id: session.customer as string,
+              stripe_subscription_id: subscription.id,
+              status: subscription.status === "trialing" ? "trialing" : "active",
+              plan_type: "investor_pro",
+              trial_ends_at: subscription.trial_end 
+                ? new Date(subscription.trial_end * 1000).toISOString() 
+                : null,
+              current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            }, { onConflict: "user_id" });
+
+            logStep("Investor subscription created/updated", { userId: user.id, status: subscription.status });
+
+            // Send confirmation email
+            if (customerEmail) {
+              await sendConfirmationEmail(
+                customerEmail,
+                "subscription",
+                session.amount_total || 4900,
+                undefined,
+                "Investor Pro"
+              );
+            }
           }
         } else if (session.mode === "payment") {
           // Handle listing credit purchase
