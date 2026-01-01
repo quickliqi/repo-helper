@@ -149,6 +149,7 @@ export function AdminVerifications() {
 
     setIsProcessing(true);
     try {
+      // Update the verification request status
       const { error } = await supabase
         .from('verification_requests')
         .update({
@@ -159,6 +160,20 @@ export function AdminVerifications() {
         .eq('id', selectedRequest.id);
 
       if (error) throw error;
+
+      // Send email notification
+      try {
+        await supabase.functions.invoke('send-verification-email', {
+          body: {
+            user_id: selectedRequest.user_id,
+            status,
+            admin_notes: adminNotes || null,
+          },
+        });
+      } catch (emailError) {
+        console.error('Error sending verification email:', emailError);
+        // Don't fail the whole operation if email fails
+      }
 
       toast.success(`Verification ${status === 'approved' ? 'approved' : 'rejected'} successfully`);
       setSelectedRequest(null);
