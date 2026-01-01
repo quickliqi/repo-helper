@@ -19,24 +19,26 @@ import {
   AlertTriangle,
   Camera,
   CreditCard,
-  FileText
+  FileText,
+  User
 } from 'lucide-react';
 
-type DocumentType = 'drivers_license' | 'passport' | 'state_id';
+type DocumentType = 'drivers_license' | 'passport';
 
 const DOCUMENT_TYPES: { value: DocumentType; label: string; icon: React.ReactNode }[] = [
   { value: 'drivers_license', label: "Driver's License", icon: <CreditCard className="h-5 w-5" /> },
   { value: 'passport', label: 'Passport', icon: <FileText className="h-5 w-5" /> },
-  { value: 'state_id', label: 'State ID', icon: <CreditCard className="h-5 w-5" /> },
 ];
 
 export default function Verify() {
   const { user, profile, role, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [documentType, setDocumentType] = useState<DocumentType>('drivers_license');
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [frontIdFile, setFrontIdFile] = useState<File | null>(null);
+  const [backIdFile, setBackIdFile] = useState<File | null>(null);
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
-  const [documentPreview, setDocumentPreview] = useState<string | null>(null);
+  const [frontIdPreview, setFrontIdPreview] = useState<string | null>(null);
+  const [backIdPreview, setBackIdPreview] = useState<string | null>(null);
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingRequest, setExistingRequest] = useState<{ status: string; created_at: string } | null>(null);
@@ -65,7 +67,7 @@ export default function Verify() {
 
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>, 
-    type: 'document' | 'selfie'
+    type: 'front' | 'back' | 'selfie'
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -82,9 +84,12 @@ export default function Verify() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      if (type === 'document') {
-        setDocumentFile(file);
-        setDocumentPreview(reader.result as string);
+      if (type === 'front') {
+        setFrontIdFile(file);
+        setFrontIdPreview(reader.result as string);
+      } else if (type === 'back') {
+        setBackIdFile(file);
+        setBackIdPreview(reader.result as string);
       } else {
         setSelfieFile(file);
         setSelfiePreview(reader.result as string);
@@ -100,28 +105,51 @@ export default function Verify() {
 
     if (uploadError) throw uploadError;
 
-    // Return the path, not the public URL since bucket is private
     return path;
   };
 
   const handleSubmit = async () => {
-    if (!user || !documentFile) {
-      toast.error('Please upload your ID document');
+    if (!user) {
+      toast.error('Please sign in to verify your identity');
+      return;
+    }
+
+    if (!frontIdFile) {
+      toast.error('Please upload the front of your ID');
+      return;
+    }
+
+    if (!backIdFile && documentType === 'drivers_license') {
+      toast.error('Please upload the back of your ID');
+      return;
+    }
+
+    if (!selfieFile) {
+      toast.error('Please upload a selfie holding your ID');
       return;
     }
 
     setIsSubmitting(true);
     try {
       const timestamp = Date.now();
-      const docPath = `${user.id}/${timestamp}-document.${documentFile.name.split('.').pop()}`;
       
-      const documentUrl = await uploadFile(documentFile, docPath);
+      // Upload front of ID
+      const frontPath = `${user.id}/${timestamp}-front.${frontIdFile.name.split('.').pop()}`;
+      const frontUrl = await uploadFile(frontIdFile, frontPath);
       
-      let selfieUrl: string | undefined;
-      if (selfieFile) {
-        const selfiePath = `${user.id}/${timestamp}-selfie.${selfieFile.name.split('.').pop()}`;
-        selfieUrl = await uploadFile(selfieFile, selfiePath);
+      // Upload back of ID (if driver's license)
+      let backUrl: string | undefined;
+      if (backIdFile) {
+        const backPath = `${user.id}/${timestamp}-back.${backIdFile.name.split('.').pop()}`;
+        backUrl = await uploadFile(backIdFile, backPath);
       }
+      
+      // Upload selfie holding ID
+      const selfiePath = `${user.id}/${timestamp}-selfie.${selfieFile.name.split('.').pop()}`;
+      const selfieUrl = await uploadFile(selfieFile, selfiePath);
+
+      // Combine front and back URLs for document_url field
+      const documentUrl = backUrl ? `${frontUrl}|${backUrl}` : frontUrl;
 
       const { error } = await supabase
         .from('verification_requests')
@@ -137,7 +165,7 @@ export default function Verify() {
 
       toast.success('Verification request submitted successfully');
       await refreshProfile();
-      navigate('/profile');
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error submitting verification:', error);
       toast.error('Failed to submit verification request');
@@ -201,6 +229,8 @@ export default function Verify() {
     );
   }
 
+  const isFormComplete = frontIdFile && selfieFile && (documentType === 'passport' || backIdFile);
+
   return (
     <MainLayout>
       <div className="bg-background min-h-screen">
@@ -227,7 +257,7 @@ export default function Verify() {
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Previous Request Rejected</AlertTitle>
                 <AlertDescription>
-                  Your previous verification was not approved. Please ensure your documents are clear and valid.
+                  Your previous verification was not approved. Please ensure your documents are clear, valid, and that your selfie clearly shows you holding your ID.
                 </AlertDescription>
               </Alert>
             )}
@@ -235,30 +265,33 @@ export default function Verify() {
             {/* Info Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Why Verification?</CardTitle>
+                <CardTitle>Verification Requirements</CardTitle>
                 <CardDescription>
-                  Identity verification helps maintain trust and safety on DealMatch
+                  To verify your identity, you'll need to provide the following:
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Prevents fraud and protects all users
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-start gap-3">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">1</div>
+                    <div>
+                      <p className="font-medium">Front of your ID</p>
+                      <p className="text-muted-foreground">Clear photo of the front of your driver's license or passport</p>
+                    </div>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Creates a paper trail for deal accountability
+                  <li className="flex items-start gap-3">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">2</div>
+                    <div>
+                      <p className="font-medium">Back of your ID</p>
+                      <p className="text-muted-foreground">Clear photo of the back of your driver's license (not required for passport)</p>
+                    </div>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    {role === 'wholesaler' 
-                      ? 'Unlocks ability to post deals and connect with investors'
-                      : 'Unlocks ability to contact sellers and save matches'}
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Verified badge on your profile increases credibility
+                  <li className="flex items-start gap-3">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">3</div>
+                    <div>
+                      <p className="font-medium">Selfie holding your ID</p>
+                      <p className="text-muted-foreground">Photo of yourself holding your ID next to your face</p>
+                    </div>
                   </li>
                 </ul>
               </CardContent>
@@ -279,7 +312,7 @@ export default function Verify() {
                 <RadioGroup 
                   value={documentType} 
                   onValueChange={(v) => setDocumentType(v as DocumentType)}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
                 >
                   {DOCUMENT_TYPES.map((doc) => (
                     <Label
@@ -300,35 +333,37 @@ export default function Verify() {
               </CardContent>
             </Card>
 
-            {/* Document Upload */}
+            {/* Document Uploads */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="h-5 w-5" />
-                  Upload Your ID
+                  Upload Documents
                 </CardTitle>
                 <CardDescription>
-                  Upload a clear photo of your {DOCUMENT_TYPES.find(d => d.value === documentType)?.label}
+                  Upload clear photos of your ID and selfie
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Document Upload */}
+                {/* Front of ID */}
                 <div>
-                  <Label className="block mb-2">Government ID *</Label>
+                  <Label className="block mb-2 font-medium">
+                    Front of {documentType === 'passport' ? 'Passport' : "Driver's License"} *
+                  </Label>
                   <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
-                    {documentPreview ? (
+                    {frontIdPreview ? (
                       <div className="space-y-4">
                         <img 
-                          src={documentPreview} 
-                          alt="Document preview" 
+                          src={frontIdPreview} 
+                          alt="Front of ID" 
                           className="max-h-48 mx-auto rounded-lg"
                         />
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => {
-                            setDocumentFile(null);
-                            setDocumentPreview(null);
+                            setFrontIdFile(null);
+                            setFrontIdPreview(null);
                           }}
                         >
                           Remove
@@ -340,11 +375,11 @@ export default function Verify() {
                           type="file"
                           className="hidden"
                           accept="image/*"
-                          onChange={(e) => handleFileChange(e, 'document')}
+                          onChange={(e) => handleFileChange(e, 'front')}
                         />
-                        <FileCheck className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                        <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground">
-                          Click to upload or drag and drop
+                          Click to upload front of ID
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           PNG, JPG up to 10MB
@@ -354,18 +389,66 @@ export default function Verify() {
                   </div>
                 </div>
 
-                {/* Selfie Upload (Optional) */}
+                {/* Back of ID (for driver's license only) */}
+                {documentType === 'drivers_license' && (
+                  <div>
+                    <Label className="block mb-2 font-medium">
+                      Back of Driver's License *
+                    </Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+                      {backIdPreview ? (
+                        <div className="space-y-4">
+                          <img 
+                            src={backIdPreview} 
+                            alt="Back of ID" 
+                            className="max-h-48 mx-auto rounded-lg"
+                          />
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setBackIdFile(null);
+                              setBackIdPreview(null);
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ) : (
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => handleFileChange(e, 'back')}
+                          />
+                          <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            Click to upload back of ID
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            PNG, JPG up to 10MB
+                          </p>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Selfie holding ID */}
                 <div>
-                  <Label className="block mb-2">Selfie (Optional)</Label>
+                  <Label className="block mb-2 font-medium">
+                    Selfie Holding Your ID *
+                  </Label>
                   <p className="text-sm text-muted-foreground mb-3">
-                    A selfie helps us verify you're the person in the ID
+                    Take a clear photo of yourself holding your ID next to your face. Make sure both your face and the ID are clearly visible.
                   </p>
                   <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
                     {selfiePreview ? (
                       <div className="space-y-4">
                         <img 
                           src={selfiePreview} 
-                          alt="Selfie preview" 
+                          alt="Selfie with ID" 
                           className="max-h-48 mx-auto rounded-lg"
                         />
                         <Button 
@@ -387,9 +470,16 @@ export default function Verify() {
                           accept="image/*"
                           onChange={(e) => handleFileChange(e, 'selfie')}
                         />
-                        <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <User className="h-10 w-10 text-muted-foreground" />
+                          <span className="text-muted-foreground">+</span>
+                          <CreditCard className="h-8 w-8 text-muted-foreground" />
+                        </div>
                         <p className="text-sm text-muted-foreground">
-                          Click to upload your selfie
+                          Click to upload selfie holding your ID
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          PNG, JPG up to 10MB
                         </p>
                       </label>
                     )}
@@ -403,7 +493,7 @@ export default function Verify() {
               size="lg" 
               className="w-full" 
               onClick={handleSubmit}
-              disabled={isSubmitting || !documentFile}
+              disabled={isSubmitting || !isFormComplete}
             >
               {isSubmitting ? (
                 <>
@@ -417,6 +507,12 @@ export default function Verify() {
                 </>
               )}
             </Button>
+
+            {!isFormComplete && (
+              <p className="text-sm text-center text-destructive">
+                Please upload all required documents to submit
+              </p>
+            )}
 
             <p className="text-xs text-center text-muted-foreground">
               Your documents are encrypted and securely stored. They will only be used for verification purposes.

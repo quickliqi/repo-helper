@@ -15,6 +15,7 @@ import BuyBox from "./pages/BuyBox";
 import PostDeal from "./pages/PostDeal";
 import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
+import ProfileSetup from "./pages/ProfileSetup";
 import Pricing from "./pages/Pricing";
 import Scraper from "./pages/Scraper";
 import Admin from "./pages/Admin";
@@ -118,6 +119,14 @@ function AppRoutes() {
         } 
       />
       <Route path="/property/:id" element={<PropertyDetail />} />
+      <Route 
+        path="/profile-setup" 
+        element={
+          <ProtectedRoute>
+            <ProfileSetup />
+          </ProtectedRoute>
+        } 
+      />
       <Route 
         path="/verify" 
         element={

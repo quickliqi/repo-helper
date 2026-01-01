@@ -73,8 +73,8 @@ export default function AuthPage() {
             toast.error(error.message);
           }
         } else {
-          toast.success('Account created successfully!');
-          navigate('/dashboard');
+          toast.success('Account created! Let\'s set up your profile.');
+          navigate('/profile-setup');
         }
       } else {
         const { error } = await signIn(email, password);
