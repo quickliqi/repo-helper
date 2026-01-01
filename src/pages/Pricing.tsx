@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Check, Zap, Building2, CreditCard, Shield, Clock } from 'lucide-react';
+import { Check, Zap, Building2, CreditCard, Shield, Clock, Scan } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 // Validate that a URL is from Stripe's trusted domains
 const validateStripeUrl = (url: string): boolean => {
@@ -275,6 +276,37 @@ const Pricing = () => {
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                   <CreditCard className="w-4 h-4" />
                   <span>Credits never expire</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Scraper Add-on */}
+          <div className="max-w-3xl mx-auto mt-12">
+            <Card className="border-2 border-dashed border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
+              <CardContent className="py-8">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Scan className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold flex items-center gap-2">
+                        AI Deal Scraper
+                        <Badge variant="secondary">Add-on</Badge>
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Scrape Facebook for deals matching your buy box with 85%+ confidence
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-center md:text-right">
+                    <p className="text-2xl font-bold">$100<span className="text-base font-normal text-muted-foreground">/mo</span></p>
+                    <p className="text-sm text-muted-foreground mb-3">10 scrapes/month</p>
+                    <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+                      <Link to="/scraper">Learn More</Link>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

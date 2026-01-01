@@ -11,7 +11,8 @@ import {
   LayoutDashboard,
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  Scan
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -66,12 +67,21 @@ export function Navbar() {
                   Marketplace
                 </Link>
                 {role === 'investor' && (
-                  <Link 
-                    to="/buy-box" 
-                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    My Buy Box
-                  </Link>
+                  <>
+                    <Link 
+                      to="/buy-box" 
+                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      My Buy Box
+                    </Link>
+                    <Link 
+                      to="/scraper" 
+                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                    >
+                      <Scan className="h-3.5 w-3.5" />
+                      AI Scraper
+                    </Link>
+                  </>
                 )}
                 {role === 'wholesaler' && (
                   <Link 
@@ -209,13 +219,23 @@ export function Navbar() {
                     Marketplace
                   </Link>
                   {role === 'investor' && (
-                    <Link 
-                      to="/buy-box" 
-                      className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      My Buy Box
-                    </Link>
+                    <>
+                      <Link 
+                        to="/buy-box" 
+                        className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        My Buy Box
+                      </Link>
+                      <Link 
+                        to="/scraper" 
+                        className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Scan className="h-3.5 w-3.5" />
+                        AI Scraper
+                      </Link>
+                    </>
                   )}
                   {role === 'wholesaler' && (
                     <Link 
