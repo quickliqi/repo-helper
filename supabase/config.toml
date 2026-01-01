@@ -17,3 +17,18 @@ verify_jwt = true
 
 [functions.buy-listing-credits]
 verify_jwt = true
+
+[functions.use-listing-credit]
+verify_jwt = true
+
+[functions.send-purchase-confirmation]
+verify_jwt = false
+
+[functions.scrape-facebook-deals]
+verify_jwt = true
+
+[functions.scrape-subscription-checkout]
+verify_jwt = true
+
+[functions.check-scrape-subscription]
+verify_jwt = true
