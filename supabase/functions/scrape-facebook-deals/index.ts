@@ -253,13 +253,17 @@ If no valid deals are found, return: {"deals": []}`;
       analysis_notes: deal.analysis_notes,
     }));
 
+    let insertedResults: any[] = [];
     if (resultsToInsert.length > 0) {
-      const { error: insertError } = await supabaseAdmin
+      const { data: inserted, error: insertError } = await supabaseAdmin
         .from("scrape_results")
-        .insert(resultsToInsert);
+        .insert(resultsToInsert)
+        .select();
 
       if (insertError) {
         logStep("Insert error", insertError);
+      } else {
+        insertedResults = inserted || [];
       }
     }
 
@@ -288,11 +292,18 @@ If no valid deals are found, return: {"deals": []}`;
       creditsRemaining: credits.credits_remaining - 1 
     });
 
+    // Merge inserted result IDs with deal data
+    const dealsWithIds = highConfidenceDeals.map((deal: any, index: number) => ({
+      ...deal,
+      id: insertedResults[index]?.id || null,
+      is_saved: false,
+    }));
+
     return new Response(JSON.stringify({
       success: true,
       session_id: session.id,
       deals_found: highConfidenceDeals.length,
-      deals: highConfidenceDeals,
+      deals: dealsWithIds,
       credits_remaining: credits.credits_remaining - 1,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

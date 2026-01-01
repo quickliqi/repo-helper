@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, Zap, Target, TrendingUp, Lock, ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Search, Zap, Target, TrendingUp, Lock, ExternalLink, CheckCircle, AlertCircle, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useSearchParams, Navigate } from 'react-router-dom';
 
 interface ScrapedDeal {
+  id?: string; // From database
   address: string;
   city: string;
   state: string;
@@ -31,6 +32,7 @@ interface ScrapedDeal {
   match_score: number;
   confidence_score: number;
   analysis_notes: string;
+  is_saved?: boolean;
 }
 
 export default function Scraper() {
@@ -43,6 +45,7 @@ export default function Scraper() {
   const [isScanning, setIsScanning] = useState(false);
   const [results, setResults] = useState<ScrapedDeal[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [savingDeals, setSavingDeals] = useState<Set<string>>(new Set());
 
   // Redirect non-investors
   if (role && role !== 'investor') {
@@ -127,6 +130,43 @@ export default function Scraper() {
       });
     } finally {
       setIsScanning(false);
+    }
+  };
+
+  const handleSaveDeal = async (dealId: string, index: number) => {
+    setSavingDeals(prev => new Set(prev).add(dealId || String(index)));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('save-scraped-deal', {
+        body: { scrape_result_id: dealId }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        // Update the results to mark as saved
+        setResults(prev => prev.map((deal, i) => 
+          i === index ? { ...deal, is_saved: true } : deal
+        ));
+        toast({
+          title: "Deal Saved!",
+          description: "This deal has been saved to your collection.",
+        });
+      } else {
+        throw new Error(data?.error || "Failed to save deal");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save deal",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingDeals(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(dealId || String(index));
+        return newSet;
+      });
     }
   };
 
@@ -326,13 +366,35 @@ export default function Scraper() {
                               {deal.city}, {deal.state} {deal.zip_code}
                             </p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex items-center gap-2">
                             <Badge className="bg-green-500/10 text-green-500">
                               {deal.confidence_score}% Confidence
                             </Badge>
                             <Badge className="bg-primary/10 text-primary">
                               {deal.match_score}% Match
                             </Badge>
+                            {deal.id && (
+                              <Button
+                                size="sm"
+                                variant={deal.is_saved ? "secondary" : "outline"}
+                                onClick={() => handleSaveDeal(deal.id!, index)}
+                                disabled={deal.is_saved || savingDeals.has(deal.id || String(index))}
+                              >
+                                {savingDeals.has(deal.id || String(index)) ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : deal.is_saved ? (
+                                  <>
+                                    <BookmarkCheck className="h-4 w-4 mr-1" />
+                                    Saved
+                                  </>
+                                ) : (
+                                  <>
+                                    <Bookmark className="h-4 w-4 mr-1" />
+                                    Save
+                                  </>
+                                )}
+                              </Button>
+                            )}
                           </div>
                         </div>
 
