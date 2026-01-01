@@ -92,7 +92,7 @@ const emptyFormData: FormData = {
 
 export default function PostDeal() {
   const { user } = useAuth();
-  const { listingCredits, isLoading: subscriptionLoading } = useSubscription();
+  const { listingCredits, isLoading: subscriptionLoading, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>(emptyFormData);
   const [images, setImages] = useState<File[]>([]);
@@ -213,7 +213,17 @@ export default function PostDeal() {
 
     setIsSubmitting(true);
     try {
-      // Upload images first
+      // First, deduct a listing credit
+      const { data: creditData, error: creditError } = await supabase.functions.invoke('use-listing-credit');
+      
+      if (creditError || !creditData?.success) {
+        const errorMsg = creditData?.error || creditError?.message || 'Failed to use listing credit';
+        toast.error(errorMsg);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Upload images
       let imageUrls: string[] = [];
       if (images.length > 0) {
         imageUrls = await uploadImages();
@@ -247,6 +257,9 @@ export default function PostDeal() {
       });
 
       if (error) throw error;
+
+      // Refresh subscription to get updated credit count
+      await refreshSubscription();
 
       toast.success('Deal posted successfully! Matching investors will be notified.');
       navigate('/dashboard');
