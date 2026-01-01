@@ -407,6 +407,128 @@ export type Database = {
         }
         Relationships: []
       }
+      scrape_credits: {
+        Row: {
+          created_at: string
+          credits_remaining: number
+          credits_used: number
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          stripe_subscription_id: string | null
+          subscription_active: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_remaining?: number
+          credits_used?: number
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          stripe_subscription_id?: string | null
+          subscription_active?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_remaining?: number
+          credits_used?: number
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          stripe_subscription_id?: string | null
+          subscription_active?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scrape_results: {
+        Row: {
+          analysis_notes: string | null
+          confidence_score: number | null
+          created_at: string
+          extracted_data: Json | null
+          id: string
+          is_saved: boolean | null
+          match_score: number | null
+          matched_buy_box_id: string | null
+          post_content: string | null
+          scrape_session_id: string
+          source_url: string
+          user_id: string
+        }
+        Insert: {
+          analysis_notes?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          extracted_data?: Json | null
+          id?: string
+          is_saved?: boolean | null
+          match_score?: number | null
+          matched_buy_box_id?: string | null
+          post_content?: string | null
+          scrape_session_id: string
+          source_url: string
+          user_id: string
+        }
+        Update: {
+          analysis_notes?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          extracted_data?: Json | null
+          id?: string
+          is_saved?: boolean | null
+          match_score?: number | null
+          matched_buy_box_id?: string | null
+          post_content?: string | null
+          scrape_session_id?: string
+          source_url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scrape_results_matched_buy_box_id_fkey"
+            columns: ["matched_buy_box_id"]
+            isOneToOne: false
+            referencedRelation: "buy_boxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scrape_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          deals_found: number | null
+          id: string
+          source_url: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          deals_found?: number | null
+          id?: string
+          source_url: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          deals_found?: number | null
+          id?: string
+          source_url?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
