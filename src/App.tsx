@@ -21,6 +21,8 @@ import Scraper from "./pages/Scraper";
 import Admin from "./pages/Admin";
 import Verify from "./pages/Verify";
 import PropertyDetail from "./pages/PropertyDetail";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -143,6 +145,8 @@ function AppRoutes() {
           </AdminRoute>
         } 
       />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

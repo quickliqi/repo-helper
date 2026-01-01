@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Navbar } from './Navbar';
 
 interface MainLayoutProps {
@@ -19,13 +20,13 @@ export function MainLayout({ children }: MainLayoutProps) {
               © {new Date().getFullYear()} DealMatch. All rights reserved.
             </p>
             <div className="flex gap-6">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Privacy Policy
-              </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              </Link>
+              <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Terms of Service
-              </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              </Link>
+              <a href="mailto:support@dealmatch.com" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Contact
               </a>
             </div>
