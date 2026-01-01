@@ -265,6 +265,10 @@ export type Database = {
           state: string | null
           updated_at: string
           user_id: string
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -279,6 +283,10 @@ export type Database = {
           state?: string | null
           updated_at?: string
           user_id: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -293,6 +301,10 @@ export type Database = {
           state?: string | null
           updated_at?: string
           user_id?: string
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
         }
         Relationships: []
       }
@@ -595,6 +607,48 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          document_type: string
+          document_url: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          selfie_url: string | null
+          status: Database["public"]["Enums"]["verification_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          document_type: string
+          document_url: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          document_type?: string
+          document_url?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -647,6 +701,7 @@ export type Database = {
         | "canceled"
         | "past_due"
         | "incomplete"
+      verification_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -808,6 +863,7 @@ export const Constants = {
         "past_due",
         "incomplete",
       ],
+      verification_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
