@@ -130,14 +130,28 @@ const Pricing = () => {
           <div className="max-w-5xl mx-auto text-center">
             <Badge className="mb-4 bg-accent text-accent-foreground">
               <Clock className="w-3 h-3 mr-1" />
-              7-Day Free Trial
+              7-Day Free Trial for Investors
             </Badge>
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-6">
-              Simple, Transparent Pricing
+              Invest in Deals, Not Lead Lists
             </h1>
-            <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto">
-              Choose the plan that fits your role. Start with a free trial, cancel anytime with our money-back guarantee.
+            <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto mb-6">
+              Stop paying for leads that don't convert. QuickLiqi delivers only the deals that match your exact criteria.
             </p>
+            <div className="flex flex-wrap justify-center gap-6 text-sm text-primary-foreground/70">
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-accent" />
+                <span>Cancel anytime</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-accent" />
+                <span>Money-back guarantee</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-accent" />
+                <span>No hidden fees</span>
+              </div>
+            </div>
           </div>
         </section>
 
