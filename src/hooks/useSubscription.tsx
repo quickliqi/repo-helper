@@ -31,14 +31,35 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   });
 
   const fetchSubscriptionStatus = useCallback(async () => {
-    if (!user) {
+    // Only fetch if user is authenticated
+    if (!user?.id) {
       setStatus(prev => ({ ...prev, isLoading: false }));
       return;
     }
 
     try {
+      // Get current session to ensure we have a valid token
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        setStatus(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('check-subscription');
-      if (error) throw error;
+      
+      if (error) {
+        // Handle gracefully - user might not have subscription
+        console.error('Error fetching subscription status:', error);
+        setStatus({
+          isSubscribed: false,
+          isTrialing: false,
+          trialEnd: null,
+          subscriptionEnd: null,
+          listingCredits: 0,
+          isLoading: false,
+        });
+        return;
+      }
 
       setStatus({
         isSubscribed: data?.subscribed || false,
@@ -50,13 +71,20 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       });
     } catch (error) {
       console.error('Error fetching subscription status:', error);
-      setStatus(prev => ({ ...prev, isLoading: false }));
+      setStatus({
+        isSubscribed: false,
+        isTrialing: false,
+        trialEnd: null,
+        subscriptionEnd: null,
+        listingCredits: 0,
+        isLoading: false,
+      });
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Fetch on mount and when user changes
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchSubscriptionStatus();
     } else {
       setStatus({
@@ -68,18 +96,18 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         isLoading: false,
       });
     }
-  }, [user, fetchSubscriptionStatus]);
+  }, [user?.id, fetchSubscriptionStatus]);
 
   // Auto-refresh every 60 seconds when user is logged in
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
 
     const interval = setInterval(() => {
       fetchSubscriptionStatus();
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [user, fetchSubscriptionStatus]);
+  }, [user?.id, fetchSubscriptionStatus]);
 
   const hasAccess = useCallback(() => {
     // Investors need active subscription or trial
