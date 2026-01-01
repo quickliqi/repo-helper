@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,6 +74,15 @@ export default function AuthPage() {
             toast.error(error.message);
           }
         } else {
+          // Send welcome email in background
+          supabase.functions.invoke('send-welcome-email', {
+            body: {
+              email,
+              name: fullName,
+              role: selectedRole,
+            },
+          }).catch(err => console.error('Failed to send welcome email:', err));
+          
           toast.success('Account created! Let\'s set up your profile.');
           navigate('/profile-setup');
         }

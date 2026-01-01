@@ -86,6 +86,50 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_requests: {
+        Row: {
+          created_at: string
+          id: string
+          investor_email: string
+          investor_id: string
+          investor_name: string
+          investor_phone: string | null
+          message: string | null
+          property_id: string
+          seller_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          investor_email: string
+          investor_id: string
+          investor_name: string
+          investor_phone?: string | null
+          message?: string | null
+          property_id: string
+          seller_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          investor_email?: string
+          investor_id?: string
+          investor_name?: string
+          investor_phone?: string | null
+          message?: string | null
+          property_id?: string
+          seller_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_requests_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_credits: {
         Row: {
           created_at: string

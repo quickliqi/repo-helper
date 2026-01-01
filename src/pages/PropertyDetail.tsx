@@ -57,6 +57,8 @@ export default function PropertyDetail() {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [hasContactedSeller, setHasContactedSeller] = useState(false);
+  const [sellerEmail, setSellerEmail] = useState<string | null>(null);
 
   const isVerified = profile?.verification_status === 'approved' || profile?.is_verified;
 
@@ -66,6 +68,12 @@ export default function PropertyDetail() {
       incrementViewCount();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (id && user && property) {
+      checkExistingContact();
+    }
+  }, [id, user, property]);
 
   const fetchProperty = async () => {
     setIsLoading(true);
@@ -79,11 +87,11 @@ export default function PropertyDetail() {
       if (error) throw error;
       setProperty(data as Property);
 
-      // Fetch seller profile
+      // Fetch seller profile (without exposing contact details yet)
       if (data?.user_id) {
         const { data: sellerData } = await supabase
           .from('profiles')
-          .select('*')
+          .select('full_name, company_name, city, state, is_verified, verification_status')
           .eq('user_id', data.user_id)
           .maybeSingle();
         
@@ -94,6 +102,38 @@ export default function PropertyDetail() {
       toast.error('Failed to load property');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkExistingContact = async () => {
+    if (!id || !user || !property) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('contact_requests')
+        .select('*')
+        .eq('property_id', id)
+        .eq('investor_id', user.id)
+        .maybeSingle();
+      
+      if (data) {
+        setHasContactedSeller(true);
+        // Fetch full seller details including phone
+        const { data: fullSeller } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', property.user_id)
+          .maybeSingle();
+        
+        if (fullSeller) {
+          setSeller(fullSeller as Profile);
+        }
+        
+        // Get seller's email
+        // Note: We'll get this from the contact_requests as we stored it when created
+      }
+    } catch (error) {
+      console.error('Error checking contact status:', error);
     }
   };
 
@@ -111,19 +151,46 @@ export default function PropertyDetail() {
   };
 
   const handleContactSeller = async () => {
-    if (!user || !property || !seller) return;
+    if (!user || !property || !seller || !profile) return;
 
     setIsSending(true);
     try {
-      // Send notification email to the seller
+      // Get user's email from auth
+      const { data: authData } = await supabase.auth.getUser();
+      const userEmail = authData?.user?.email;
+
+      if (!userEmail) {
+        toast.error('Unable to get your email. Please try again.');
+        return;
+      }
+
+      // Create contact request record
+      const { error: insertError } = await supabase
+        .from('contact_requests')
+        .insert({
+          property_id: property.id,
+          investor_id: user.id,
+          seller_id: property.user_id,
+          message: message,
+          investor_email: userEmail,
+          investor_name: profile.full_name,
+          investor_phone: profile.phone,
+        });
+
+      if (insertError) throw insertError;
+
+      // Send notification email to the seller with investor's contact info
       await supabase.functions.invoke('send-notification-email', {
         body: {
           type: 'deal_contact',
-          recipientEmail: seller.user_id, // Will be resolved in the function
+          recipientEmail: property.user_id, // Will be resolved in the function
           recipientName: seller.full_name,
-          viewerName: profile?.full_name || 'An investor',
+          viewerName: profile.full_name || 'An investor',
+          viewerEmail: userEmail,
+          viewerPhone: profile.phone,
           propertyTitle: property.title,
-          propertyAddress: `${property.address}, ${property.city}, ${property.state}`,
+          propertyCity: property.city,
+          propertyState: property.state,
           message: message,
         },
       });
@@ -132,17 +199,29 @@ export default function PropertyDetail() {
       await supabase.from('notifications').insert({
         user_id: property.user_id,
         title: 'New Contact Request',
-        message: `${profile?.full_name || 'An investor'} is interested in your property: ${property.title}`,
+        message: `${profile.full_name || 'An investor'} is interested in your property: ${property.title}`,
         type: 'contact',
         related_property_id: property.id,
       });
 
-      toast.success('Message sent to seller successfully!');
+      // Fetch full seller details now that contact is established
+      const { data: fullSeller } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', property.user_id)
+        .maybeSingle();
+      
+      if (fullSeller) {
+        setSeller(fullSeller as Profile);
+      }
+
+      setHasContactedSeller(true);
+      toast.success('Contact request sent! You can now see the seller\'s contact info.');
       setShowContactDialog(false);
       setMessage('');
     } catch (error) {
       console.error('Error contacting seller:', error);
-      toast.error('Failed to send message');
+      toast.error('Failed to send contact request');
     } finally {
       setIsSending(false);
     }
@@ -390,58 +469,101 @@ export default function PropertyDetail() {
               {/* Contact Seller Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Contact Seller</CardTitle>
+                  <CardTitle>
+                    {hasContactedSeller ? 'Seller Contact Info' : 'Contact Seller'}
+                  </CardTitle>
                   <CardDescription>
-                    Reach out to the wholesaler about this property
+                    {hasContactedSeller 
+                      ? 'You have access to this seller\'s contact information'
+                      : 'Request contact info to connect with this wholesaler'
+                    }
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {seller && (
-                    <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-lg font-semibold text-primary">
-                          {seller.full_name?.[0]?.toUpperCase() || 'W'}
-                        </span>
+                  {hasContactedSeller && seller ? (
+                    // Show full seller contact info after contact request
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        <span className="text-sm text-green-700 dark:text-green-400">Contact info unlocked</span>
                       </div>
-                      <div>
-                        <p className="font-medium">{seller.full_name}</p>
-                        {seller.company_name && (
-                          <p className="text-sm text-muted-foreground">{seller.company_name}</p>
-                        )}
+                      
+                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-lg font-semibold text-primary">
+                            {seller.full_name?.[0]?.toUpperCase() || 'W'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{seller.full_name}</p>
+                          {seller.company_name && (
+                            <p className="text-sm text-muted-foreground">{seller.company_name}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-
-                  {!user ? (
-                    <div className="text-center py-4">
-                      <Lock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground mb-3">Sign in to contact this seller</p>
-                      <Button asChild className="w-full">
-                        <Link to="/auth">Sign In</Link>
-                      </Button>
-                    </div>
-                  ) : !isVerified ? (
-                    <div className="text-center py-4">
-                      <Shield className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Verify your identity to contact sellers
-                      </p>
-                      <Button asChild className="w-full">
-                        <Link to="/verify">
-                          <Shield className="h-4 w-4 mr-2" />
-                          Get Verified
-                        </Link>
-                      </Button>
+                      
+                      {seller.phone && (
+                        <a 
+                          href={`tel:${seller.phone}`}
+                          className="flex items-center gap-3 p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
+                        >
+                          <Phone className="h-5 w-5 text-primary" />
+                          <span className="font-medium">{seller.phone}</span>
+                        </a>
+                      )}
+                      
+                      {seller.city && seller.state && (
+                        <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                          <MapPin className="h-5 w-5 text-muted-foreground" />
+                          <span>{seller.city}, {seller.state}</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <Button 
-                      className="w-full" 
-                      size="lg"
-                      onClick={() => setShowContactDialog(true)}
-                    >
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Contact Seller
-                    </Button>
+                    // Show limited info before contact request
+                    <>
+                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                        <div className="h-12 w-12 rounded-full bg-muted-foreground/10 flex items-center justify-center">
+                          <Lock className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-muted-foreground">Wholesaler</p>
+                          <p className="text-sm text-muted-foreground">Request access to see details</p>
+                        </div>
+                      </div>
+
+                      {!user ? (
+                        <div className="text-center py-4">
+                          <Lock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground mb-3">Sign in to request contact info</p>
+                          <Button asChild className="w-full">
+                            <Link to="/auth">Sign In</Link>
+                          </Button>
+                        </div>
+                      ) : !isVerified ? (
+                        <div className="text-center py-4">
+                          <Shield className="h-8 w-8 text-primary mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Verify your identity to contact sellers
+                          </p>
+                          <Button asChild className="w-full">
+                            <Link to="/verify">
+                              <Shield className="h-4 w-4 mr-2" />
+                              Get Verified
+                            </Link>
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button 
+                          className="w-full" 
+                          size="lg"
+                          onClick={() => setShowContactDialog(true)}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Request Contact Info
+                        </Button>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
