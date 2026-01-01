@@ -39,6 +39,9 @@ interface NotificationEmailRequest {
   propertyCity?: string;
   propertyState?: string;
   viewerName?: string;
+  viewerEmail?: string;
+  viewerPhone?: string;
+  message?: string;
   matchScore?: number;
 }
 
@@ -92,18 +95,39 @@ const getEmailContent = (data: NotificationEmailRequest) => {
         subject: `📞 New Contact Request: ${data.propertyTitle}`,
         html: `
           <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #1a365d; font-size: 24px; margin-bottom: 20px;">Someone Wants to Connect!</h1>
+            <h1 style="color: #1a365d; font-size: 24px; margin-bottom: 20px;">New Contact Request!</h1>
             <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Hi ${data.recipientName},</p>
             <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">
-              ${data.viewerName} is interested in your property and wants to connect with you.
+              <strong>${data.viewerName}</strong> is interested in your property and wants to connect with you.
             </p>
+            
             <div style="background: #f7fafc; border-radius: 8px; padding: 20px; margin: 20px 0;">
-              <h2 style="color: #2d3748; font-size: 18px; margin: 0 0 10px 0;">${data.propertyTitle}</h2>
+              <h3 style="color: #2d3748; font-size: 16px; margin: 0 0 10px 0;">Property:</h3>
+              <p style="color: #2d3748; font-size: 18px; font-weight: 600; margin: 0 0 5px 0;">${data.propertyTitle}</p>
               <p style="color: #718096; margin: 0;">${data.propertyCity}, ${data.propertyState}</p>
             </div>
+            
+            <div style="background: #e6fffa; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #38b2ac;">
+              <h3 style="color: #234e52; font-size: 16px; margin: 0 0 15px 0;">Investor Contact Info:</h3>
+              <p style="color: #2d3748; margin: 0 0 8px 0;"><strong>Name:</strong> ${data.viewerName}</p>
+              <p style="color: #2d3748; margin: 0 0 8px 0;"><strong>Email:</strong> <a href="mailto:${data.viewerEmail}" style="color: #3182ce;">${data.viewerEmail}</a></p>
+              ${data.viewerPhone ? `<p style="color: #2d3748; margin: 0;"><strong>Phone:</strong> <a href="tel:${data.viewerPhone}" style="color: #3182ce;">${data.viewerPhone}</a></p>` : ''}
+            </div>
+            
+            ${data.message ? `
+            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h3 style="color: #2d3748; font-size: 16px; margin: 0 0 10px 0;">Their Message:</h3>
+              <p style="color: #4a5568; font-style: italic; margin: 0;">"${data.message}"</p>
+            </div>
+            ` : ''}
+            
+            <p style="color: #4a5568; font-size: 14px;">
+              Reply directly to this investor using the contact info above, or manage your listings from your dashboard.
+            </p>
+            
             <a href="${Deno.env.get("SITE_URL") || "https://dealflow.app"}/dashboard" 
-               style="display: inline-block; background: #d69e2e; color: #1a365d; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-              Respond Now
+               style="display: inline-block; background: #1a365d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+              View Dashboard
             </a>
           </div>
         `,
@@ -175,8 +199,32 @@ serve(async (req) => {
     const data: NotificationEmailRequest = await req.json();
     console.log("[SEND-NOTIFICATION-EMAIL] Email type:", data.type, "To:", data.recipientEmail);
 
+    let recipientEmail = data.recipientEmail;
+
+    // If recipientEmail looks like a UUID (user_id), resolve it to actual email
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(recipientEmail)) {
+      console.log("[SEND-NOTIFICATION-EMAIL] Resolving user_id to email:", recipientEmail);
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+      
+      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(recipientEmail);
+      
+      if (authError || !authUser?.user?.email) {
+        console.error("[SEND-NOTIFICATION-EMAIL] Could not resolve user email:", authError?.message);
+        return new Response(
+          JSON.stringify({ error: "Could not find recipient email" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      
+      recipientEmail = authUser.user.email;
+      console.log("[SEND-NOTIFICATION-EMAIL] Resolved to email:", recipientEmail);
+    }
+
     // Input validation
-    if (!data.recipientEmail || !data.recipientEmail.includes("@")) {
+    if (!recipientEmail || !recipientEmail.includes("@")) {
       return new Response(
         JSON.stringify({ error: "Invalid email address" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -194,7 +242,7 @@ serve(async (req) => {
 
     const emailResponse = await resend.emails.send({
       from: "DealFlow <notifications@resend.dev>",
-      to: [data.recipientEmail],
+      to: [recipientEmail],
       subject: emailContent.subject,
       html: emailContent.html,
     });
