@@ -369,6 +369,7 @@ export type Database = {
           highlights: string[] | null
           id: string
           image_urls: string[] | null
+          is_demo: boolean | null
           lot_size_sqft: number | null
           property_type: Database["public"]["Enums"]["property_type"]
           repair_estimate: number | null
@@ -398,6 +399,7 @@ export type Database = {
           highlights?: string[] | null
           id?: string
           image_urls?: string[] | null
+          is_demo?: boolean | null
           lot_size_sqft?: number | null
           property_type: Database["public"]["Enums"]["property_type"]
           repair_estimate?: number | null
@@ -427,6 +429,7 @@ export type Database = {
           highlights?: string[] | null
           id?: string
           image_urls?: string[] | null
+          is_demo?: boolean | null
           lot_size_sqft?: number | null
           property_type?: Database["public"]["Enums"]["property_type"]
           repair_estimate?: number | null
