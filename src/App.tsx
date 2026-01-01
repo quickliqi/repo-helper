@@ -18,6 +18,7 @@ import Profile from "./pages/Profile";
 import Pricing from "./pages/Pricing";
 import Scraper from "./pages/Scraper";
 import Admin from "./pages/Admin";
+import Verify from "./pages/Verify";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -112,6 +113,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Scraper />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/verify" 
+        element={
+          <ProtectedRoute>
+            <Verify />
           </ProtectedRoute>
         } 
       />
