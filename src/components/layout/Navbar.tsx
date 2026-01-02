@@ -255,6 +255,13 @@ export function Navbar() {
                       My Listings
                     </Link>
                   )}
+                  <Link 
+                    to="/pricing" 
+                    className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Pricing
+                  </Link>
                 </>
               ) : (
                 <>
@@ -264,6 +271,13 @@ export function Navbar() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Browse Deals
+                  </Link>
+                  <Link 
+                    to="/pricing" 
+                    className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Pricing
                   </Link>
                   <Link 
                     to="/auth" 
