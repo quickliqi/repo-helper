@@ -96,7 +96,7 @@ export function UpgradePrompt({ type, compact = false }: UpgradePromptProps) {
             </li>
             <li className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-primary" />
-              <span>Direct wholesaler contact</span>
+              <span>Secure in-platform messaging</span>
             </li>
             <li className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-primary" />

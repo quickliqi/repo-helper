@@ -103,7 +103,7 @@ const Pricing = () => {
     'Unlimited property matches',
     'Real-time email notifications',
     'Advanced buy box criteria',
-    'Direct wholesaler contact',
+    'Secure in-platform messaging',
     'Save and track deals',
     'Priority support',
   ];

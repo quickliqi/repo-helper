@@ -278,7 +278,7 @@ export default function Index() {
                 Close Your Assignment
               </h3>
               <p className="text-muted-foreground">
-                Connect directly with verified buyers. No middlemen, no tire-kickers—just closers.
+                Message verified buyers securely through our platform. No middlemen, no tire-kickers—just closers.
               </p>
             </div>
           </div>
@@ -546,7 +546,7 @@ export default function Index() {
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <CheckCircle className="h-5 w-5 text-success" />
-                <span>Direct Messaging</span>
+                <span>Secure Messaging</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <CheckCircle className="h-5 w-5 text-success" />
