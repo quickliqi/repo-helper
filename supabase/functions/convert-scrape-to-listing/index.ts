@@ -11,6 +11,10 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CONVERT-TO-LISTING] ${step}${detailsStr}`);
 };
 
+// Rate limit: 10 requests per minute per user
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MINUTES = 1;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -34,6 +38,29 @@ serve(async (req) => {
 
     const user = userData.user;
     logStep("User authenticated", { userId: user.id });
+
+    // Check rate limit
+    const { data: rateLimitOk, error: rlError } = await supabaseAdmin.rpc("check_rate_limit", {
+      p_user_id: user.id,
+      p_function_name: "convert-scrape-to-listing",
+      p_max_requests: RATE_LIMIT_MAX,
+      p_window_minutes: RATE_LIMIT_WINDOW_MINUTES,
+    });
+
+    if (rlError) {
+      logStep("Rate limit check error", { error: rlError.message });
+    }
+
+    if (rateLimitOk === false) {
+      logStep("Rate limit exceeded", { userId: user.id });
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Rate limit exceeded. Please wait before making more requests.",
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Check if user has wholesaler role (required to post listings)
     const { data: roleData, error: roleError } = await supabaseAdmin

@@ -11,6 +11,10 @@ const logStep = (step: string, details?: any) => {
   console.log(`[BUY-LISTING-CREDITS] ${step}`, details ? JSON.stringify(details) : "");
 };
 
+// Rate limit: 10 requests per minute per user
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MINUTES = 1;
+
 const LISTING_CREDIT_PRICE = "price_1SjI9J0VL3B5XXLH4pGYfKkC"; // $10 per credit
 
 serve(async (req) => {
@@ -20,7 +24,8 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
   );
 
   try {
@@ -33,6 +38,26 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
     logStep("User authenticated", { userId: user.id, email: user.email });
+
+    // Check rate limit
+    const { data: rateLimitOk, error: rlError } = await supabaseClient.rpc("check_rate_limit", {
+      p_user_id: user.id,
+      p_function_name: "buy-listing-credits",
+      p_max_requests: RATE_LIMIT_MAX,
+      p_window_minutes: RATE_LIMIT_WINDOW_MINUTES,
+    });
+
+    if (rlError) {
+      logStep("Rate limit check error", { error: rlError.message });
+    }
+
+    if (rateLimitOk === false) {
+      logStep("Rate limit exceeded", { userId: user.id });
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait before making more requests." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { quantity = 1 } = await req.json();
     logStep("Processing purchase", { quantity });

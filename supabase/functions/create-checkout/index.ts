@@ -11,6 +11,10 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CREATE-CHECKOUT] ${step}`, details ? JSON.stringify(details) : "");
 };
 
+// Rate limit: 10 requests per minute per user
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MINUTES = 1;
+
 // Stripe price IDs
 const PRICES = {
   investor_pro: "price_1SjI8j0VL3B5XXLHB1xRD8Bb", // $49/month subscription
@@ -38,6 +42,26 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
     logStep("User authenticated", { userId: user.id, email: user.email });
+
+    // Check rate limit
+    const { data: rateLimitOk, error: rlError } = await supabaseClient.rpc("check_rate_limit", {
+      p_user_id: user.id,
+      p_function_name: "create-checkout",
+      p_max_requests: RATE_LIMIT_MAX,
+      p_window_minutes: RATE_LIMIT_WINDOW_MINUTES,
+    });
+
+    if (rlError) {
+      logStep("Rate limit check error", { error: rlError.message });
+    }
+
+    if (rateLimitOk === false) {
+      logStep("Rate limit exceeded", { userId: user.id });
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait before making more requests." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { priceType, quantity = 1 } = await req.json();
     const priceId = PRICES[priceType as keyof typeof PRICES];
