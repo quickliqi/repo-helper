@@ -372,6 +372,7 @@ export type Database = {
           city: string | null
           company_name: string | null
           created_at: string
+          fcm_token: string | null
           full_name: string
           id: string
           is_actively_buying: boolean | null
@@ -391,6 +392,7 @@ export type Database = {
           city?: string | null
           company_name?: string | null
           created_at?: string
+          fcm_token?: string | null
           full_name: string
           id?: string
           is_actively_buying?: boolean | null
@@ -410,6 +412,7 @@ export type Database = {
           city?: string | null
           company_name?: string | null
           created_at?: string
+          fcm_token?: string | null
           full_name?: string
           id?: string
           is_actively_buying?: boolean | null
