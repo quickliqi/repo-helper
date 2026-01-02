@@ -304,6 +304,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          is_actively_buying: boolean | null
           is_verified: boolean | null
           phone: string | null
           state: string | null
@@ -322,6 +323,7 @@ export type Database = {
           created_at?: string
           full_name: string
           id?: string
+          is_actively_buying?: boolean | null
           is_verified?: boolean | null
           phone?: string | null
           state?: string | null
@@ -340,6 +342,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          is_actively_buying?: boolean | null
           is_verified?: boolean | null
           phone?: string | null
           state?: string | null

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -26,7 +27,8 @@ import {
   Camera,
   Save,
   Loader2,
-  Shield
+  Shield,
+  DollarSign
 } from 'lucide-react';
 
 interface ProfileFormData {
@@ -36,6 +38,7 @@ interface ProfileFormData {
   bio: string;
   city: string;
   state: string;
+  is_actively_buying: boolean;
 }
 
 export default function Profile() {
@@ -47,6 +50,7 @@ export default function Profile() {
     bio: '',
     city: '',
     state: '',
+    is_actively_buying: true,
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -62,6 +66,7 @@ export default function Profile() {
         bio: profile.bio || '',
         city: profile.city || '',
         state: profile.state || '',
+        is_actively_buying: (profile as any).is_actively_buying ?? true,
       });
       setAvatarPreview(profile.avatar_url || null);
       setIsLoading(false);
@@ -132,6 +137,7 @@ export default function Profile() {
           city: formData.city.trim() || null,
           state: formData.state || null,
           avatar_url: avatarUrl,
+          is_actively_buying: formData.is_actively_buying,
         })
         .eq('user_id', user.id);
 
@@ -262,6 +268,41 @@ export default function Profile() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Investor Status - Only show for investors */}
+            {role === 'investor' && (
+              <Card className="border-accent/30 bg-accent/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-accent" />
+                    Buying Status
+                  </CardTitle>
+                  <CardDescription>
+                    Let wholesalers know if you're actively looking for deals
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="actively_buying" className="text-base font-medium">
+                        I'm actively seeking to purchase
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {formData.is_actively_buying 
+                          ? "You'll receive match notifications and appear as an active buyer"
+                          : "You won't receive new match notifications"}
+                      </p>
+                    </div>
+                    <Switch
+                      id="actively_buying"
+                      checked={formData.is_actively_buying}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_actively_buying: checked }))}
+                      className="data-[state=checked]:bg-accent"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Company Info */}
             <Card>
