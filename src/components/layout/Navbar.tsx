@@ -13,7 +13,8 @@ import {
   X,
   Sparkles,
   Scan,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -130,6 +131,13 @@ export function Navbar() {
                     </Link>
                   </Button>
                 )}
+
+                {/* Messages */}
+                <Button variant="ghost" size="icon" className="relative" asChild>
+                  <Link to="/messages">
+                    <MessageSquare className="h-5 w-5" />
+                  </Link>
+                </Button>
 
                 {/* Notifications */}
                 <Button variant="ghost" size="icon" className="relative" asChild>

@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import Matches from "./pages/Matches";
 import MyListings from "./pages/MyListings";
 import BuyerDemand from "./pages/BuyerDemand";
+import Messages from "./pages/Messages";
 
 const queryClient = new QueryClient();
 
@@ -149,6 +150,14 @@ function AppRoutes() {
         } 
       />
       <Route 
+        path="/messages" 
+        element={
+          <ProtectedRoute>
+            <Messages />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/profile-setup" 
         element={
           <ProtectedRoute>

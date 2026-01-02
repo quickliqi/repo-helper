@@ -35,7 +35,6 @@ import {
   BedDouble,
   Bath,
   Building2,
-  Phone,
   Mail,
   MessageSquare,
   ArrowLeft,
@@ -109,28 +108,16 @@ export default function PropertyDetail() {
     if (!id || !user || !property) return;
     
     try {
-      const { data, error } = await supabase
-        .from('contact_requests')
-        .select('*')
+      // Check for existing conversation
+      const { data } = await supabase
+        .from('conversations')
+        .select('id')
         .eq('property_id', id)
         .eq('investor_id', user.id)
         .maybeSingle();
       
       if (data) {
         setHasContactedSeller(true);
-        // Fetch full seller details including phone
-        const { data: fullSeller } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', property.user_id)
-          .maybeSingle();
-        
-        if (fullSeller) {
-          setSeller(fullSeller as Profile);
-        }
-        
-        // Get seller's email
-        // Note: We'll get this from the contact_requests as we stored it when created
       }
     } catch (error) {
       console.error('Error checking contact status:', error);
@@ -155,39 +142,59 @@ export default function PropertyDetail() {
 
     setIsSending(true);
     try {
-      // Get user's email from auth
-      const { data: authData } = await supabase.auth.getUser();
-      const userEmail = authData?.user?.email;
+      // Check if conversation already exists
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('property_id', property.id)
+        .eq('investor_id', user.id)
+        .maybeSingle();
 
-      if (!userEmail) {
-        toast.error('Unable to get your email. Please try again.');
-        return;
+      let conversationId = existingConv?.id;
+
+      // Create conversation if it doesn't exist
+      if (!conversationId) {
+        const { data: newConv, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            property_id: property.id,
+            investor_id: user.id,
+            seller_id: property.user_id,
+          })
+          .select('id')
+          .single();
+
+        if (convError) throw convError;
+        conversationId = newConv.id;
       }
 
-      // Create contact request record
-      const { error: insertError } = await supabase
-        .from('contact_requests')
+      // Send the first message
+      const { error: msgError } = await supabase
+        .from('messages')
         .insert({
-          property_id: property.id,
-          investor_id: user.id,
-          seller_id: property.user_id,
-          message: message,
-          investor_email: userEmail,
-          investor_name: profile.full_name,
-          investor_phone: profile.phone,
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content: message.trim(),
         });
 
-      if (insertError) throw insertError;
+      if (msgError) throw msgError;
 
-      // Send notification email to the seller with investor's contact info
+      // Create a notification in the database
+      await supabase.from('notifications').insert({
+        user_id: property.user_id,
+        title: 'New Message',
+        message: `${profile.full_name || 'An investor'} sent you a message about: ${property.title}`,
+        type: 'message',
+        related_property_id: property.id,
+      });
+
+      // Send notification email to the seller (without contact info)
       await supabase.functions.invoke('send-notification-email', {
         body: {
-          type: 'deal_contact',
-          recipientEmail: property.user_id, // Will be resolved in the function
+          type: 'new_message',
+          recipientEmail: property.user_id,
           recipientName: seller.full_name,
           viewerName: profile.full_name || 'An investor',
-          viewerEmail: userEmail,
-          viewerPhone: profile.phone,
           propertyTitle: property.title,
           propertyCity: property.city,
           propertyState: property.state,
@@ -195,33 +202,13 @@ export default function PropertyDetail() {
         },
       });
 
-      // Create a notification in the database
-      await supabase.from('notifications').insert({
-        user_id: property.user_id,
-        title: 'New Contact Request',
-        message: `${profile.full_name || 'An investor'} is interested in your property: ${property.title}`,
-        type: 'contact',
-        related_property_id: property.id,
-      });
-
-      // Fetch full seller details now that contact is established
-      const { data: fullSeller } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', property.user_id)
-        .maybeSingle();
-      
-      if (fullSeller) {
-        setSeller(fullSeller as Profile);
-      }
-
       setHasContactedSeller(true);
-      toast.success('Contact request sent! You can now see the seller\'s contact info.');
+      toast.success('Message sent! View your conversation in Messages.');
       setShowContactDialog(false);
       setMessage('');
     } catch (error) {
-      console.error('Error contacting seller:', error);
-      toast.error('Failed to send contact request');
+      console.error('Error starting conversation:', error);
+      toast.error('Failed to send message');
     } finally {
       setIsSending(false);
     }
@@ -470,22 +457,22 @@ export default function PropertyDetail() {
               <Card>
                 <CardHeader>
                   <CardTitle>
-                    {hasContactedSeller ? 'Seller Contact Info' : 'Contact Seller'}
+                    {hasContactedSeller ? 'Conversation Started' : 'Message Seller'}
                   </CardTitle>
                   <CardDescription>
                     {hasContactedSeller 
-                      ? 'You have access to this seller\'s contact information'
-                      : 'Request contact info to connect with this wholesaler'
+                      ? 'Continue your conversation securely on the platform'
+                      : 'Send a secure message to connect with this wholesaler'
                     }
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {hasContactedSeller && seller ? (
-                    // Show full seller contact info after contact request
+                    // Show conversation link after initial message
                     <div className="space-y-4">
                       <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                         <CheckCircle2 className="h-5 w-5 text-green-600" />
-                        <span className="text-sm text-green-700 dark:text-green-400">Contact info unlocked</span>
+                        <span className="text-sm text-green-700 dark:text-green-400">Conversation active</span>
                       </div>
                       
                       <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
@@ -502,15 +489,12 @@ export default function PropertyDetail() {
                         </div>
                       </div>
                       
-                      {seller.phone && (
-                        <a 
-                          href={`tel:${seller.phone}`}
-                          className="flex items-center gap-3 p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
-                        >
-                          <Phone className="h-5 w-5 text-primary" />
-                          <span className="font-medium">{seller.phone}</span>
-                        </a>
-                      )}
+                      <Button asChild className="w-full" size="lg">
+                        <Link to="/messages">
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          View Conversation
+                        </Link>
+                      </Button>
                       
                       {seller.city && seller.state && (
                         <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
@@ -520,22 +504,22 @@ export default function PropertyDetail() {
                       )}
                     </div>
                   ) : (
-                    // Show limited info before contact request
+                    // Show limited info before starting conversation
                     <>
                       <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                         <div className="h-12 w-12 rounded-full bg-muted-foreground/10 flex items-center justify-center">
-                          <Lock className="h-5 w-5 text-muted-foreground" />
+                          <MessageSquare className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
                           <p className="font-medium text-muted-foreground">Wholesaler</p>
-                          <p className="text-sm text-muted-foreground">Request access to see details</p>
+                          <p className="text-sm text-muted-foreground">Send a message to start chatting</p>
                         </div>
                       </div>
 
                       {!user ? (
                         <div className="text-center py-4">
                           <Lock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground mb-3">Sign in to request contact info</p>
+                          <p className="text-sm text-muted-foreground mb-3">Sign in to message the seller</p>
                           <Button asChild className="w-full">
                             <Link to="/auth">Sign In</Link>
                           </Button>
@@ -547,7 +531,7 @@ export default function PropertyDetail() {
                           onClick={() => setShowContactDialog(true)}
                         >
                           <MessageSquare className="h-4 w-4 mr-2" />
-                          Request Contact Info
+                          Send Message
                         </Button>
                       )}
                     </>
