@@ -35,15 +35,25 @@ export function usePushNotifications() {
     }
 
     try {
-      // Request permission
-      const permResult = await PushNotifications.requestPermissions();
-      console.log('Push permission result:', permResult);
+      // Check current permission status
+      const permStatus = await PushNotifications.checkPermissions();
+      console.log('Current push permission status:', permStatus);
+
+      let permResult = permStatus;
+      
+      // Request permission if not already granted
+      if (permResult.receive !== 'granted') {
+        permResult = await PushNotifications.requestPermissions();
+        console.log('Push permission request result:', permResult);
+      }
 
       if (permResult.receive === 'granted') {
         // Register for push notifications
         await PushNotifications.register();
+        console.log('Push notifications registration initiated');
       } else {
         console.log('Push notifications permission denied');
+        toast.info('Enable notifications in Settings to receive message alerts');
       }
     } catch (err) {
       console.error('Error initializing push notifications:', err);
