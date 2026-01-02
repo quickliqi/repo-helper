@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { Helmet } from 'react-helmet-async';
 import { 
   Building2, 
   TrendingUp, 
@@ -18,7 +19,10 @@ import {
   Sparkles,
   Search,
   Bell,
-  Handshake
+  Handshake,
+  DollarSign,
+  Timer,
+  Flame
 } from 'lucide-react';
 import heroImage from '@/assets/hero-deal-matching.jpg';
 import investorImage from '@/assets/investor-analyzing.jpg';
@@ -30,13 +34,18 @@ export default function Index() {
 
   return (
     <MainLayout>
-      {/* Hero Section */}
+      <Helmet>
+        <title>QuickLiqi - Sell Wholesale Deals Fast | Find Off-Market Properties</title>
+        <meta name="description" content="Need to sell your wholesale deal fast? Find cash buyers in 24 hours. Investors: get off-market properties matched to your buy box instantly. No cold calls, just deals that close." />
+      </Helmet>
+
+      {/* Hero Section - Optimized for urgency */}
       <section className="relative overflow-hidden">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img 
             src={heroImage} 
-            alt="Real estate professionals closing deals" 
+            alt="Wholesalers and investors closing off-market real estate deals" 
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/85 to-primary/70" />
@@ -44,19 +53,20 @@ export default function Index() {
         
         <div className="relative z-10 container mx-auto px-4 py-20 lg:py-32">
           <div className="max-w-3xl">
+            {/* Urgency Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/20 text-accent mb-6 backdrop-blur-sm">
-              <Zap className="h-4 w-4" />
-              <span className="text-sm font-medium">Stop wasting time on bad leads</span>
+              <Flame className="h-4 w-4 animate-pulse" />
+              <span className="text-sm font-medium">Got a contract? Find buyers in 24 hours</span>
             </div>
             
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight mb-6">
-              The Fastest Way to<br />
-              <span className="text-accent">Match Deals to Buyers</span>
+              Dispose Wholesale Deals Fast.<br />
+              <span className="text-accent">Find Off-Market Gems Faster.</span>
             </h1>
             
             <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mb-8">
-              QuickLiqi is the professional marketplace that automatically connects off-market real estate deals 
-              with qualified investors. No more cold calls, no more guessing—just smart matches that close.
+              <strong>Wholesalers:</strong> Stop scrambling for buyers—we match your deals to verified cash investors instantly. 
+              <strong className="block mt-2">Investors:</strong> Off-market properties with ARV, comps, and repair estimates delivered to your inbox.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
@@ -69,26 +79,27 @@ export default function Index() {
                 </Button>
               ) : (
                 <>
-                  <Button size="lg" asChild className="text-base bg-accent text-accent-foreground hover:bg-accent/90">
+                  <Button size="lg" asChild className="text-base bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg">
                     <Link to="/auth?mode=signup">
-                      Get Started Free
-                      <ArrowRight className="ml-2 h-5 w-5" />
+                      <Timer className="mr-2 h-5 w-5" />
+                      Find Buyers Now
                     </Link>
                   </Button>
                   <Button size="lg" variant="outline" asChild className="text-base bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
                     <Link to="/marketplace">
-                      Browse Deals
+                      <DollarSign className="mr-2 h-5 w-5" />
+                      Browse Off-Market Deals
                     </Link>
                   </Button>
                 </>
               )}
             </div>
 
-            {/* Quick Stats */}
+            {/* Quick Stats - Social Proof */}
             <div className="grid grid-cols-3 gap-4 sm:flex sm:flex-wrap sm:gap-8 text-primary-foreground/80">
               <div className="text-center sm:text-left">
                 <p className="text-xl sm:text-2xl font-bold text-accent">500+</p>
-                <p className="text-xs sm:text-sm">Active Investors</p>
+                <p className="text-xs sm:text-sm">Cash Buyers Ready</p>
               </div>
               <div className="text-center sm:text-left">
                 <p className="text-xl sm:text-2xl font-bold text-accent">$2M+</p>
@@ -96,26 +107,26 @@ export default function Index() {
               </div>
               <div className="text-center sm:text-left">
                 <p className="text-xl sm:text-2xl font-bold text-accent">24hrs</p>
-                <p className="text-xs sm:text-sm">Avg. Response</p>
+                <p className="text-xs sm:text-sm">Avg. First Response</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Problem Section */}
+      {/* Problem Section - SEO Keywords */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 text-destructive mb-4">
               <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm font-medium">The Problem</span>
+              <span className="text-sm font-medium">The Wholesale Real Estate Problem</span>
             </div>
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Real Estate Deals Die in the Gap
+              Great Deals Die When Buyers Can't Be Found Fast
             </h2>
             <p className="text-lg text-muted-foreground">
-              Great deals get stuck between sellers who need to move fast and buyers who can't find them in time.
+              You have the contract. The seller is waiting. But your buyers list isn't converting and time is running out.
             </p>
           </div>
 
@@ -127,32 +138,32 @@ export default function Index() {
                   <TrendingUp className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="font-display text-xl font-semibold text-foreground">
-                  If You're an Investor...
+                  Tired of Missing Off-Market Deals?
                 </h3>
               </div>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Missing deals</span> because you hear about them after they're gone
+                    <span className="font-medium text-foreground">Deals gone</span> before you even hear about them
                   </p>
                 </li>
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Wasting hours</span> on deals that don't match your criteria
+                    <span className="font-medium text-foreground">No ARV or repair numbers</span>—just vague "good deal" claims
                   </p>
                 </li>
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Drowning in emails</span> from wholesalers with irrelevant properties
+                    <span className="font-medium text-foreground">Inbox flooded</span> with properties outside your buy box
                   </p>
                 </li>
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">No visibility</span> into what's actually available in your target markets
+                    <span className="font-medium text-foreground">Cash ready</span> but can't find the right fix-and-flip or BRRRR deal
                   </p>
                 </li>
               </ul>
@@ -165,32 +176,32 @@ export default function Index() {
                   <Building2 className="h-6 w-6 text-accent" />
                 </div>
                 <h3 className="font-display text-xl font-semibold text-foreground">
-                  If You're a Wholesaler...
+                  Need to Sell Your Wholesale Deal ASAP?
                 </h3>
               </div>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Can't find buyers</span> fast enough before sellers back out
+                    <span className="font-medium text-foreground">Contract expiring</span> and your buyers list isn't responding
                   </p>
                 </li>
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Blasting emails</span> to lists that rarely convert
+                    <span className="font-medium text-foreground">Blasting emails</span> to dead lists that never convert
                   </p>
                 </li>
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">No idea</span> what buyers actually want right now
+                    <span className="font-medium text-foreground">No idea</span> which investors are actively buying right now
                   </p>
                 </li>
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Losing deals</span> to competitors who reach buyers first
+                    <span className="font-medium text-foreground">Losing assignments</span> because you can't find dispositions fast enough
                   </p>
                 </li>
               </ul>
@@ -205,13 +216,13 @@ export default function Index() {
           <div className="max-w-4xl mx-auto text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-success/10 text-success mb-4">
               <Sparkles className="h-4 w-4" />
-              <span className="text-sm font-medium">The Solution</span>
+              <span className="text-sm font-medium">Your Wholesale Dispositions Solution</span>
             </div>
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              QuickLiqi Bridges the Gap
+              QuickLiqi: Where Deals Meet Cash Buyers
             </h2>
             <p className="text-lg text-muted-foreground">
-              Our smart matching engine connects the right deals with the right buyers—automatically.
+              Post once. Get matched to verified investors who want exactly what you have—automatically.
             </p>
           </div>
 
@@ -220,14 +231,14 @@ export default function Index() {
             <div className="relative rounded-2xl overflow-hidden shadow-xl">
               <img 
                 src={matchingImage} 
-                alt="Smart deal matching visualization" 
+                alt="Wholesale deal matching with cash buyers visualization" 
                 className="w-full h-64 md:h-80 object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/50 to-transparent flex items-end">
                 <div className="p-8 text-primary-foreground">
-                  <h3 className="font-display text-2xl font-bold mb-2">Intelligent Matching Engine</h3>
+                  <h3 className="font-display text-2xl font-bold mb-2">Intelligent Buy Box Matching</h3>
                   <p className="text-primary-foreground/80 max-w-2xl">
-                    Every property is analyzed against every active buy box. When there's a match, both parties are notified instantly.
+                    Every wholesale deal is analyzed against active investor buy boxes. Match scores, ARV, repair estimates—everything they need to make fast offers.
                   </p>
                 </div>
               </div>
@@ -240,10 +251,10 @@ export default function Index() {
                 <Target className="h-7 w-7 text-primary" />
               </div>
               <h3 className="font-display text-xl font-semibold text-foreground mb-3">
-                Define Your Criteria
+                Post Your Assignment
               </h3>
               <p className="text-muted-foreground">
-                Investors create detailed buy boxes. Wholesalers post deals with complete property data.
+                Upload photos, enter ARV, repair costs, and assignment fee. Our system does the rest.
               </p>
             </div>
 
@@ -252,10 +263,10 @@ export default function Index() {
                 <Zap className="h-7 w-7 text-accent" />
               </div>
               <h3 className="font-display text-xl font-semibold text-foreground mb-3">
-                Instant Matching
+                Instant Cash Buyer Match
               </h3>
               <p className="text-muted-foreground">
-                Our algorithm runs in real-time, matching properties to buyers the moment they're posted.
+                Our algorithm matches your deal to investors actively buying in that market—in real-time.
               </p>
             </div>
 
@@ -264,25 +275,25 @@ export default function Index() {
                 <Handshake className="h-7 w-7 text-success" />
               </div>
               <h3 className="font-display text-xl font-semibold text-foreground mb-3">
-                Close the Deal
+                Close Your Assignment
               </h3>
               <p className="text-muted-foreground">
-                Connect directly with qualified parties and move from match to close faster than ever.
+                Connect directly with verified buyers. No middlemen, no tire-kickers—just closers.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
+      {/* How It Works Section - SEO Rich */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              How It Works for You
+              How QuickLiqi Works for Real Estate Pros
             </h2>
             <p className="text-lg text-muted-foreground">
-              Get started in minutes—whether you're buying or selling.
+              Whether you're disposing wholesale contracts or hunting off-market deals—get started in minutes.
             </p>
           </div>
 
@@ -292,7 +303,7 @@ export default function Index() {
               <div className="h-48 overflow-hidden">
                 <img 
                   src={investorImage} 
-                  alt="Investor analyzing real estate deals" 
+                  alt="Real estate investor analyzing fix and flip deals with buy box criteria" 
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -301,9 +312,12 @@ export default function Index() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success text-success-foreground">
                     <TrendingUp className="h-5 w-5" />
                   </div>
-                  <h3 className="font-display text-2xl font-semibold text-foreground">
-                    For Investors
-                  </h3>
+                  <div>
+                    <h3 className="font-display text-2xl font-semibold text-foreground">
+                      For Cash Buyers & Investors
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Fix-and-flip, BRRRR, buy-and-hold</p>
+                  </div>
                 </div>
                 <div className="space-y-5">
                   <div className="flex gap-4">
@@ -311,8 +325,8 @@ export default function Index() {
                       1
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Create Your Buy Box</p>
-                      <p className="text-sm text-muted-foreground">Define exactly what you want: location, price, property type, deal type, ARV, and more.</p>
+                      <p className="font-medium text-foreground">Set Your Buy Box Criteria</p>
+                      <p className="text-sm text-muted-foreground">Location, price range, ARV, property type, deal type, minimum equity—be as specific as you want.</p>
                     </div>
                   </div>
                   <div className="flex gap-4">
@@ -320,8 +334,8 @@ export default function Index() {
                       2
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Get Notified Instantly</p>
-                      <p className="text-sm text-muted-foreground">Receive email alerts the moment a deal matches your criteria—before anyone else.</p>
+                      <p className="font-medium text-foreground">Get Off-Market Deals Delivered</p>
+                      <p className="text-sm text-muted-foreground">Instant email alerts when wholesale deals match your criteria—before they hit anyone's blast list.</p>
                     </div>
                   </div>
                   <div className="flex gap-4">
@@ -329,15 +343,15 @@ export default function Index() {
                       3
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Connect & Close</p>
-                      <p className="text-sm text-muted-foreground">Contact the wholesaler directly through the platform and secure your next investment.</p>
+                      <p className="font-medium text-foreground">Make Offers Confidently</p>
+                      <p className="text-sm text-muted-foreground">Every deal includes ARV, repair estimates, and assignment fee. All the numbers on a silver platter.</p>
                     </div>
                   </div>
                 </div>
                 {!user && (
                   <Button asChild className="w-full mt-6 bg-success hover:bg-success/90 text-success-foreground">
                     <Link to="/auth?mode=signup&role=investor">
-                      Start as an Investor
+                      Find Deals That Match My Buy Box
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
@@ -350,7 +364,7 @@ export default function Index() {
               <div className="h-48 overflow-hidden">
                 <img 
                   src={wholesalerImage} 
-                  alt="Wholesaler at property site" 
+                  alt="Wholesaler with property under contract needing cash buyer fast" 
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -359,9 +373,12 @@ export default function Index() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                     <Building2 className="h-5 w-5" />
                   </div>
-                  <h3 className="font-display text-2xl font-semibold text-foreground">
-                    For Wholesalers
-                  </h3>
+                  <div>
+                    <h3 className="font-display text-2xl font-semibold text-foreground">
+                      For Wholesalers & Dispositions
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Move contracts fast, stop chasing buyers</p>
+                  </div>
                 </div>
                 <div className="space-y-5">
                   <div className="flex gap-4">
@@ -369,8 +386,8 @@ export default function Index() {
                       1
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Post Your Deal</p>
-                      <p className="text-sm text-muted-foreground">List your property with photos, pricing, and deal details. Our form captures everything buyers need.</p>
+                      <p className="font-medium text-foreground">Post Your Wholesale Deal</p>
+                      <p className="text-sm text-muted-foreground">Upload photos, enter your numbers. Takes 5 minutes—we capture everything buyers need to decide.</p>
                     </div>
                   </div>
                   <div className="flex gap-4">
@@ -378,8 +395,8 @@ export default function Index() {
                       2
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Reach Qualified Buyers</p>
-                      <p className="text-sm text-muted-foreground">Your deal is instantly matched to investors whose buy box criteria fit—no blasting required.</p>
+                      <p className="font-medium text-foreground">Reach Active Cash Buyers Instantly</p>
+                      <p className="text-sm text-muted-foreground">Your deal is matched to investors whose buy box fits—no more blasting to dead lists.</p>
                     </div>
                   </div>
                   <div className="flex gap-4">
@@ -387,15 +404,15 @@ export default function Index() {
                       3
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">See What Buyers Want</p>
-                      <p className="text-sm text-muted-foreground">Browse active buy boxes to understand demand before you even source your next deal.</p>
+                      <p className="font-medium text-foreground">See What Buyers Actually Want</p>
+                      <p className="text-sm text-muted-foreground">Browse active buy boxes before you source. Know exactly what investors are looking for.</p>
                     </div>
                   </div>
                 </div>
                 {!user && (
                   <Button asChild className="w-full mt-6">
                     <Link to="/auth?mode=signup&role=wholesaler">
-                      Start as a Wholesaler
+                      Find Buyers for My Deal Now
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
@@ -406,15 +423,15 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Features Grid */}
+      {/* Features Grid - SEO Keywords */}
       <section className="py-20 bg-secondary/30">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Everything You Need to Move Fast
+              Built for Speed. Built for Closers.
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Purpose-built tools for serious real estate professionals.
+              Professional tools for serious wholesalers and investors who move fast on off-market real estate.
             </p>
           </div>
 
@@ -424,10 +441,10 @@ export default function Index() {
                 <Search className="h-5 w-5 text-primary" />
               </div>
               <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                Advanced Buy Box
+                Detailed Buy Box Matching
               </h3>
               <p className="text-sm text-muted-foreground">
-                Filter by location, price, ARV, property type, deal type, condition, and more. Get only what fits.
+                Filter by location, price, ARV, property type, deal type (fix-and-flip, BRRRR, subject-to), and condition.
               </p>
             </div>
 
@@ -436,10 +453,10 @@ export default function Index() {
                 <Bell className="h-5 w-5 text-accent" />
               </div>
               <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                Instant Notifications
+                Instant Deal Alerts
               </h3>
               <p className="text-sm text-muted-foreground">
-                Email alerts the second a match is found. Never miss a deal because you weren't watching.
+                Email the second a wholesale deal matches your criteria. Be first to make an offer.
               </p>
             </div>
 
@@ -448,10 +465,10 @@ export default function Index() {
                 <Users className="h-5 w-5 text-success" />
               </div>
               <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                Verified Network
+                Verified Cash Buyers
               </h3>
               <p className="text-sm text-muted-foreground">
-                Every user is verified. Know you're dealing with legitimate buyers and sellers.
+                Every investor is verified. No tire-kickers—only serious buyers who close.
               </p>
             </div>
 
@@ -460,10 +477,10 @@ export default function Index() {
                 <BarChart3 className="h-5 w-5 text-primary" />
               </div>
               <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                Market Intelligence
+                Market Demand Intelligence
               </h3>
               <p className="text-sm text-muted-foreground">
-                Wholesalers can browse buyer demand. Investors see what's actively being sourced in their markets.
+                Wholesalers: see active buyer demand. Investors: know what's being sourced in your markets.
               </p>
             </div>
 
@@ -472,10 +489,10 @@ export default function Index() {
                 <Clock className="h-5 w-5 text-accent" />
               </div>
               <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                Real-Time Updates
+                Real-Time Deal Flow
               </h3>
               <p className="text-sm text-muted-foreground">
-                Listings update live. Status changes, price drops, and new deals appear instantly.
+                New wholesale deals, price drops, and status changes appear instantly. Never miss a hot deal.
               </p>
             </div>
 
@@ -484,10 +501,10 @@ export default function Index() {
                 <Shield className="h-5 w-5 text-success" />
               </div>
               <h3 className="font-display text-lg font-semibold text-foreground mb-2">
-                Secure Platform
+                Secure & Professional
               </h3>
               <p className="text-sm text-muted-foreground">
-                Enterprise-grade security. Your data and communications are protected.
+                Enterprise-grade security. Your deal data and buyer communications are protected.
               </p>
             </div>
           </div>
@@ -500,65 +517,65 @@ export default function Index() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-                Trusted by Real Estate Professionals
+                Where Wholesalers & Investors Close Deals Faster
               </h2>
               <p className="text-lg text-muted-foreground">
-                Join a growing network of investors and wholesalers who are closing more deals, faster.
+                Join the network of real estate pros who stopped chasing and started closing.
               </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8 mb-12">
               <div className="text-center">
                 <p className="text-4xl font-bold text-primary mb-2">93%</p>
-                <p className="text-muted-foreground">of investors find relevant deals within 7 days</p>
+                <p className="text-muted-foreground">of investors find matching deals within 7 days</p>
               </div>
               <div className="text-center">
-                <p className="text-4xl font-bold text-accent mb-2">3x</p>
-                <p className="text-muted-foreground">faster buyer connections for wholesalers</p>
+                <p className="text-4xl font-bold text-accent mb-2">24hrs</p>
+                <p className="text-muted-foreground">average time to first cash buyer response</p>
               </div>
               <div className="text-center">
                 <p className="text-4xl font-bold text-success mb-2">$50K+</p>
-                <p className="text-muted-foreground">average deal size on the platform</p>
+                <p className="text-muted-foreground">average wholesale deal size on platform</p>
               </div>
             </div>
 
             <div className="flex flex-wrap justify-center gap-6">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <CheckCircle className="h-5 w-5 text-success" />
-                <span>Verified Users</span>
+                <span>Verified Cash Buyers</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <CheckCircle className="h-5 w-5 text-success" />
-                <span>Secure Messaging</span>
+                <span>Direct Messaging</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <CheckCircle className="h-5 w-5 text-success" />
-                <span>Data Encryption</span>
+                <span>Deal Analytics</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <CheckCircle className="h-5 w-5 text-success" />
-                <span>Money-Back Guarantee</span>
+                <span>No Tire-Kickers</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* CTA Section - Urgency Focused */}
       {!user && (
         <section className="py-20 gradient-primary">
           <div className="container mx-auto px-4 text-center">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-              Stop Missing Deals. Start Closing More.
+              Got a Contract? Find Cash Buyers Now.
             </h2>
             <p className="text-lg text-primary-foreground/80 max-w-xl mx-auto mb-8">
-              Join QuickLiqi today and connect with the right opportunities—automatically.
+              Stop losing deals to slow dispositions. Get your wholesale contract in front of verified investors today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild className="text-base bg-accent text-accent-foreground hover:bg-accent/90">
+              <Button size="lg" asChild className="text-base bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg">
                 <Link to="/auth?mode=signup">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <Timer className="mr-2 h-5 w-5" />
+                  Start Matching Deals Free
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild className="text-base bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
@@ -568,7 +585,7 @@ export default function Index() {
               </Button>
             </div>
             <p className="text-sm text-primary-foreground/60 mt-4">
-              7-day free trial for investors • No credit card required to sign up
+              7-day free trial • No credit card required • Cancel anytime
             </p>
           </div>
         </section>
