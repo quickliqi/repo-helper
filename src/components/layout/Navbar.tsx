@@ -2,7 +2,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { SubscriptionBadge } from '@/components/subscription/SubscriptionGate';
+import { Badge } from '@/components/ui/badge';
 import { 
   Building2, 
   Bell, 
@@ -27,7 +29,8 @@ import { useState } from 'react';
 
 export function Navbar() {
   const { user, profile, role, signOut } = useAuth();
-  const { isSubscribed, isTrialing, hasAccess } = useSubscription();
+  const { isSubscribed, isTrialing } = useSubscription();
+  const { unreadCount } = useUnreadMessages();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -136,6 +139,13 @@ export function Navbar() {
                 <Button variant="ghost" size="icon" className="relative" asChild>
                   <Link to="/messages">
                     <MessageSquare className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <Badge 
+                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-destructive text-destructive-foreground"
+                      >
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Badge>
+                    )}
                   </Link>
                 </Button>
 

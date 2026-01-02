@@ -7,6 +7,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/hooks/useSubscription";
 import { ScrapeSubscriptionProvider } from "@/hooks/useScrapeSubscription";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -30,6 +31,12 @@ import BuyerDemand from "./pages/BuyerDemand";
 import Messages from "./pages/Messages";
 
 const queryClient = new QueryClient();
+
+// Component to initialize push notifications
+function PushNotificationInitializer() {
+  usePushNotifications();
+  return null;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -198,6 +205,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
+                <PushNotificationInitializer />
                 <AppRoutes />
               </BrowserRouter>
             </TooltipProvider>

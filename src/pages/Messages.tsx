@@ -242,6 +242,7 @@ export default function Messages() {
         ? selectedConversation.seller_id 
         : selectedConversation.investor_id;
 
+      // Create in-app notification
       await supabase.from('notifications').insert({
         user_id: recipientId,
         title: 'New Message',
@@ -249,6 +250,23 @@ export default function Messages() {
         type: 'message',
         related_property_id: selectedConversation.property_id
       });
+
+      // Send push notification
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_id: recipientId,
+            title: 'New Message',
+            body: `You have a new message about ${selectedConversation.property?.title}`,
+            data: {
+              conversationId: selectedConversation.id,
+              propertyId: selectedConversation.property_id || ''
+            }
+          }
+        });
+      } catch (pushError) {
+        console.log('Push notification failed (user may not have mobile app):', pushError);
+      }
 
     } catch (error) {
       console.error('Error sending message:', error);
