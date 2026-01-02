@@ -12,6 +12,10 @@ const logStep = (step: string, details?: any) => {
   console.log(`[SCRAPE-CHECKOUT] ${step}${detailsStr}`);
 };
 
+// Rate limit: 10 requests per minute per user
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MINUTES = 1;
+
 // Investor Scraping Pro - $100/month for 10 scrapes
 const SCRAPE_PRICE_ID = "price_1SkekM0VL3B5XXLHuT9r6FIr";
 
@@ -38,6 +42,26 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated");
 
     logStep("User authenticated", { email: user.email });
+
+    // Check rate limit
+    const { data: rateLimitOk, error: rlError } = await supabaseClient.rpc("check_rate_limit", {
+      p_user_id: user.id,
+      p_function_name: "scrape-subscription-checkout",
+      p_max_requests: RATE_LIMIT_MAX,
+      p_window_minutes: RATE_LIMIT_WINDOW_MINUTES,
+    });
+
+    if (rlError) {
+      logStep("Rate limit check error", { error: rlError.message });
+    }
+
+    if (rateLimitOk === false) {
+      logStep("Rate limit exceeded", { userId: user.id });
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait before making more requests." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",

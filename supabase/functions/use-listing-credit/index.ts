@@ -10,6 +10,10 @@ const logStep = (step: string, details?: any) => {
   console.log(`[USE-LISTING-CREDIT] ${step}`, details ? JSON.stringify(details) : "");
 };
 
+// Rate limit: 20 requests per minute per user
+const RATE_LIMIT_MAX = 20;
+const RATE_LIMIT_WINDOW_MINUTES = 1;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -40,6 +44,29 @@ serve(async (req) => {
     if (!user) throw new Error("User not authenticated");
     
     logStep("User authenticated", { userId: user.id });
+
+    // Check rate limit
+    const { data: rateLimitOk, error: rlError } = await supabaseAdmin.rpc("check_rate_limit", {
+      p_user_id: user.id,
+      p_function_name: "use-listing-credit",
+      p_max_requests: RATE_LIMIT_MAX,
+      p_window_minutes: RATE_LIMIT_WINDOW_MINUTES,
+    });
+
+    if (rlError) {
+      logStep("Rate limit check error", { error: rlError.message });
+    }
+
+    if (rateLimitOk === false) {
+      logStep("Rate limit exceeded", { userId: user.id });
+      return new Response(
+        JSON.stringify({ success: false, error: "Rate limit exceeded. Please wait before making more requests." }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429,
+        }
+      );
+    }
 
     // Get current credits
     const { data: credits, error: creditsError } = await supabaseAdmin

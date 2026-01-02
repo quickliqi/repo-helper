@@ -11,6 +11,10 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CUSTOMER-PORTAL] ${step}`, details ? JSON.stringify(details) : "");
 };
 
+// Rate limit: 10 requests per minute per user
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MINUTES = 1;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -39,6 +43,26 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
     logStep("User authenticated", { userId: user.id, email: user.email });
+
+    // Check rate limit
+    const { data: rateLimitOk, error: rlError } = await supabaseClient.rpc("check_rate_limit", {
+      p_user_id: user.id,
+      p_function_name: "customer-portal",
+      p_max_requests: RATE_LIMIT_MAX,
+      p_window_minutes: RATE_LIMIT_WINDOW_MINUTES,
+    });
+
+    if (rlError) {
+      logStep("Rate limit check error", { error: rlError.message });
+    }
+
+    if (rateLimitOk === false) {
+      logStep("Rate limit exceeded", { userId: user.id });
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait before making more requests." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     
