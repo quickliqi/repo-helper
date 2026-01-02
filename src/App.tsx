@@ -24,6 +24,9 @@ import PropertyDetail from "./pages/PropertyDetail";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
+import Matches from "./pages/Matches";
+import MyListings from "./pages/MyListings";
+import BuyerDemand from "./pages/BuyerDemand";
 
 const queryClient = new QueryClient();
 
@@ -121,6 +124,30 @@ function AppRoutes() {
         } 
       />
       <Route path="/property/:id" element={<PropertyDetail />} />
+      <Route 
+        path="/matches" 
+        element={
+          <ProtectedRoute>
+            <Matches />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/my-listings" 
+        element={
+          <ProtectedRoute>
+            <MyListings />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/buyer-demand" 
+        element={
+          <ProtectedRoute>
+            <BuyerDemand />
+          </ProtectedRoute>
+        } 
+      />
       <Route 
         path="/profile-setup" 
         element={
