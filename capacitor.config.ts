@@ -19,11 +19,17 @@ const config: CapacitorConfig = {
       showSpinner: false,
       splashFullScreen: true,
       splashImmersive: true
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert']
     }
   },
   android: {
     backgroundColor: '#0F172A',
     allowMixedContent: true
+  },
+  ios: {
+    backgroundColor: '#0F172A'
   }
 };
 
