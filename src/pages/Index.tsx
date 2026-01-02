@@ -85,18 +85,18 @@ export default function Index() {
             </div>
 
             {/* Quick Stats */}
-            <div className="flex flex-wrap gap-8 text-primary-foreground/80">
-              <div>
-                <p className="text-2xl font-bold text-accent">500+</p>
-                <p className="text-sm">Active Investors</p>
+            <div className="grid grid-cols-3 gap-4 sm:flex sm:flex-wrap sm:gap-8 text-primary-foreground/80">
+              <div className="text-center sm:text-left">
+                <p className="text-xl sm:text-2xl font-bold text-accent">500+</p>
+                <p className="text-xs sm:text-sm">Active Investors</p>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-accent">$2M+</p>
-                <p className="text-sm">Deals Matched</p>
+              <div className="text-center sm:text-left">
+                <p className="text-xl sm:text-2xl font-bold text-accent">$2M+</p>
+                <p className="text-xs sm:text-sm">Deals Matched</p>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-accent">24hrs</p>
-                <p className="text-sm">Avg. Response Time</p>
+              <div className="text-center sm:text-left">
+                <p className="text-xl sm:text-2xl font-bold text-accent">24hrs</p>
+                <p className="text-xs sm:text-sm">Avg. Response</p>
               </div>
             </div>
           </div>

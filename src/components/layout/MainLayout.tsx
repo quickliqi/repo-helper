@@ -13,10 +13,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       <main className="flex-1">
         {children}
       </main>
-      <footer className="border-t border-border bg-card py-12">
+      <footer className="border-t border-border bg-card py-8 sm:py-12">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
+            <div className="col-span-2">
               <Link to="/" className="flex items-center gap-2 mb-4">
                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                   <span className="text-primary-foreground font-bold text-sm">QL</span>
@@ -29,7 +29,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               </p>
             </div>
             <div>
-              <h4 className="font-semibold text-foreground mb-4">Platform</h4>
+              <h4 className="font-semibold text-foreground mb-3 sm:mb-4 text-sm sm:text-base">Platform</h4>
               <div className="flex flex-col gap-2">
                 <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Marketplace
@@ -43,7 +43,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               </div>
             </div>
             <div>
-              <h4 className="font-semibold text-foreground mb-4">Legal</h4>
+              <h4 className="font-semibold text-foreground mb-3 sm:mb-4 text-sm sm:text-base">Legal</h4>
               <div className="flex flex-col gap-2">
                 <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Privacy Policy
@@ -57,11 +57,11 @@ export function MainLayout({ children }: MainLayoutProps) {
               </div>
             </div>
           </div>
-          <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="border-t border-border pt-6 sm:pt-8 flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4 text-center md:text-left">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               © {new Date().getFullYear()} QuickLiqi. All rights reserved.
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Built for real estate professionals who move fast.
             </p>
           </div>
