@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (data.user) {
-      // Create profile
+      // Create profile - this will trigger the create_initial_listing_credit function
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -123,6 +123,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleError) {
         console.error('Error creating role:', roleError);
+      }
+
+      // Create 7-day trial subscription for investors
+      if (selectedRole === 'investor') {
+        const trialEndsAt = new Date();
+        trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+        
+        const { error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .insert({
+            user_id: data.user.id,
+            status: 'trialing',
+            plan_type: 'investor_pro',
+            trial_ends_at: trialEndsAt.toISOString(),
+            current_period_start: new Date().toISOString(),
+            current_period_end: trialEndsAt.toISOString(),
+          });
+
+        if (subscriptionError) {
+          console.error('Error creating trial subscription:', subscriptionError);
+        }
       }
     }
 
