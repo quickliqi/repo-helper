@@ -29,6 +29,7 @@ import Matches from "./pages/Matches";
 import MyListings from "./pages/MyListings";
 import BuyerDemand from "./pages/BuyerDemand";
 import Messages from "./pages/Messages";
+import Funnel from "./pages/Funnel";
 
 const queryClient = new QueryClient();
 
@@ -190,6 +191,9 @@ function AppRoutes() {
       />
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
+      <Route path="/funnel" element={<Funnel />} />
+      <Route path="/start" element={<Funnel />} />
+      <Route path="/get-started" element={<Funnel />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
