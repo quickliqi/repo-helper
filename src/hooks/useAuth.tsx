@@ -139,7 +139,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // If the user was deleted server-side (e.g., database reset), global signout can fail.
+    // Always clear local session + state so the app can recover.
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (error) {
+      console.warn('Global sign out failed, clearing local session:', error);
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // ignore
+      }
+    }
+
     setUser(null);
     setSession(null);
     setProfile(null);

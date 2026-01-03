@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Check, Zap, Building2, CreditCard, Shield, Clock, Scan } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -19,35 +19,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const Pricing = () => {
   const { user, role } = useAuth();
+  const { isSubscribed, isTrialing, trialEnd, listingCredits } = useSubscription();
   const [loading, setLoading] = useState<string | null>(null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<{
-    subscribed: boolean;
-    trialing: boolean;
-    subscription_end: string | null;
-    trial_end: string | null;
-    listing_credits: number;
-  } | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      checkSubscription();
-    }
-  }, [user]);
-
-  const checkSubscription = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('check-subscription');
-      if (error) throw error;
-      setSubscriptionStatus(data);
-    } catch (error) {
-      console.error('Error checking subscription:', error);
-    }
-  };
+  const subscribed = isSubscribed || isTrialing;
 
   const handleCheckout = async (priceType: string, quantity = 1) => {
     if (!user) {
@@ -191,15 +172,15 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                {subscriptionStatus?.subscribed ? (
+                {subscribed ? (
                   <div className="space-y-3">
                     <div className="p-3 bg-success/10 rounded-lg text-center">
                       <p className="text-success font-medium">
-                        {subscriptionStatus.trialing ? '✨ Currently on Trial' : '✓ Active Subscription'}
+                        {isTrialing ? '✨ Currently on Trial' : '✓ Active Subscription'}
                       </p>
-                      {subscriptionStatus.trial_end && subscriptionStatus.trialing && (
+                      {trialEnd && isTrialing && (
                         <p className="text-sm text-muted-foreground mt-1">
-                          Trial ends {new Date(subscriptionStatus.trial_end).toLocaleDateString()}
+                          Trial ends {new Date(trialEnd).toLocaleDateString()}
                         </p>
                       )}
                     </div>
@@ -258,10 +239,10 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                {subscriptionStatus && subscriptionStatus.listing_credits > 0 && (
+                {listingCredits > 0 && (
                   <div className="p-3 bg-accent/10 rounded-lg text-center">
                     <p className="text-accent font-medium">
-                      {subscriptionStatus.listing_credits} credit{subscriptionStatus.listing_credits !== 1 ? 's' : ''} available
+                      {listingCredits} credit{listingCredits !== 1 ? 's' : ''} available
                     </p>
                   </div>
                 )}
