@@ -372,29 +372,81 @@ export default function ProfileSetup() {
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
                   <div>
-                    <p className="font-medium">Next: Identity Verification</p>
+                    <p className="font-medium">Next: Identity Verification (Optional)</p>
                     <p className="text-sm text-muted-foreground">
-                      After saving your profile, you'll verify your identity to unlock all platform features.
+                      Verify your identity to unlock all platform features, or skip and do it later.
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Submit Button */}
-            <Button type="submit" size="lg" className="w-full" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  Continue to Verification
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </>
-              )}
-            </Button>
+            {/* Submit Buttons */}
+            <div className="space-y-3">
+              <Button type="submit" size="lg" className="w-full" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Continue to Verification
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="lg" 
+                className="w-full text-muted-foreground"
+                disabled={isSaving}
+                onClick={async () => {
+                  if (!user) return;
+                  
+                  if (!formData.full_name.trim() || !formData.phone.trim() || !formData.city.trim() || !formData.state) {
+                    toast.error('Please fill in the required fields first');
+                    return;
+                  }
+                  
+                  setIsSaving(true);
+                  try {
+                    let avatarUrl = profile?.avatar_url || null;
+                    if (avatarFile) {
+                      avatarUrl = await uploadAvatar();
+                    }
+
+                    const { error } = await supabase
+                      .from('profiles')
+                      .update({
+                        full_name: formData.full_name.trim(),
+                        company_name: formData.company_name.trim() || null,
+                        phone: formData.phone.trim() || null,
+                        bio: formData.bio.trim() || null,
+                        city: formData.city.trim() || null,
+                        state: formData.state || null,
+                        avatar_url: avatarUrl,
+                      })
+                      .eq('user_id', user.id);
+
+                    if (error) throw error;
+
+                    await refreshProfile();
+                    toast.success('Profile saved! You can verify your identity anytime from your profile.');
+                    navigate('/dashboard');
+                  } catch (error) {
+                    console.error('Error updating profile:', error);
+                    toast.error('Failed to update profile');
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+              >
+                Skip verification for now
+              </Button>
+            </div>
           </form>
         </div>
       </div>

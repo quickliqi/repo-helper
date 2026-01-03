@@ -509,10 +509,22 @@ export default function Verify() {
             </Button>
 
             {!isFormComplete && (
-              <p className="text-sm text-center text-destructive">
+              <p className="text-sm text-center text-muted-foreground">
                 Please upload all required documents to submit
               </p>
             )}
+
+            {/* Skip for now option */}
+            <div className="text-center pt-2">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/dashboard')}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                I'll do this later
+              </Button>
+            </div>
 
             <p className="text-xs text-center text-muted-foreground">
               Your documents are encrypted and securely stored. They will only be used for verification purposes.
