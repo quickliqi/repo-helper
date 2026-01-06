@@ -78,20 +78,12 @@ export default function Index() {
                   </Link>
                 </Button>
               ) : (
-                <>
-                  <Button size="lg" asChild className="text-base bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg">
-                    <Link to="/auth?mode=signup">
-                      <Timer className="mr-2 h-5 w-5" />
-                      Find Buyers Now
-                    </Link>
-                  </Button>
-                  <Button size="lg" variant="outline" asChild className="text-base bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
-                    <Link to="/marketplace">
-                      <DollarSign className="mr-2 h-5 w-5" />
-                      Browse Off-Market Deals
-                    </Link>
-                  </Button>
-                </>
+                <Button size="lg" asChild className="text-base bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg">
+                  <Link to="/auth?mode=signup">
+                    <Timer className="mr-2 h-5 w-5" />
+                    Find Buyers Now
+                  </Link>
+                </Button>
               )}
             </div>
 

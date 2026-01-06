@@ -104,20 +104,12 @@ export function Navbar() {
                 </Link>
               </>
             ) : (
-              <>
-                <Link 
-                  to="/marketplace" 
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Browse Deals
-                </Link>
-                <Link 
-                  to="/pricing" 
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Pricing
-                </Link>
-              </>
+              <Link 
+                to="/pricing" 
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Pricing
+              </Link>
             )}
           </div>
 
@@ -283,13 +275,6 @@ export function Navbar() {
                 </>
               ) : (
                 <>
-                  <Link 
-                    to="/marketplace" 
-                    className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Browse Deals
-                  </Link>
                   <Link 
                     to="/pricing" 
                     className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
