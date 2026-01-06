@@ -30,6 +30,7 @@ import MyListings from "./pages/MyListings";
 import BuyerDemand from "./pages/BuyerDemand";
 import Messages from "./pages/Messages";
 import Funnel from "./pages/Funnel";
+import AdLanding from "./pages/AdLanding";
 
 const queryClient = new QueryClient();
 
@@ -194,6 +195,9 @@ function AppRoutes() {
       <Route path="/funnel" element={<Funnel />} />
       <Route path="/start" element={<Funnel />} />
       <Route path="/get-started" element={<Funnel />} />
+      <Route path="/ad" element={<AdLanding />} />
+      <Route path="/lp" element={<AdLanding />} />
+      <Route path="/go" element={<AdLanding />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -165,6 +165,57 @@ export type Database = {
           },
         ]
       }
+      email_leads: {
+        Row: {
+          converted_to_user: boolean | null
+          converted_user_id: string | null
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          landing_page: string | null
+          lead_type: string
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          converted_to_user?: boolean | null
+          converted_user_id?: string | null
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          landing_page?: string | null
+          lead_type: string
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          converted_to_user?: boolean | null
+          converted_user_id?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          landing_page?: string | null
+          lead_type?: string
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       listing_credits: {
         Row: {
           created_at: string

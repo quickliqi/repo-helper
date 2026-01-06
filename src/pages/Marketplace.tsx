@@ -10,8 +10,9 @@ import { Property, PROPERTY_TYPE_LABELS, DEAL_TYPE_LABELS, PropertyType, DealTyp
 import { Search, SlidersHorizontal, X, Loader2 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { MarketplaceGate } from '@/components/marketplace/MarketplaceGate';
 
-export default function Marketplace() {
+function MarketplaceContent() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -243,7 +244,7 @@ export default function Marketplace() {
   return (
     <MainLayout>
       <Helmet>
-        <title>Deal Marketplace | DealMatch - Real Estate Wholesale Deals</title>
+        <title>Deal Marketplace | QuickLiqi - Real Estate Wholesale Deals</title>
         <meta name="description" content="Browse active real estate wholesale deals. Find fix and flip, buy and hold, and wholesale opportunities from verified wholesalers." />
       </Helmet>
 
@@ -255,5 +256,13 @@ export default function Marketplace() {
         renderContent()
       )}
     </MainLayout>
+  );
+}
+
+export default function Marketplace() {
+  return (
+    <MarketplaceGate>
+      <MarketplaceContent />
+    </MarketplaceGate>
   );
 }
