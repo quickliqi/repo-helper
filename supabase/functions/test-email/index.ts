@@ -69,22 +69,22 @@ serve(async (req) => {
     const { type }: TestEmailRequest = await req.json();
     logStep("Testing email type", { type, userEmail: user.email });
 
-    const siteUrl = Deno.env.get("SITE_URL") || "https://dealflow.app";
+    const siteUrl = Deno.env.get("SITE_URL") || "https://quickliqi.lovable.app";
 
     let subject: string;
     let html: string;
 
     switch (type) {
       case "welcome":
-        subject = "🧪 TEST: Welcome to DealMatch!";
+        subject = "🧪 TEST: Welcome to QuickLiqi!";
         html = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
               <strong>⚠️ This is a test email</strong>
             </div>
-            <h1 style="color: #1a365d;">Welcome to DealMatch!</h1>
+            <h1 style="color: #10b981;">Welcome to QuickLiqi!</h1>
             <p>This is a test of the welcome email that new users receive when they sign up.</p>
-            <a href="${siteUrl}/dashboard" style="display: inline-block; background: #1a365d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Go to Dashboard</a>
+            <a href="${siteUrl}/dashboard" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Go to Dashboard</a>
           </div>
         `;
         break;
@@ -126,12 +126,12 @@ serve(async (req) => {
             <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
               <strong>⚠️ This is a test email</strong>
             </div>
-            <h1 style="color: #1a365d;">🏠 New Property Match!</h1>
+            <h1 style="color: #10b981;">🏠 New Property Match!</h1>
             <p>This is a test of the email sent when a property matches an investor's buy box criteria.</p>
             <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h2>Sample Property</h2>
-              <p>123 Main Street, Phoenix, AZ</p>
-              <p style="color: #d69e2e; font-weight: bold;">Match Score: 85%</p>
+              <p>123 Main Street, Atlanta, GA</p>
+              <p style="color: #10b981; font-weight: bold;">Match Score: 85%</p>
             </div>
           </div>
         `;
@@ -144,7 +144,7 @@ serve(async (req) => {
             <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
               <strong>⚠️ This is a test email</strong>
             </div>
-            <h1 style="color: #1a365d;">💬 New Message!</h1>
+            <h1 style="color: #10b981;">💬 New Message!</h1>
             <p>This is a test of the email sent when a user receives a new message about a property.</p>
             <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <p><strong>From:</strong> Test User</p>
@@ -181,7 +181,7 @@ serve(async (req) => {
     }
 
     const emailResponse = await resend.emails.send({
-      from: "DealMatch <onboarding@resend.dev>",
+      from: "QuickLiqi <noreply@send.quickliqi.com>",
       to: [user.email!],
       subject,
       html,
