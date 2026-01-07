@@ -14,12 +14,14 @@ import {
   Activity,
   Loader2,
   ShieldCheck,
-  Shield
+  Shield,
+  Mail
 } from 'lucide-react';
 import { AdminPaymentHistory } from '@/components/admin/AdminPaymentHistory';
 import { AdminSubscriptions } from '@/components/admin/AdminSubscriptions';
 import { AdminAnalytics } from '@/components/admin/AdminAnalytics';
 import { AdminVerifications } from '@/components/admin/AdminVerifications';
+import { AdminEmailTesting } from '@/components/admin/AdminEmailTesting';
 
 interface PlatformStats {
   totalUsers: number;
@@ -196,22 +198,26 @@ export default function Admin() {
 
           {/* Tabs for different views */}
           <Tabs defaultValue="analytics" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+            <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex">
               <TabsTrigger value="analytics" className="gap-2">
                 <TrendingUp className="h-4 w-4" />
-                Analytics
+                <span className="hidden sm:inline">Analytics</span>
               </TabsTrigger>
               <TabsTrigger value="verifications" className="gap-2">
                 <Shield className="h-4 w-4" />
-                Verifications
+                <span className="hidden sm:inline">Verifications</span>
               </TabsTrigger>
               <TabsTrigger value="subscriptions" className="gap-2">
                 <CreditCard className="h-4 w-4" />
-                Subscriptions
+                <span className="hidden sm:inline">Subscriptions</span>
               </TabsTrigger>
               <TabsTrigger value="payments" className="gap-2">
                 <DollarSign className="h-4 w-4" />
-                Payments
+                <span className="hidden sm:inline">Payments</span>
+              </TabsTrigger>
+              <TabsTrigger value="emails" className="gap-2">
+                <Mail className="h-4 w-4" />
+                <span className="hidden sm:inline">Emails</span>
               </TabsTrigger>
             </TabsList>
 
@@ -229,6 +235,10 @@ export default function Admin() {
 
             <TabsContent value="payments">
               <AdminPaymentHistory />
+            </TabsContent>
+
+            <TabsContent value="emails">
+              <AdminEmailTesting />
             </TabsContent>
           </Tabs>
         </div>
