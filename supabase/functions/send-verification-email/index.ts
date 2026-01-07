@@ -79,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
               <li>Full platform access</li>
             </ul>
             <div style="text-align: center; margin-top: 30px;">
-              <a href="https://your-app-url.lovable.app/dashboard" style="background: #059669; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Go to Dashboard</a>
+              <a href="${Deno.env.get("SITE_URL") || "https://dealflow.app"}/dashboard" style="background: #059669; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Go to Dashboard</a>
             </div>
             <p style="color: #6b7280; font-size: 14px; margin-top: 30px; text-align: center;">
               Thank you for being part of the DealMatch community!
@@ -117,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
               <li>Make sure the ID is not expired</li>
             </ul>
             <div style="text-align: center; margin-top: 30px;">
-              <a href="https://your-app-url.lovable.app/verify" style="background: #f59e0b; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Submit New Verification</a>
+              <a href="${Deno.env.get("SITE_URL") || "https://dealflow.app"}/verify" style="background: #f59e0b; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Submit New Verification</a>
             </div>
             <p style="color: #6b7280; font-size: 14px; margin-top: 30px; text-align: center;">
               If you have questions, please contact our support team.
