@@ -884,6 +884,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_views: { Args: { p_property_id: string }; Returns: undefined }
       match_property_to_buy_boxes: {
         Args: { property_id_input: string }
         Returns: undefined
