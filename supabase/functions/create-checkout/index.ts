@@ -82,7 +82,7 @@ serve(async (req) => {
       logStep("Existing customer found", { customerId });
     }
 
-    const origin = req.headers.get("origin") || "https://dealflow.app";
+    const origin = req.headers.get("origin") || "https://quickliqi.lovable.app";
     const isSubscription = priceType === "investor_pro";
 
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {

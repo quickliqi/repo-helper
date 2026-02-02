@@ -7,13 +7,30 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Building2, TrendingUp, Users, AlertCircle } from 'lucide-react';
+import { Building2, TrendingUp, Users, AlertCircle, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { AppRole } from '@/types/database';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Progress } from '@/components/ui/progress';
 
 const emailSchema = z.string().email('Please enter a valid email address');
-const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
+const passwordSchema = z.string().min(8, 'Password must be at least 8 characters');
+
+// Password strength calculation
+const calculatePasswordStrength = (password: string): { score: number; label: string; color: string } => {
+  let score = 0;
+  if (password.length >= 8) score += 25;
+  if (password.length >= 12) score += 15;
+  if (/[A-Z]/.test(password)) score += 20;
+  if (/[a-z]/.test(password)) score += 10;
+  if (/[0-9]/.test(password)) score += 15;
+  if (/[^A-Za-z0-9]/.test(password)) score += 15;
+  
+  if (score < 30) return { score, label: 'Weak', color: 'bg-destructive' };
+  if (score < 60) return { score, label: 'Fair', color: 'bg-yellow-500' };
+  if (score < 80) return { score, label: 'Good', color: 'bg-blue-500' };
+  return { score: Math.min(score, 100), label: 'Strong', color: 'bg-green-500' };
+};
 
 export default function AuthPage() {
   const [searchParams] = useSearchParams();
@@ -22,13 +39,18 @@ export default function AuthPage() {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [selectedRole, setSelectedRole] = useState<AppRole>('investor');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string }>({});
+  const [signupComplete, setSignupComplete] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
 
   const { signUp, signIn } = useAuth();
   const navigate = useNavigate();
+
+  const passwordStrength = calculatePasswordStrength(password);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -106,54 +128,120 @@ export default function AuthPage() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error('Please enter your email address first');
+      return;
+    }
+
+    try {
+      emailSchema.parse(email);
+    } catch {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset`,
+      });
+      
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Password reset instructions sent to your email');
+      }
+    } catch {
+      toast.error('Failed to send reset email');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Show confirmation message after signup
+  if (signupComplete) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8 bg-background">
+        <Card className="w-full max-w-md border-0 shadow-xl text-center">
+          <CardHeader>
+            <div className="flex justify-center mb-4">
+              <div className="rounded-full bg-primary/10 p-4">
+                <CheckCircle2 className="h-12 w-12 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="font-display text-2xl">Check Your Email</CardTitle>
+            <CardDescription className="text-base">
+              We've sent a confirmation email to <strong>{signupEmail}</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Click the link in the email to verify your account and get started.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Didn't receive the email? Check your spam folder or{' '}
+              <button 
+                onClick={() => setSignupComplete(false)}
+                className="text-primary hover:underline"
+              >
+                try again
+              </button>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero p-12 flex-col justify-between">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-12 flex-col justify-between">
         <div>
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
-              <Building2 className="h-6 w-6 text-accent-foreground" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+              <Building2 className="h-6 w-6 text-white" />
             </div>
-            <span className="font-display text-2xl font-semibold text-primary-foreground">
-              DealMatch
+            <span className="font-display text-2xl font-semibold text-white">
+              QuickLiqi
             </span>
           </Link>
         </div>
         
         <div className="space-y-8">
-          <h1 className="font-display text-4xl font-bold text-primary-foreground leading-tight">
+          <h1 className="font-display text-4xl font-bold text-white leading-tight">
             Connect with the right deals,<br />
             at the right time.
           </h1>
-          <p className="text-lg text-primary-foreground/80 max-w-md">
+          <p className="text-lg text-white/80 max-w-md">
             The professional marketplace for real estate wholesalers and investors. 
             Post deals, set your criteria, and let our matching engine do the rest.
           </p>
           
           <div className="grid grid-cols-2 gap-6 pt-8">
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20">
-                <TrendingUp className="h-5 w-5 text-accent" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+                <TrendingUp className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-primary-foreground">Smart Matching</h3>
-                <p className="text-sm text-primary-foreground/70">Auto-match properties to your criteria</p>
+                <h3 className="font-semibold text-white">Smart Matching</h3>
+                <p className="text-sm text-white/70">Auto-match properties to your criteria</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20">
-                <Users className="h-5 w-5 text-accent" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+                <Users className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-primary-foreground">Verified Users</h3>
-                <p className="text-sm text-primary-foreground/70">Connect with serious buyers & sellers</p>
+                <h3 className="font-semibold text-white">Verified Users</h3>
+                <p className="text-sm text-white/70">Connect with serious buyers & sellers</p>
               </div>
             </div>
           </div>
         </div>
 
-        <p className="text-sm text-primary-foreground/60">
+        <p className="text-sm text-white/60">
           Trusted by wholesalers and investors nationwide
         </p>
       </div>
@@ -168,7 +256,7 @@ export default function AuthPage() {
                 <Building2 className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="font-display text-xl font-semibold text-foreground">
-                DealMatch
+                QuickLiqi
               </span>
             </Link>
             
@@ -223,20 +311,49 @@ export default function AuthPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={errors.password ? 'border-destructive' : ''}
-                />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  {mode === 'signin' && (
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={errors.password ? 'border-destructive pr-10' : 'pr-10'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-sm text-destructive flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
                     {errors.password}
                   </p>
+                )}
+                {/* Password strength indicator */}
+                {mode === 'signup' && password.length > 0 && (
+                  <div className="space-y-1.5">
+                    <Progress value={passwordStrength.score} className={`h-1.5 ${passwordStrength.color}`} />
+                    <p className={`text-xs ${passwordStrength.score < 60 ? 'text-muted-foreground' : 'text-green-600'}`}>
+                      Password strength: {passwordStrength.label}
+                    </p>
+                  </div>
                 )}
               </div>
 
