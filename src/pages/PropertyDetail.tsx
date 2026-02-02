@@ -59,7 +59,7 @@ export default function PropertyDetail() {
   const [hasContactedSeller, setHasContactedSeller] = useState(false);
   const [sellerEmail, setSellerEmail] = useState<string | null>(null);
 
-  // Verification check removed - will be re-enabled with proper ID verification service later
+  // Verification status accessed via profile.verification_status or profile.is_verified
 
   useEffect(() => {
     if (id) {
@@ -126,12 +126,9 @@ export default function PropertyDetail() {
 
   const incrementViewCount = async () => {
     if (!id) return;
-    // Increment view count - just update without RPC
+    // Use atomic increment via RPC to avoid race conditions
     try {
-      await supabase
-        .from('properties')
-        .update({ views_count: (property?.views_count || 0) + 1 })
-        .eq('id', id);
+      await supabase.rpc('increment_views', { p_property_id: id });
     } catch (error) {
       // Silently fail - not critical
     }
@@ -522,6 +519,17 @@ export default function PropertyDetail() {
                           <p className="text-sm text-muted-foreground mb-3">Sign in to message the seller</p>
                           <Button asChild className="w-full">
                             <Link to="/auth">Sign In</Link>
+                          </Button>
+                        </div>
+                      ) : !(profile?.verification_status === 'approved' || profile?.is_verified) ? (
+                        <div className="text-center py-4">
+                          <Shield className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground mb-3">Verify your identity to contact sellers</p>
+                          <Button asChild className="w-full">
+                            <Link to="/verify">
+                              <Shield className="h-4 w-4 mr-2" />
+                              Get Verified
+                            </Link>
                           </Button>
                         </div>
                       ) : (

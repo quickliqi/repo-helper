@@ -272,7 +272,54 @@ export default function PostDeal() {
     }
   };
 
-  // Verification check removed - will be re-enabled with proper ID verification service later
+  // Check if user is verified - wholesalers must verify to post deals
+  const isVerified = profile?.verification_status === 'approved' || profile?.is_verified;
+
+  // Gate posting for unverified wholesalers
+  if (!subscriptionLoading && !isVerified) {
+    return (
+      <MainLayout>
+        <div className="bg-background min-h-screen">
+          <div className="border-b border-border bg-card">
+            <div className="container mx-auto px-4 py-8">
+              <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+                Post a New Deal
+              </h1>
+              <p className="text-muted-foreground">
+                List your property and get matched with interested investors automatically
+              </p>
+            </div>
+          </div>
+          <div className="container mx-auto px-4 py-12">
+            <Card className="max-w-md mx-auto text-center">
+              <CardHeader>
+                <div className="flex justify-center mb-4">
+                  <div className="rounded-full bg-muted p-4">
+                    <Shield className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </div>
+                <CardTitle>Verification Required</CardTitle>
+                <CardDescription>
+                  Complete identity verification to post deals on QuickLiqi
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Verified wholesalers build trust with investors and get more responses to their listings.
+                </p>
+                <Button asChild>
+                  <Link to="/verify">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Get Verified
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   // Gate posting for wholesalers without credits
   if (!subscriptionLoading && listingCredits <= 0) {
