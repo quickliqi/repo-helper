@@ -67,8 +67,8 @@ serve(async (req) => {
       : "Start by completing your profile, verifying your identity, and posting your first deal.";
 
     const ctaButton = role === "investor"
-      ? `<a href="https://dealflow.app/profile-setup" class="button">Complete Your Profile</a>`
-      : `<a href="https://dealflow.app/profile-setup" class="button">Get Started</a>`;
+      ? `<a href="https://quickliqi.lovable.app/profile-setup" class="button">Complete Your Profile</a>`
+      : `<a href="https://quickliqi.lovable.app/profile-setup" class="button">Get Started</a>`;
 
     const html = `
       <!DOCTYPE html>
@@ -79,35 +79,35 @@ serve(async (req) => {
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #1a365d 0%, #2d4a7c 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0; }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0; }
           .header h1 { color: white; margin: 0; font-size: 28px; }
           .header p { color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 16px; }
           .content { background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none; }
           .greeting { font-size: 20px; margin-bottom: 20px; }
           .features { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb; }
-          .features h3 { margin-top: 0; color: #1a365d; }
+          .features h3 { margin-top: 0; color: #10b981; }
           .feature { padding: 12px 0; border-bottom: 1px solid #f3f4f6; display: flex; align-items: flex-start; }
           .feature:last-child { border-bottom: none; }
           .check { color: #10b981; margin-right: 12px; font-weight: bold; }
-          .next-step { background: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0; }
-          .next-step strong { color: #92400e; }
-          .button { display: inline-block; background: #1a365d; color: white !important; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 10px; }
+          .next-step { background: #d1fae5; padding: 16px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0; }
+          .next-step strong { color: #065f46; }
+          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 10px; }
           .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
-          .footer a { color: #1a365d; }
+          .footer a { color: #10b981; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to DealMatch!</h1>
+            <h1>Welcome to QuickLiqi!</h1>
             <p>Your real estate investment journey starts here</p>
           </div>
           <div class="content">
             <p class="greeting">Hi ${name || 'there'},</p>
-            <p>Thank you for joining DealMatch! We're excited to have you as part of our community of ${role === 'investor' ? 'real estate investors' : 'wholesalers'}.</p>
+            <p>Thank you for joining QuickLiqi! We're excited to have you as part of our community of ${role === 'investor' ? 'real estate investors' : 'wholesalers'}.</p>
             
             <div class="features">
-              <h3>What you can do on DealMatch:</h3>
+              <h3>What you can do on QuickLiqi:</h3>
               ${roleSpecificContent}
             </div>
             
@@ -122,10 +122,10 @@ serve(async (req) => {
             
             <div class="footer">
               <p>Questions? Just reply to this email - we're here to help!</p>
-              <p>— The DealMatch Team</p>
+              <p>— The QuickLiqi Team</p>
               <p style="margin-top: 20px; font-size: 12px;">
-                <a href="https://dealflow.app/terms">Terms of Service</a> · 
-                <a href="https://dealflow.app/privacy">Privacy Policy</a>
+                <a href="https://quickliqi.lovable.app/terms">Terms of Service</a> · 
+                <a href="https://quickliqi.lovable.app/privacy">Privacy Policy</a>
               </p>
             </div>
           </div>
@@ -135,9 +135,9 @@ serve(async (req) => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "DealMatch <onboarding@resend.dev>",
+      from: "QuickLiqi <noreply@send.quickliqi.com>",
       to: [email],
-      subject: `Welcome to DealMatch, ${name || 'there'}! 🎉`,
+      subject: `Welcome to QuickLiqi, ${name || 'there'}! 🎉`,
       html,
     });
 

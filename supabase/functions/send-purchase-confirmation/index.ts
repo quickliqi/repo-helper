@@ -30,11 +30,12 @@ serve(async (req) => {
     
     logStep("Sending confirmation email", { email, type, amount });
 
+    const siteUrl = "https://quickliqi.lovable.app";
     let subject: string;
     let html: string;
 
     if (type === "subscription") {
-      subject = "Welcome to DealFlow Pro! 🎉";
+      subject = "Welcome to QuickLiqi Pro! 🎉";
       html = `
         <!DOCTYPE html>
         <html>
@@ -42,22 +43,22 @@ serve(async (req) => {
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #059669, #10b981); padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header { background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .header h1 { color: white; margin: 0; font-size: 24px; }
             .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-            .amount { font-size: 32px; font-weight: bold; color: #059669; text-align: center; margin: 20px 0; }
+            .amount { font-size: 32px; font-weight: bold; color: #10b981; text-align: center; margin: 20px 0; }
             .features { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
             .feature { padding: 10px 0; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; }
             .feature:last-child { border-bottom: none; }
             .check { color: #10b981; margin-right: 10px; }
             .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
-            .button { display: inline-block; background: #059669; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+            .button { display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>Welcome to DealFlow Pro!</h1>
+              <h1>Welcome to QuickLiqi Pro!</h1>
             </div>
             <div class="content">
               <p>Thank you for subscribing to <strong>${planName || 'Investor Pro'}</strong>!</p>
@@ -88,12 +89,12 @@ serve(async (req) => {
               </div>
               
               <p style="text-align: center;">
-                <a href="https://dealflow.app/dashboard" class="button">Go to Dashboard</a>
+                <a href="${siteUrl}/dashboard" class="button">Go to Dashboard</a>
               </p>
               
               <div class="footer">
                 <p>If you have any questions, reply to this email and we'll be happy to help.</p>
-                <p>— The DealFlow Team</p>
+                <p>— The QuickLiqi Team</p>
               </div>
             </div>
           </div>
@@ -109,15 +110,15 @@ serve(async (req) => {
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header { background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .header h1 { color: white; margin: 0; font-size: 24px; }
             .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
             .credits-box { background: white; padding: 30px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px solid #e5e7eb; }
-            .credits-number { font-size: 48px; font-weight: bold; color: #6366f1; }
+            .credits-number { font-size: 48px; font-weight: bold; color: #10b981; }
             .credits-label { color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
             .amount { font-size: 18px; color: #374151; margin-top: 10px; }
             .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
-            .button { display: inline-block; background: #6366f1; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+            .button { display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
           </style>
         </head>
         <body>
@@ -134,15 +135,15 @@ serve(async (req) => {
                 <div class="amount">Total: $${(amount / 100).toFixed(2)}</div>
               </div>
               
-              <p>Each credit allows you to post one property listing to the DealFlow marketplace, where investors actively search for deals.</p>
+              <p>Each credit allows you to post one property listing to the QuickLiqi marketplace, where investors actively search for deals.</p>
               
               <p style="text-align: center;">
-                <a href="https://dealflow.app/post-deal" class="button">Post a Deal Now</a>
+                <a href="${siteUrl}/post-deal" class="button">Post a Deal Now</a>
               </p>
               
               <div class="footer">
                 <p>Credits never expire. Use them whenever you're ready!</p>
-                <p>— The DealFlow Team</p>
+                <p>— The QuickLiqi Team</p>
               </div>
             </div>
           </div>
@@ -152,7 +153,7 @@ serve(async (req) => {
     }
 
     const emailResponse = await resend.emails.send({
-      from: "DealFlow <onboarding@resend.dev>",
+      from: "QuickLiqi <noreply@send.quickliqi.com>",
       to: [email],
       subject,
       html,

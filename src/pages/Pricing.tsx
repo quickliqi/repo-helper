@@ -101,7 +101,7 @@ const Pricing = () => {
   return (
     <MainLayout>
       <Helmet>
-        <title>Pricing - DealFlow | Real Estate Investment Platform</title>
+        <title>Pricing - QuickLiqi | Real Estate Investment Platform</title>
         <meta name="description" content="Simple, transparent pricing for investors and wholesalers. Start with a 7-day free trial." />
       </Helmet>
 

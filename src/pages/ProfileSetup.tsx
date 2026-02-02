@@ -186,7 +186,7 @@ export default function ProfileSetup() {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
                 <Building2 className="h-6 w-6 text-primary-foreground" />
               </div>
-              <span className="font-display text-xl font-semibold">DealMatch</span>
+              <span className="font-display text-xl font-semibold">QuickLiqi</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Step 1 of 2</span>
@@ -203,7 +203,7 @@ export default function ProfileSetup() {
           {/* Welcome Card */}
           <div className="text-center mb-8">
             <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-              Welcome to DealMatch!
+              Welcome to QuickLiqi!
             </h1>
             <p className="text-muted-foreground">
               Let's set up your profile so you can start connecting with deals.

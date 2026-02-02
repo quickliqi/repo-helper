@@ -75,7 +75,7 @@ serve(async (req) => {
       logStep("Existing customer found", { customerId });
     }
 
-    const origin = req.headers.get("origin") || "https://clone-friendly-helper.lovable.app";
+    const origin = req.headers.get("origin") || "https://quickliqi.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
