@@ -1,26 +1,49 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { PropertyCard } from '@/components/properties/PropertyCard';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { EnhancedPropertyCard } from '@/components/marketplace/EnhancedPropertyCard';
+import { AdvancedFilters, FilterState, SortOption } from '@/components/marketplace/AdvancedFilters';
+import { SaveSearchDialog } from '@/components/marketplace/SaveSearchDialog';
 import { PullToRefresh } from '@/components/ui/PullToRefresh';
 import { supabase } from '@/integrations/supabase/client';
-import { Property, PROPERTY_TYPE_LABELS, DEAL_TYPE_LABELS, PropertyType, DealType, US_STATES } from '@/types/database';
-import { Search, SlidersHorizontal, X, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Property, PropertyType, DealType, PropertyCondition } from '@/types/database';
+import { Loader2, LayoutGrid, List, Heart } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MarketplaceGate } from '@/components/marketplace/MarketplaceGate';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Link } from 'react-router-dom';
+
+interface SellerInfo {
+  full_name: string;
+  company_name?: string;
+  avatar_url?: string;
+  is_verified: boolean;
+  deals_closed: number;
+  member_since?: string;
+}
 
 function MarketplaceContent() {
+  const { user } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
+  const [sellerInfoMap, setSellerInfoMap] = useState<Record<string, SellerInfo>>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [propertyType, setPropertyType] = useState<string>('all');
-  const [dealType, setDealType] = useState<string>('all');
-  const [state, setState] = useState<string>('all');
-  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
   const isMobile = useIsMobile();
+
+  const [filters, setFilters] = useState<FilterState>({
+    searchQuery: '',
+    propertyTypes: [],
+    dealTypes: [],
+    conditions: [],
+    states: [],
+    minPrice: null,
+    maxPrice: null,
+    minEquity: null,
+    sortBy: 'newest',
+  });
 
   useEffect(() => {
     fetchProperties();
@@ -36,7 +59,25 @@ function MarketplaceContent() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProperties((data as Property[]) || []);
+      const propertiesData = (data as Property[]) || [];
+      setProperties(propertiesData);
+
+      // Fetch seller info for all unique user_ids
+      const uniqueUserIds = [...new Set(propertiesData.map(p => p.user_id))];
+      if (uniqueUserIds.length > 0) {
+        const { data: sellersData } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, company_name, avatar_url, is_verified, deals_closed, member_since')
+          .in('user_id', uniqueUserIds);
+
+        if (sellersData) {
+          const map: Record<string, SellerInfo> = {};
+          sellersData.forEach((seller: any) => {
+            map[seller.user_id] = seller;
+          });
+          setSellerInfoMap(map);
+        }
+      }
     } catch (error) {
       console.error('Error fetching properties:', error);
     } finally {
@@ -48,196 +89,179 @@ function MarketplaceContent() {
     await fetchProperties();
   }, []);
 
-  const filteredProperties = properties.filter((property) => {
-    const matchesSearch = 
-      property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      property.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      property.address.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesType = propertyType === 'all' || property.property_type === propertyType;
-    const matchesDeal = dealType === 'all' || property.deal_type === dealType;
-    const matchesState = state === 'all' || property.state === state;
+  const filteredAndSortedProperties = useMemo(() => {
+    let result = properties.filter((property) => {
+      // Search query
+      const matchesSearch = !filters.searchQuery || 
+        property.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
+        property.city.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
+        property.address.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
+        property.state.toLowerCase().includes(filters.searchQuery.toLowerCase());
+      
+      // Property types
+      const matchesType = filters.propertyTypes.length === 0 || 
+        filters.propertyTypes.includes(property.property_type as PropertyType);
+      
+      // Deal types
+      const matchesDeal = filters.dealTypes.length === 0 || 
+        filters.dealTypes.includes(property.deal_type as DealType);
+      
+      // Conditions
+      const matchesCondition = filters.conditions.length === 0 || 
+        filters.conditions.includes(property.condition as PropertyCondition);
+      
+      // States
+      const matchesState = filters.states.length === 0 || 
+        filters.states.includes(property.state);
+      
+      // Price range
+      const matchesMinPrice = !filters.minPrice || property.asking_price >= filters.minPrice;
+      const matchesMaxPrice = !filters.maxPrice || property.asking_price <= filters.maxPrice;
+      
+      // Equity
+      const matchesEquity = !filters.minEquity || 
+        (property.equity_percentage && property.equity_percentage >= filters.minEquity);
 
-    return matchesSearch && matchesType && matchesDeal && matchesState;
-  });
+      return matchesSearch && matchesType && matchesDeal && matchesCondition && 
+             matchesState && matchesMinPrice && matchesMaxPrice && matchesEquity;
+    });
 
-  const clearFilters = () => {
-    setSearchQuery('');
-    setPropertyType('all');
-    setDealType('all');
-    setState('all');
-  };
+    // Sort
+    switch (filters.sortBy) {
+      case 'oldest':
+        result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case 'price_low':
+        result.sort((a, b) => a.asking_price - b.asking_price);
+        break;
+      case 'price_high':
+        result.sort((a, b) => b.asking_price - a.asking_price);
+        break;
+      case 'equity_high':
+        result.sort((a, b) => (b.equity_percentage || 0) - (a.equity_percentage || 0));
+        break;
+      case 'newest':
+      default:
+        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
 
-  const hasActiveFilters = searchQuery || propertyType !== 'all' || dealType !== 'all' || state !== 'all';
+    return result;
+  }, [properties, filters]);
 
   const renderContent = () => (
     <div className="bg-background min-h-screen">
       {/* Header */}
       <div className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-8">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-            Deal Marketplace
-          </h1>
-          <p className="text-muted-foreground">
-            Browse active wholesale deals from verified sellers
-          </p>
-          {isMobile && (
-            <p className="text-xs text-muted-foreground/60 mt-2">
-              Pull down to refresh
-            </p>
-          )}
+        <div className="container mx-auto px-4 py-6 md:py-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+                Deal Marketplace
+              </h1>
+              <p className="text-muted-foreground text-sm md:text-base">
+                Browse active wholesale deals from verified sellers
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {user && (
+                <Button variant="outline" size="sm" asChild className="gap-2">
+                  <Link to="/saved">
+                    <Heart className="h-4 w-4" />
+                    <span className="hidden sm:inline">Saved</span>
+                  </Link>
+                </Button>
+              )}
+              <div className="hidden md:flex border rounded-lg">
+                <Button
+                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="rounded-r-none"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="rounded-l-none"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="border-b border-border bg-card/50 sticky top-16 z-40">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by address, city, or title..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Filter toggles */}
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowFilters(!showFilters)}
-                className="md:hidden"
-              >
-                <SlidersHorizontal className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
-
-              {/* Desktop filters */}
-              <div className="hidden md:flex gap-2">
-                <Select value={propertyType} onValueChange={setPropertyType}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Property Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={dealType} onValueChange={setDealType}>
-                  <SelectTrigger className="w-36">
-                    <SelectValue placeholder="Deal Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Deals</SelectItem>
-                    {Object.entries(DEAL_TYPE_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={state} onValueChange={setState}>
-                  <SelectTrigger className="w-28">
-                    <SelectValue placeholder="State" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All States</SelectItem>
-                    {US_STATES.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {hasActiveFilters && (
-                <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground">
-                  <X className="h-4 w-4 mr-1" />
-                  Clear
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile filters */}
-          {showFilters && (
-            <div className="md:hidden grid grid-cols-2 gap-2 mt-4 animate-fade-in">
-              <Select value={propertyType} onValueChange={setPropertyType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Property Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={dealType} onValueChange={setDealType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Deal Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Deals</SelectItem>
-                  {Object.entries(DEAL_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={state} onValueChange={setState}>
-                <SelectTrigger className="col-span-2">
-                  <SelectValue placeholder="State" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All States</SelectItem>
-                  {US_STATES.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <AdvancedFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            onSaveSearch={user ? () => setShowSaveDialog(true) : undefined}
+            resultCount={filteredAndSortedProperties.length}
+          />
         </div>
       </div>
 
       {/* Results */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : filteredProperties.length === 0 ? (
+        ) : filteredAndSortedProperties.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-lg text-muted-foreground mb-4">
-              {hasActiveFilters 
-                ? 'No properties match your filters.' 
-                : 'No active properties available yet.'}
+              No properties match your filters.
             </p>
-            {hasActiveFilters && (
-              <Button variant="outline" onClick={clearFilters}>
-                Clear Filters
-              </Button>
-            )}
+            <Button 
+              variant="outline" 
+              onClick={() => setFilters({
+                ...filters,
+                searchQuery: '',
+                propertyTypes: [],
+                dealTypes: [],
+                conditions: [],
+                states: [],
+                minPrice: null,
+                maxPrice: null,
+                minEquity: null,
+              })}
+            >
+              Clear Filters
+            </Button>
           </div>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground mb-6">
-              Showing {filteredProperties.length} {filteredProperties.length === 1 ? 'property' : 'properties'}
+            <p className="text-sm text-muted-foreground mb-4 md:mb-6">
+              Showing {filteredAndSortedProperties.length} {filteredAndSortedProperties.length === 1 ? 'property' : 'properties'}
             </p>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProperties.map((property) => (
-                <PropertyCard key={property.id} property={property} />
+            <div className={`grid gap-4 md:gap-6 ${
+              viewMode === 'grid' 
+                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
+                : 'grid-cols-1'
+            }`}>
+              {filteredAndSortedProperties.map((property) => (
+                <EnhancedPropertyCard 
+                  key={property.id} 
+                  property={property}
+                  sellerInfo={sellerInfoMap[property.user_id]}
+                />
               ))}
             </div>
           </>
         )}
       </div>
+
+      {/* Save Search Dialog */}
+      <SaveSearchDialog
+        isOpen={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        filters={filters}
+      />
     </div>
   );
 

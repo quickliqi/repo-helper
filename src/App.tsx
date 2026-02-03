@@ -31,6 +31,8 @@ import BuyerDemand from "./pages/BuyerDemand";
 import Messages from "./pages/Messages";
 import Funnel from "./pages/Funnel";
 import AdLanding from "./pages/AdLanding";
+import PublicProfile from "./components/profile/PublicProfile";
+import SavedProperties from "./pages/SavedProperties";
 
 const queryClient = new QueryClient();
 
@@ -188,6 +190,15 @@ function AppRoutes() {
           <AdminRoute>
             <Admin />
           </AdminRoute>
+        } 
+      />
+      <Route path="/user/:userId" element={<PublicProfile />} />
+      <Route 
+        path="/saved" 
+        element={
+          <ProtectedRoute>
+            <SavedProperties />
+          </ProtectedRoute>
         } 
       />
       <Route path="/terms" element={<Terms />} />
