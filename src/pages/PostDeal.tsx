@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,8 +38,11 @@ import {
   Loader2,
   Plus,
   Sparkles,
-  Shield
+  Shield,
+  AlertTriangle
 } from 'lucide-react';
+import { validateDeal } from '@/lib/dealValidation';
+import { DealQualityIndicator } from '@/components/deals/DealQualityIndicator';
 
 const PROPERTY_TYPES: PropertyType[] = ['single_family', 'multi_family', 'condo', 'townhouse', 'commercial', 'land', 'mobile_home', 'other'];
 const DEAL_TYPES: DealType[] = ['fix_and_flip', 'buy_and_hold', 'wholesale', 'subject_to', 'seller_finance', 'other'];
@@ -100,6 +103,29 @@ export default function PostDeal() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [highlightInput, setHighlightInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if user is verified - wholesalers must verify to post deals
+  const isVerified = profile?.verification_status === 'approved' || profile?.is_verified;
+
+  // Real-time deal validation
+  const validation = useMemo(() => {
+    return validateDeal({
+      title: formData.title,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      zip_code: formData.zip_code,
+      property_type: formData.property_type,
+      deal_type: formData.deal_type,
+      condition: formData.condition,
+      asking_price: formData.asking_price,
+      arv: formData.arv,
+      repair_estimate: formData.repair_estimate,
+      description: formData.description,
+      imageCount: images.length,
+      isVerified: isVerified || false,
+    });
+  }, [formData, images.length, isVerified]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -174,41 +200,10 @@ export default function PostDeal() {
       return;
     }
 
-    // Validation
-    if (!formData.title.trim()) {
-      toast.error('Please enter a title');
-      return;
-    }
-    if (!formData.address.trim()) {
-      toast.error('Please enter an address');
-      return;
-    }
-    if (!formData.city.trim()) {
-      toast.error('Please enter a city');
-      return;
-    }
-    if (!formData.state) {
-      toast.error('Please select a state');
-      return;
-    }
-    if (!formData.zip_code.trim()) {
-      toast.error('Please enter a zip code');
-      return;
-    }
-    if (!formData.property_type) {
-      toast.error('Please select a property type');
-      return;
-    }
-    if (!formData.deal_type) {
-      toast.error('Please select a deal type');
-      return;
-    }
-    if (!formData.condition) {
-      toast.error('Please select a condition');
-      return;
-    }
-    if (!formData.asking_price) {
-      toast.error('Please enter an asking price');
+    // Use the comprehensive validation
+    if (!validation.isValid) {
+      // Show the first error
+      toast.error(validation.errors[0] || 'Please fix all errors before submitting');
       return;
     }
 
@@ -271,9 +266,6 @@ export default function PostDeal() {
       setIsSubmitting(false);
     }
   };
-
-  // Check if user is verified - wholesalers must verify to post deals
-  const isVerified = profile?.verification_status === 'approved' || profile?.is_verified;
 
   // Gate posting for unverified wholesalers
   if (!subscriptionLoading && !isVerified) {
@@ -647,6 +639,13 @@ export default function PostDeal() {
               </CardContent>
             </Card>
 
+            {/* Deal Quality Indicator - Shows real-time validation */}
+            <DealQualityIndicator
+              validation={validation}
+              askingPrice={parseFloat(formData.asking_price) || 0}
+              arv={parseFloat(formData.arv) || 0}
+            />
+
             {/* Photos */}
             <Card>
               <CardHeader>
@@ -749,33 +748,47 @@ export default function PostDeal() {
             </Card>
 
             {/* Submit */}
-            <div className="flex gap-4">
-              <Button 
-                type="submit" 
-                size="lg" 
-                disabled={isSubmitting}
-                className="flex-1 md:flex-none"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Posting Deal...
-                  </>
-                ) : (
-                  <>
-                    <Building2 className="h-4 w-4 mr-2" />
-                    Post Deal
-                  </>
-                )}
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="lg"
-                onClick={() => navigate('/dashboard')}
-              >
-                Cancel
-              </Button>
+            <div className="space-y-4">
+              {!validation.isValid && validation.errors.length > 0 && (
+                <div className="flex items-start gap-3 bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                  <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-destructive">Cannot post deal yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Please fix the issues shown in the Deal Quality Check above.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-4">
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  disabled={isSubmitting || !validation.isValid}
+                  className="flex-1 md:flex-none"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Posting Deal...
+                    </>
+                  ) : (
+                    <>
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Post Deal
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="lg"
+                  onClick={() => navigate('/dashboard')}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           </div>
         </form>

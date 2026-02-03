@@ -16,7 +16,8 @@ import {
   Sparkles,
   Scan,
   ShieldCheck,
-  MessageSquare
+  MessageSquare,
+  BookOpen
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -102,14 +103,30 @@ export function Navbar() {
                 >
                   Pricing
                 </Link>
+                <Link 
+                  to="/blog" 
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <BookOpen className="h-3.5 w-3.5" />
+                  Learn
+                </Link>
               </>
             ) : (
-              <Link 
-                to="/pricing" 
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Pricing
-              </Link>
+              <>
+                <Link 
+                  to="/pricing" 
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Pricing
+                </Link>
+                <Link 
+                  to="/blog" 
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <BookOpen className="h-3.5 w-3.5" />
+                  Learn
+                </Link>
+              </>
             )}
           </div>
 
@@ -272,6 +289,14 @@ export function Navbar() {
                   >
                     Pricing
                   </Link>
+                  <Link 
+                    to="/blog" 
+                    className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    Learn
+                  </Link>
                 </>
               ) : (
                 <>
@@ -281,6 +306,14 @@ export function Navbar() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Pricing
+                  </Link>
+                  <Link 
+                    to="/blog" 
+                    className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    Learn
                   </Link>
                   <Link 
                     to="/auth" 
