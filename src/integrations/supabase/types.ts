@@ -419,16 +419,20 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          avg_response_time_hours: number | null
           bio: string | null
           city: string | null
           company_name: string | null
           created_at: string
+          deals_closed: number | null
           fcm_token: string | null
           full_name: string
           id: string
           is_actively_buying: boolean | null
           is_verified: boolean | null
+          member_since: string | null
           phone: string | null
+          response_rate: number | null
           state: string | null
           updated_at: string
           user_id: string
@@ -439,16 +443,20 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          avg_response_time_hours?: number | null
           bio?: string | null
           city?: string | null
           company_name?: string | null
           created_at?: string
+          deals_closed?: number | null
           fcm_token?: string | null
           full_name: string
           id?: string
           is_actively_buying?: boolean | null
           is_verified?: boolean | null
+          member_since?: string | null
           phone?: string | null
+          response_rate?: number | null
           state?: string | null
           updated_at?: string
           user_id: string
@@ -459,16 +467,20 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          avg_response_time_hours?: number | null
           bio?: string | null
           city?: string | null
           company_name?: string | null
           created_at?: string
+          deals_closed?: number | null
           fcm_token?: string | null
           full_name?: string
           id?: string
           is_actively_buying?: boolean | null
           is_verified?: boolean | null
+          member_since?: string | null
           phone?: string | null
+          response_rate?: number | null
           state?: string | null
           updated_at?: string
           user_id?: string
@@ -617,6 +629,83 @@ export type Database = {
           request_count?: number | null
           user_id?: string
           window_start?: string | null
+        }
+        Relationships: []
+      }
+      saved_properties: {
+        Row: {
+          created_at: string
+          id: string
+          property_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          property_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          property_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_properties_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_searches: {
+        Row: {
+          created_at: string
+          deal_types: string[] | null
+          id: string
+          last_notified_at: string | null
+          max_price: number | null
+          min_price: number | null
+          name: string
+          notifications_enabled: boolean | null
+          property_types: string[] | null
+          search_query: string | null
+          states: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deal_types?: string[] | null
+          id?: string
+          last_notified_at?: string | null
+          max_price?: number | null
+          min_price?: number | null
+          name: string
+          notifications_enabled?: boolean | null
+          property_types?: string[] | null
+          search_query?: string | null
+          states?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deal_types?: string[] | null
+          id?: string
+          last_notified_at?: string | null
+          max_price?: number | null
+          min_price?: number | null
+          name?: string
+          notifications_enabled?: boolean | null
+          property_types?: string[] | null
+          search_query?: string | null
+          states?: string[] | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -787,6 +876,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          property_id: string | null
+          rated_user_id: string
+          rater_user_id: string
+          rating: number
+          review: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          property_id?: string | null
+          rated_user_id: string
+          rater_user_id: string
+          rating: number
+          review?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          property_id?: string | null
+          rated_user_id?: string
+          rater_user_id?: string
+          rating?: number
+          review?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_ratings_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -873,6 +1000,8 @@ export type Database = {
         }
         Returns: number
       }
+      get_user_avg_rating: { Args: { p_user_id: string }; Returns: number }
+      get_user_rating_count: { Args: { p_user_id: string }; Returns: number }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
