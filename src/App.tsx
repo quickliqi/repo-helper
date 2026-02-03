@@ -33,6 +33,8 @@ import Funnel from "./pages/Funnel";
 import AdLanding from "./pages/AdLanding";
 import PublicProfile from "./components/profile/PublicProfile";
 import SavedProperties from "./pages/SavedProperties";
+import Blog from "./pages/Blog";
+import BlogArticle from "./pages/BlogArticle";
 
 const queryClient = new QueryClient();
 
@@ -209,6 +211,8 @@ function AppRoutes() {
       <Route path="/ad" element={<AdLanding />} />
       <Route path="/lp" element={<AdLanding />} />
       <Route path="/go" element={<AdLanding />} />
+      <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:slug" element={<BlogArticle />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
