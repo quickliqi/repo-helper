@@ -24,7 +24,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
+  // Use ANON_KEY for user token validation
+  const supabaseAuth = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+  );
+
+  // Use SERVICE_ROLE_KEY for database operations (bypasses RLS)
+  const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     { auth: { persistSession: false } }
@@ -37,14 +44,14 @@ serve(async (req) => {
     if (!authHeader) throw new Error("No authorization header");
 
     const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
+    const { data } = await supabaseAuth.auth.getUser(token);
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated");
 
     logStep("User authenticated", { email: user.email });
 
     // Check rate limit
-    const { data: rateLimitOk, error: rlError } = await supabaseClient.rpc("check_rate_limit", {
+    const { data: rateLimitOk, error: rlError } = await supabaseAdmin.rpc("check_rate_limit", {
       p_user_id: user.id,
       p_function_name: "scrape-subscription-checkout",
       p_max_requests: RATE_LIMIT_MAX,
