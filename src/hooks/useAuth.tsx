@@ -3,16 +3,20 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AppRole, Profile } from '@/types/database';
 
+const ACTIVE_ROLE_KEY = 'quickliqi_active_role';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   role: AppRole | null;
+  allRoles: AppRole[];
   isLoading: boolean;
   signUp: (email: string, password: string, fullName: string, role: AppRole) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  switchRole: (newRole: AppRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [allRoles, setAllRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
@@ -37,15 +42,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(profileData as Profile);
       }
 
-      // Fetch role
-      const { data: roleData } = await supabase
+      // Fetch ALL roles for the user
+      const { data: rolesData } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .eq('user_id', userId);
       
-      if (roleData) {
-        setRole(roleData.role as AppRole);
+      if (rolesData && rolesData.length > 0) {
+        const roles = rolesData.map(r => r.role as AppRole);
+        setAllRoles(roles);
+        
+        // Check if there's a saved active role in localStorage
+        const savedRole = localStorage.getItem(ACTIVE_ROLE_KEY) as AppRole | null;
+        
+        if (savedRole && roles.includes(savedRole)) {
+          setRole(savedRole);
+        } else {
+          // Default to first role (or admin if available for priority)
+          const defaultRole = roles.includes('admin') ? 'admin' : roles[0];
+          setRole(defaultRole);
+          localStorage.setItem(ACTIVE_ROLE_KEY, defaultRole);
+        }
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -67,6 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
           setRole(null);
+          setAllRoles([]);
+          localStorage.removeItem(ACTIVE_ROLE_KEY);
         }
         setIsLoading(false);
       }
@@ -156,6 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setRole(null);
+    setAllRoles([]);
+    localStorage.removeItem(ACTIVE_ROLE_KEY);
   };
 
   const refreshProfile = async () => {
@@ -164,17 +185,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const switchRole = (newRole: AppRole) => {
+    if (allRoles.includes(newRole)) {
+      setRole(newRole);
+      localStorage.setItem(ACTIVE_ROLE_KEY, newRole);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       session, 
       profile, 
-      role, 
+      role,
+      allRoles,
       isLoading, 
       signUp, 
       signIn, 
       signOut,
       refreshProfile,
+      switchRole,
     }}>
       {children}
     </AuthContext.Provider>
