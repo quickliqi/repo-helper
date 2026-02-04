@@ -25,24 +25,63 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
+    // Basic health check (useful for quickly verifying reachability)
+    if (req.method === "GET") {
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Validate cross-project API key
-    const crossProjectKey = req.headers.get("x-cross-project-key");
-    const expectedKey = Deno.env.get("CROSS_PROJECT_API_KEY");
+    // Supports either:
+    //  - x-cross-project-key: <secret>
+    //  - Authorization: Bearer <secret>
+    const headerKey = req.headers.get("x-cross-project-key");
+    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
+    const bearerKey = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : null;
+    const providedKey = headerKey ?? bearerKey;
+
+    // Prefer QUICKLIQI_API_SECRET (new name), but keep backward compatibility
+    const expectedKey = Deno.env.get("QUICKLIQI_API_SECRET") ?? Deno.env.get("CROSS_PROJECT_API_KEY");
 
     if (!expectedKey) {
       throw new Error("CROSS_PROJECT_API_KEY not configured");
     }
 
-    if (crossProjectKey !== expectedKey) {
-      logStep("Invalid API key");
+    if (!providedKey || providedKey !== expectedKey) {
+      logStep("Invalid API key", {
+        headerPresent: Boolean(providedKey),
+        headerLength: providedKey?.length ?? 0,
+        source: headerKey ? "x-cross-project-key" : bearerKey ? "authorization_bearer" : "none",
+      });
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { action, email, user_id } = await req.json();
-    logStep("Request received", { action, email, user_id });
+    // Parse request body ONCE (the body stream can only be read once)
+    let payload: any;
+    try {
+      payload = await req.json();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      logStep("Invalid JSON body", { message: msg });
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const action = payload?.action;
+    const email = payload?.email;
+    const user_id = payload?.user_id;
+    logStep("Request received", {
+      action,
+      hasEmail: Boolean(email),
+      hasUserId: Boolean(user_id),
+      payloadKeys: payload && typeof payload === "object" ? Object.keys(payload).slice(0, 12) : [],
+    });
 
     switch (action) {
       case "verify_user": {
@@ -193,7 +232,15 @@ serve(async (req) => {
           throw new Error("user_id is required for sync_from_external");
         }
 
-        const { data: syncData } = await req.json();
+        // Accept multiple common shapes from external callers
+        const syncData =
+          payload?.data ?? payload?.syncData ?? payload?.sync_data ?? payload?.payload ?? null;
+        logStep("Sync payload", {
+          userId: user_id,
+          hasSyncData: Boolean(syncData),
+          syncKeys:
+            syncData && typeof syncData === "object" ? Object.keys(syncData).slice(0, 12) : [],
+        });
         
         // Update profile if provided
         if (syncData?.profile) {
