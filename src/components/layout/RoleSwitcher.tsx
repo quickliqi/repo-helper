@@ -17,12 +17,14 @@ const ROLE_LABELS: Record<AppRole, string> = {
 export function RoleSwitcher() {
   const { role, allRoles, switchRole } = useAuth();
 
+  // Calculate derived values after hooks
+  const hasMultipleRoles = allRoles && allRoles.length > 1;
+  const otherRoles = hasMultipleRoles ? allRoles.filter(r => r !== role) : [];
+
   // Only show if user has more than one role
-  if (!allRoles || allRoles.length <= 1) {
+  if (!hasMultipleRoles) {
     return null;
   }
-
-  const otherRoles = allRoles.filter(r => r !== role);
 
   return (
     <DropdownMenuSub>
