@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Building2, TrendingUp, Users, AlertCircle, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { Building2, TrendingUp, Users, AlertCircle, Eye, EyeOff, CheckCircle2, Plus } from 'lucide-react';
 import { AppRole } from '@/types/database';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -16,7 +16,6 @@ import { Progress } from '@/components/ui/progress';
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(8, 'Password must be at least 8 characters');
 
-// Password strength calculation
 const calculatePasswordStrength = (password: string): { score: number; label: string; color: string } => {
   let score = 0;
   if (password.length >= 8) score += 25;
@@ -32,11 +31,18 @@ const calculatePasswordStrength = (password: string): { score: number; label: st
   return { score: Math.min(score, 100), label: 'Strong', color: 'bg-green-500' };
 };
 
+const ROLE_LABELS: Record<AppRole, string> = {
+  investor: 'Investor',
+  wholesaler: 'Wholesaler',
+  admin: 'Admin',
+};
+
 export default function AuthPage() {
   const [searchParams] = useSearchParams();
   const isSignUp = searchParams.get('mode') === 'signup';
-  const [mode, setMode] = useState<'signin' | 'signup'>(isSignUp ? 'signup' : 'signin');
+  const addRoleParam = searchParams.get('addRole') as AppRole | null;
   
+  const [mode, setMode] = useState<'signin' | 'signup'>(isSignUp ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,10 +52,11 @@ export default function AuthPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string }>({});
   const [signupComplete, setSignupComplete] = useState(false);
   const [signupEmail, setSignupEmail] = useState('');
+  const [showAddRolePrompt, setShowAddRolePrompt] = useState(false);
+  const [pendingRole, setPendingRole] = useState<AppRole | null>(addRoleParam);
 
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, refreshProfile } = useAuth();
   const navigate = useNavigate();
-
   const passwordStrength = calculatePasswordStrength(password);
 
   const validateForm = () => {
@@ -79,11 +86,56 @@ export default function AuthPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const addRoleToAccount = async (userId: string, roleToAdd: AppRole) => {
+    const { data: existingRole } = await supabase
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('role', roleToAdd)
+      .maybeSingle();
+    
+    if (existingRole) {
+      toast.info(`You already have the ${ROLE_LABELS[roleToAdd]} role!`);
+      return false;
+    }
+    
+    const { error } = await supabase
+      .from('user_roles')
+      .insert({ user_id: userId, role: roleToAdd });
+    
+    if (error) {
+      console.error('Error adding role:', error);
+      toast.error('Failed to add role. Please try again.');
+      return false;
+    }
+    
+    if (roleToAdd === 'investor') {
+      await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: userId,
+          status: 'trialing',
+          plan_type: 'investor_pro',
+          trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+    }
+    
+    if (roleToAdd === 'wholesaler') {
+      await supabase
+        .from('listing_credits')
+        .insert({ user_id: userId, credits_remaining: 1, credits_used: 0 });
+    }
+    
+    await refreshProfile();
+    toast.success(`${ROLE_LABELS[roleToAdd]} role added to your account!`);
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-
     setIsLoading(true);
 
     try {
@@ -91,18 +143,16 @@ export default function AuthPage() {
         const { error } = await signUp(email, password, fullName, selectedRole);
         if (error) {
           if (error.message.includes('already registered')) {
-            toast.error('This email is already registered. Please sign in instead.');
+            setShowAddRolePrompt(true);
+            setPendingRole(selectedRole);
+            setMode('signin');
+            toast.info('This email already has an account. Sign in to add a new role.');
           } else {
             toast.error(error.message);
           }
         } else {
-          // Send welcome email in background
           supabase.functions.invoke('send-welcome-email', {
-            body: {
-              email,
-              name: fullName,
-              role: selectedRole,
-            },
+            body: { email, name: fullName, role: selectedRole },
           }).catch(err => console.error('Failed to send welcome email:', err));
           
           toast.success('Account created! Let\'s set up your profile.');
@@ -117,7 +167,19 @@ export default function AuthPage() {
             toast.error(error.message);
           }
         } else {
-          toast.success('Welcome back!');
+          if (pendingRole) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const added = await addRoleToAccount(user.id, pendingRole);
+              if (added) {
+                toast.success(`Welcome back! ${ROLE_LABELS[pendingRole]} role has been added.`);
+              }
+            }
+            setPendingRole(null);
+            setShowAddRolePrompt(false);
+          } else {
+            toast.success('Welcome back!');
+          }
           navigate('/dashboard');
         }
       }
@@ -159,7 +221,6 @@ export default function AuthPage() {
     }
   };
 
-  // Show confirmation message after signup
   if (signupComplete) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8 bg-background">
@@ -250,7 +311,6 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <Card className="w-full max-w-md border-0 shadow-xl">
           <CardHeader className="text-center pb-2">
-            {/* Mobile logo */}
             <Link to="/" className="flex items-center justify-center gap-2 lg:hidden mb-6">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Building2 className="h-5 w-5 text-primary-foreground" />
@@ -261,16 +321,44 @@ export default function AuthPage() {
             </Link>
             
             <CardTitle className="font-display text-2xl">
-              {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+              {showAddRolePrompt 
+                ? `Add ${pendingRole ? ROLE_LABELS[pendingRole] : ''} Role`
+                : mode === 'signup' 
+                  ? 'Create your account' 
+                  : 'Welcome back'
+              }
             </CardTitle>
             <CardDescription>
-              {mode === 'signup' 
-                ? 'Start matching with real estate opportunities today'
-                : 'Sign in to access your dashboard'
+              {showAddRolePrompt
+                ? 'Sign in to add a new role to your existing account'
+                : mode === 'signup' 
+                  ? 'Start matching with real estate opportunities today'
+                  : 'Sign in to access your dashboard'
               }
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {showAddRolePrompt && pendingRole && (
+              <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20">
+                  <Plus className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Adding {ROLE_LABELS[pendingRole]} role</p>
+                  <p className="text-xs text-muted-foreground">Sign in to add this role to your account</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowAddRolePrompt(false);
+                    setPendingRole(null);
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === 'signup' && (
                 <div className="space-y-2">
@@ -346,7 +434,6 @@ export default function AuthPage() {
                     {errors.password}
                   </p>
                 )}
-                {/* Password strength indicator */}
                 {mode === 'signup' && password.length > 0 && (
                   <div className="space-y-1.5">
                     <Progress value={passwordStrength.score} className={`h-1.5 ${passwordStrength.color}`} />
@@ -394,9 +481,11 @@ export default function AuthPage() {
               <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                 {isLoading 
                   ? 'Please wait...' 
-                  : mode === 'signup' 
-                    ? 'Create Account' 
-                    : 'Sign In'
+                  : showAddRolePrompt
+                    ? `Sign In & Add ${pendingRole ? ROLE_LABELS[pendingRole] : ''} Role`
+                    : mode === 'signup' 
+                      ? 'Create Account' 
+                      : 'Sign In'
                 }
               </Button>
             </form>
@@ -417,7 +506,11 @@ export default function AuthPage() {
                   <>
                     Don't have an account?{' '}
                     <button 
-                      onClick={() => setMode('signup')}
+                      onClick={() => {
+                        setMode('signup');
+                        setShowAddRolePrompt(false);
+                        setPendingRole(null);
+                      }}
                       className="font-medium text-primary hover:underline"
                     >
                       Create one
