@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.test-email]
 verify_jwt = false
+
+[functions.cross-project-sync]
+verify_jwt = false
