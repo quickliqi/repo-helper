@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { SubscriptionBadge } from '@/components/subscription/SubscriptionGate';
+import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { Badge } from '@/components/ui/badge';
 import { 
   Building2, 
@@ -203,6 +204,7 @@ export function Navbar() {
                         </Link>
                       </DropdownMenuItem>
                     )}
+                    <RoleSwitcher />
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
