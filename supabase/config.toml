@@ -7,37 +7,37 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.create-checkout]
-verify_jwt = true
+verify_jwt = false
 
 [functions.check-subscription]
-verify_jwt = true
+verify_jwt = false
 
 [functions.customer-portal]
-verify_jwt = true
+verify_jwt = false
 
 [functions.buy-listing-credits]
-verify_jwt = true
+verify_jwt = false
 
 [functions.use-listing-credit]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-purchase-confirmation]
 verify_jwt = false
 
 [functions.scrape-facebook-deals]
-verify_jwt = true
+verify_jwt = false
 
 [functions.scrape-subscription-checkout]
-verify_jwt = true
+verify_jwt = false
 
 [functions.check-scrape-subscription]
-verify_jwt = true
+verify_jwt = false
 
 [functions.save-scraped-deal]
-verify_jwt = true
+verify_jwt = false
 
 [functions.convert-scrape-to-listing]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-verification-email]
 verify_jwt = false

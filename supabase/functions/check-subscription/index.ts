@@ -20,7 +20,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
+  // Use ANON_KEY for user token validation
+  const supabaseAuth = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+  );
+
+  // Use SERVICE_ROLE_KEY for database operations (bypasses RLS)
+  const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     { auth: { persistSession: false } }
@@ -36,7 +43,7 @@ serve(async (req) => {
     if (!authHeader) throw new Error("No authorization header provided");
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     
     const user = userData.user;
@@ -45,7 +52,7 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     // Check rate limit
-    const { data: rateLimitOk, error: rlError } = await supabaseClient.rpc("check_rate_limit", {
+    const { data: rateLimitOk, error: rlError } = await supabaseAdmin.rpc("check_rate_limit", {
       p_user_id: user.id,
       p_function_name: "check-subscription",
       p_max_requests: RATE_LIMIT_MAX,
@@ -73,7 +80,7 @@ serve(async (req) => {
       logStep("No Stripe customer found");
       
       // Check listing credits from database
-      const { data: credits } = await supabaseClient
+      const { data: credits } = await supabaseAdmin
         .from("listing_credits")
         .select("credits_remaining")
         .eq("user_id", user.id)
@@ -124,7 +131,7 @@ serve(async (req) => {
     }
 
     // Get listing credits
-    const { data: credits } = await supabaseClient
+    const { data: credits } = await supabaseAdmin
       .from("listing_credits")
       .select("credits_remaining")
       .eq("user_id", user.id)
