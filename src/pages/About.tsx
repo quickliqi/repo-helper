@@ -5,6 +5,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
  import { Target, Users, Zap, Shield, Heart, TrendingUp } from "lucide-react";
  import { Button } from "@/components/ui/button";
  import { Link } from "react-router-dom";
+import founderImage from "@/assets/founder-damien-thomas.png";
  
  const About = () => {
    return (
@@ -114,9 +115,11 @@ import { MainLayout } from "@/components/layout/MainLayout";
              <Card className="overflow-hidden">
                <CardContent className="p-8 md:p-12">
                  <div className="flex flex-col md:flex-row gap-8 items-center">
-                   <div className="w-40 h-40 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0">
-                     <span className="text-5xl font-bold text-primary-foreground">DT</span>
-                   </div>
+                  <img 
+                    src={founderImage} 
+                    alt="Damien Thomas - Founder & CEO of QuickLiqi" 
+                    className="w-40 h-40 rounded-full object-cover shrink-0 border-4 border-primary/20 shadow-lg"
+                  />
                    <div>
                      <p className="text-lg text-muted-foreground mb-4">
                        "I started QuickLiqi because I was tired of watching great deals fall through. 
