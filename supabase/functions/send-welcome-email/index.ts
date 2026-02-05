@@ -24,7 +24,8 @@ serve(async (req) => {
 
     console.log("[SEND-WELCOME-EMAIL] Sending welcome email to:", email, "role:", role);
 
-    const roleSpecificContent = role === "investor" 
+    const siteUrl = "https://quickliqi.com";
+    const featuresList = role === "investor"
       ? `
         <div class="feature">
           <span class="check">✓</span>
@@ -40,7 +41,7 @@ serve(async (req) => {
         </div>
         <div class="feature">
           <span class="check">✓</span>
-          <span>Browse the marketplace for off-market deals</span>
+          <span>Use AI Hunter to source deals from external channels</span>
         </div>
       `
       : `
@@ -58,17 +59,9 @@ serve(async (req) => {
         </div>
         <div class="feature">
           <span class="check">✓</span>
-          <span>Track views and interest on your listings</span>
+          <span>Manage your listings with ease and transparency</span>
         </div>
       `;
-
-    const nextStepText = role === "investor"
-      ? "Start by completing your profile and verifying your identity to unlock full platform access."
-      : "Start by completing your profile, verifying your identity, and posting your first deal.";
-
-    const ctaButton = role === "investor"
-      ? `<a href="https://quickliqi.lovable.app/profile-setup" class="button">Complete Your Profile</a>`
-      : `<a href="https://quickliqi.lovable.app/profile-setup" class="button">Get Started</a>`;
 
     const html = `
       <!DOCTYPE html>
@@ -89,11 +82,8 @@ serve(async (req) => {
           .feature { padding: 12px 0; border-bottom: 1px solid #f3f4f6; display: flex; align-items: flex-start; }
           .feature:last-child { border-bottom: none; }
           .check { color: #10b981; margin-right: 12px; font-weight: bold; }
-          .next-step { background: #d1fae5; padding: 16px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0; }
-          .next-step strong { color: #065f46; }
           .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 10px; }
           .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
-          .footer a { color: #10b981; }
         </style>
       </head>
       <body>
@@ -108,26 +98,18 @@ serve(async (req) => {
             
             <div class="features">
               <h3>What you can do on QuickLiqi:</h3>
-              ${roleSpecificContent}
+              ${featuresList}
             </div>
-            
-            <div class="next-step">
-              <strong>Next Step:</strong>
-              <p style="margin: 8px 0 0 0;">${nextStepText}</p>
+
+            <p>Get started now by logging into your dashboard:</p>
+            <div style="text-align: center;">
+              <a href="${siteUrl}/dashboard" class="button">Go to Dashboard</a>
             </div>
+
+            <p style="margin-top: 30px;">If you have any questions, simply reply to this email. We're here to help you close more deals.</p>
             
-            <p style="text-align: center;">
-              ${ctaButton}
-            </p>
-            
-            <div class="footer">
-              <p>Questions? Just reply to this email - we're here to help!</p>
-              <p>— The QuickLiqi Team</p>
-              <p style="margin-top: 20px; font-size: 12px;">
-                <a href="https://quickliqi.lovable.app/terms">Terms of Service</a> · 
-                <a href="https://quickliqi.lovable.app/privacy">Privacy Policy</a>
-              </p>
-            </div>
+            <p>Happy deal making!<br />
+            — The QuickLiqi Team</p>
           </div>
         </div>
       </body>

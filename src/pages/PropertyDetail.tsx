@@ -17,19 +17,20 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { 
-  Property, 
+import { JVSignDialog } from '@/components/agreements/JVSignDialog';
+import {
+  Property,
   Profile,
-  PROPERTY_TYPE_LABELS, 
-  DEAL_TYPE_LABELS, 
-  CONDITION_LABELS, 
-  STATUS_LABELS 
+  PROPERTY_TYPE_LABELS,
+  DEAL_TYPE_LABELS,
+  CONDITION_LABELS,
+  STATUS_LABELS
 } from '@/types/database';
-import { 
-  MapPin, 
-  Home, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  MapPin,
+  Home,
+  DollarSign,
+  TrendingUp,
   Calendar,
   Ruler,
   BedDouble,
@@ -58,6 +59,8 @@ export default function PropertyDetail() {
   const [isSaved, setIsSaved] = useState(false);
   const [hasContactedSeller, setHasContactedSeller] = useState(false);
   const [sellerEmail, setSellerEmail] = useState<string | null>(null);
+  const [hasSignedJV, setHasSignedJV] = useState(false);
+  const [showJVSignDialog, setShowJVSignDialog] = useState(false);
 
   // Verification status accessed via profile.verification_status or profile.is_verified
 
@@ -71,6 +74,7 @@ export default function PropertyDetail() {
   useEffect(() => {
     if (id && user && property) {
       checkExistingContact();
+      checkJVSigned();
     }
   }, [id, user, property]);
 
@@ -93,7 +97,7 @@ export default function PropertyDetail() {
           .select('full_name, company_name, city, state, is_verified, verification_status')
           .eq('user_id', data.user_id)
           .maybeSingle();
-        
+
         setSeller(sellerData as Profile);
       }
     } catch (error) {
@@ -106,7 +110,7 @@ export default function PropertyDetail() {
 
   const checkExistingContact = async () => {
     if (!id || !user || !property) return;
-    
+
     try {
       // Check for existing conversation
       const { data } = await supabase
@@ -115,12 +119,30 @@ export default function PropertyDetail() {
         .eq('property_id', id)
         .eq('investor_id', user.id)
         .maybeSingle();
-      
+
       if (data) {
         setHasContactedSeller(true);
       }
     } catch (error) {
       console.error('Error checking contact status:', error);
+    }
+  };
+
+  const checkJVSigned = async () => {
+    if (!id || !user) return;
+    try {
+      const { data } = await (supabase as any)
+        .from('jv_agreements')
+        .select('id')
+        .eq('property_id', id)
+        .eq('investor_id', user.id)
+        .maybeSingle();
+
+      if (data) {
+        setHasSignedJV(true);
+      }
+    } catch (error) {
+      console.error('Error checking JV status:', error);
     }
   };
 
@@ -211,6 +233,25 @@ export default function PropertyDetail() {
     }
   };
 
+  const handleInitiateContact = () => {
+    if (!user) {
+      toast.error('Please sign in to contact the seller');
+      return;
+    }
+
+    if (role === 'wholesaler') {
+      toast.error('Wholesalers cannot contact other wholesalers for deals');
+      return;
+    }
+
+    if (!hasSignedJV) {
+      setShowJVSignDialog(true);
+      return;
+    }
+
+    setShowContactDialog(true);
+  };
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -281,8 +322,8 @@ export default function PropertyDetail() {
               {/* Image Gallery */}
               <div className="rounded-xl overflow-hidden bg-muted aspect-video">
                 {property.image_urls && property.image_urls.length > 0 ? (
-                  <img 
-                    src={property.image_urls[0]} 
+                  <img
+                    src={property.image_urls[0]}
                     alt={property.title}
                     className="w-full h-full object-cover"
                   />
@@ -457,7 +498,7 @@ export default function PropertyDetail() {
                     {hasContactedSeller ? 'Conversation Started' : 'Message Seller'}
                   </CardTitle>
                   <CardDescription>
-                    {hasContactedSeller 
+                    {hasContactedSeller
                       ? 'Continue your conversation securely on the platform'
                       : 'Send a secure message to connect with this wholesaler'
                     }
@@ -471,7 +512,7 @@ export default function PropertyDetail() {
                         <CheckCircle2 className="h-5 w-5 text-green-600" />
                         <span className="text-sm text-green-700 dark:text-green-400">Conversation active</span>
                       </div>
-                      
+
                       <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                         <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                           <span className="text-lg font-semibold text-primary">
@@ -485,14 +526,14 @@ export default function PropertyDetail() {
                           )}
                         </div>
                       </div>
-                      
+
                       <Button asChild className="w-full" size="lg">
                         <Link to="/messages">
                           <MessageSquare className="h-4 w-4 mr-2" />
                           View Conversation
                         </Link>
                       </Button>
-                      
+
                       {seller.city && seller.state && (
                         <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                           <MapPin className="h-5 w-5 text-muted-foreground" />
@@ -533,10 +574,10 @@ export default function PropertyDetail() {
                           </Button>
                         </div>
                       ) : (
-                        <Button 
-                          className="w-full" 
+                        <Button
+                          className="w-full"
                           size="lg"
-                          onClick={() => setShowContactDialog(true)}
+                          onClick={handleInitiateContact}
                         >
                           <MessageSquare className="h-4 w-4 mr-2" />
                           Send Message
@@ -623,6 +664,24 @@ export default function PropertyDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {property && (
+        <JVSignDialog
+          isOpen={showJVSignDialog}
+          onClose={() => setShowJVSignDialog(false)}
+          onSuccess={() => {
+            setHasSignedJV(true);
+            setShowContactDialog(true);
+          }}
+          property={{
+            id: property.id,
+            address: property.address,
+            wholesaler_id: property.user_id,
+            wholesaler_name: seller?.full_name || 'Wholesaler'
+          }}
+          investorName={profile?.full_name || user?.email?.split('@')[0] || 'Investor'}
+        />
+      )}
     </MainLayout>
   );
 }

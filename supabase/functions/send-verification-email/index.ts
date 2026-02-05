@@ -36,7 +36,7 @@ serve(async (req) => {
     );
 
     const { data: userData, error: userError } = await supabaseClient.auth.admin.getUserById(user_id);
-    
+
     if (userError || !userData.user?.email) {
       logStep("Failed to get user email", { error: userError?.message });
       throw new Error("Could not find user email");
@@ -51,18 +51,16 @@ serve(async (req) => {
       .single();
 
     const userName = profile?.full_name || "there";
+    const siteUrl = "https://quickliqi.com";
 
     logStep("Sending to user", { email: userEmail, name: userName });
 
     const isApproved = status === "approved";
-    const siteUrl = "https://quickliqi.lovable.app";
-
     const subject = isApproved
       ? "✅ Your QuickLiqi Account is Now Verified!"
       : "⚠️ Verification Update - QuickLiqi";
 
-    const html = isApproved
-      ? `
+    const approvedHtml = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -111,10 +109,6 @@ serve(async (req) => {
                 <span class="check">✓</span>
                 <span>Post deals and receive match notifications</span>
               </div>
-              <div class="feature">
-                <span class="check">✓</span>
-                <span>Access exclusive verified-only features</span>
-              </div>
             </div>
             
             <p style="text-align: center;">
@@ -129,8 +123,9 @@ serve(async (req) => {
         </div>
       </body>
       </html>
-    `
-      : `
+    `;
+
+    const rejectedHtml = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -149,7 +144,6 @@ serve(async (req) => {
           .tip-number { background: #10b981; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0; }
           .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; }
           .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
-          .footer a { color: #10b981; }
         </style>
       </head>
       <body>
@@ -181,10 +175,6 @@ serve(async (req) => {
                 <span class="tip-number">3</span>
                 <span>Make sure all text on your ID is clearly readable</span>
               </div>
-              <div class="tip">
-                <span class="tip-number">4</span>
-                <span>For your selfie, hold your ID next to your face so both are visible</span>
-              </div>
             </div>
             
             <p style="text-align: center;">
@@ -205,7 +195,7 @@ serve(async (req) => {
       from: "QuickLiqi <noreply@send.quickliqi.com>",
       to: [userEmail],
       subject,
-      html,
+      html: isApproved ? approvedHtml : rejectedHtml,
     });
 
     logStep("Email sent successfully", { response: emailResponse });

@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Check, Zap, Building2, CreditCard, Shield, Clock, Scan } from 'lucide-react';
+import { Check, Zap, Building2, Shield, Clock, Scan, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 // Validate that a URL is from Stripe's trusted domains
 const validateStripeUrl = (url: string): boolean => {
   try {
     const parsed = new URL(url);
-    return parsed.hostname === 'checkout.stripe.com' || 
-           parsed.hostname === 'billing.stripe.com' ||
-           parsed.hostname.endsWith('.stripe.com');
+    return parsed.hostname === 'checkout.stripe.com' ||
+      parsed.hostname === 'billing.stripe.com' ||
+      parsed.hostname.endsWith('.stripe.com');
   } catch {
     return false;
   }
@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 
 const Pricing = () => {
   const { user, role } = useAuth();
-  const { isSubscribed, isTrialing, trialEnd, listingCredits } = useSubscription();
+  const { isSubscribed, isTrialing, trialEnd, listingCredits, planTier } = useSubscription();
   const [loading, setLoading] = useState<string | null>(null);
 
   const subscribed = isSubscribed || isTrialing;
@@ -53,8 +53,8 @@ const Pricing = () => {
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : typeof error === 'object' && error !== null && 'message' in error
           ? String((error as { message: unknown }).message)
           : 'Unknown error occurred';
@@ -79,8 +79,8 @@ const Pricing = () => {
       }
     } catch (error) {
       console.error('Portal error:', error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : typeof error === 'object' && error !== null && 'message' in error
           ? String((error as { message: unknown }).message)
           : 'Unknown error occurred';
@@ -90,22 +90,28 @@ const Pricing = () => {
     }
   };
 
-  const investorFeatures = [
+  const investorBasicFeatures = [
     'Unlimited property matches',
     'Real-time email notifications',
     'Advanced buy box criteria',
     'Secure in-platform messaging',
     'Save and track deals',
+  ];
+
+  const investorProFeatures = [
+    ...investorBasicFeatures,
+    'AI Hunter Engine access',
+    'Craigslist & MLS Scraper',
     'Priority support',
   ];
 
   const wholesalerFeatures = [
-    'List deals on marketplace',
+    'List deals on marketplace for free',
+    'No listing credits required',
     'Auto-match with investors',
+    'Secure in-platform messaging',
     'Track views and interest',
-    'Email notifications on contacts',
     'Analytics dashboard',
-    'Unlimited buy box visibility',
   ];
 
   return (
@@ -148,9 +154,55 @@ const Pricing = () => {
 
         {/* Pricing Cards */}
         <section className="py-16 px-4 -mt-12">
-          <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
-            {/* Investor Plan */}
-            <Card className="relative border-2 border-primary shadow-xl">
+          <div className="max-w-7xl mx-auto grid md:grid-cols-3 gap-8">
+            {/* Investor Basic Plan */}
+            <Card className="border-2 border-border shadow-lg">
+              <CardHeader className="text-center pt-8">
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <User className="w-7 h-7 text-primary" />
+                </div>
+                <CardTitle className="text-2xl font-display">Investor Basic</CardTitle>
+                <CardDescription>For casual investors</CardDescription>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold text-foreground">$49</span>
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <ul className="space-y-3">
+                  {investorBasicFeatures.map((feature, index) => (
+                    <li key={index} className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-3 h-3 text-success" />
+                      </div>
+                      <span className="text-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {planTier === 'basic' ? (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleManageSubscription}
+                    disabled={loading === 'manage'}
+                  >
+                    {loading === 'manage' ? 'Loading...' : 'Manage Subscription'}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full"
+                    onClick={() => handleCheckout('investor_basic')}
+                    disabled={loading === 'investor_basic' || role === 'wholesaler' || subscribed}
+                  >
+                    {loading === 'investor_basic' ? 'Loading...' : 'Select Basic'}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Investor Pro Plan */}
+            <Card className="relative border-2 border-primary shadow-xl scale-105 z-10">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                 <Badge className="bg-primary text-primary-foreground px-4 py-1">
                   Most Popular
@@ -161,9 +213,9 @@ const Pricing = () => {
                   <Zap className="w-7 h-7 text-primary" />
                 </div>
                 <CardTitle className="text-2xl font-display">Investor Pro</CardTitle>
-                <CardDescription>For active real estate investors</CardDescription>
+                <CardDescription>Advanced tools for serious investors</CardDescription>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold text-foreground">$49</span>
+                  <span className="text-4xl font-bold text-foreground">$99</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
                 <p className="text-sm text-success font-medium mt-2">
@@ -172,7 +224,7 @@ const Pricing = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <ul className="space-y-3">
-                  {investorFeatures.map((feature, index) => (
+                  {investorProFeatures.map((feature, index) => (
                     <li key={index} className="flex items-center gap-3">
                       <div className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
                         <Check className="w-3 h-3 text-success" />
@@ -182,11 +234,11 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                {subscribed ? (
+                {planTier === 'pro' ? (
                   <div className="space-y-3">
                     <div className="p-3 bg-success/10 rounded-lg text-center">
                       <p className="text-success font-medium">
-                        {isTrialing ? '✨ Currently on Trial' : '✓ Active Subscription'}
+                        {isTrialing ? '✨ Currently on Trial' : '✓ Pro Plan Active'}
                       </p>
                       {trialEnd && isTrialing && (
                         <p className="text-sm text-muted-foreground mt-1">
@@ -194,8 +246,8 @@ const Pricing = () => {
                         </p>
                       )}
                     </div>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full"
                       onClick={handleManageSubscription}
                       disabled={loading === 'manage'}
@@ -204,8 +256,8 @@ const Pricing = () => {
                     </Button>
                   </div>
                 ) : (
-                  <Button 
-                    className="w-full bg-primary hover:bg-primary/90" 
+                  <Button
+                    className="w-full bg-primary hover:bg-primary/90"
                     size="lg"
                     onClick={() => handleCheckout('investor_pro')}
                     disabled={loading === 'investor_pro' || role === 'wholesaler'}
@@ -230,11 +282,11 @@ const Pricing = () => {
                 <CardTitle className="text-2xl font-display">Wholesaler</CardTitle>
                 <CardDescription>For deal finders and wholesalers</CardDescription>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold text-foreground">$10</span>
+                  <span className="text-4xl font-bold text-foreground">$0</span>
                   <span className="text-muted-foreground">/listing</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Pay only when you post
+                <p className="text-sm text-success font-medium mt-2">
+                  Free to list your deals
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -249,38 +301,19 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                {listingCredits > 0 && (
-                  <div className="p-3 bg-accent/10 rounded-lg text-center">
-                    <p className="text-accent font-medium">
-                      {listingCredits} credit{listingCredits !== 1 ? 's' : ''} available
-                    </p>
-                  </div>
-                )}
-
                 <div className="space-y-3">
-                  <Button 
-                    variant="outline"
-                    className="w-full border-accent text-accent hover:bg-accent hover:text-accent-foreground" 
+                  <Button
+                    className="w-full"
                     size="lg"
-                    onClick={() => handleCheckout('listing_credit', 1)}
-                    disabled={loading === 'listing_credit' || role === 'investor'}
+                    asChild
                   >
-                    {loading === 'listing_credit' ? 'Loading...' : 'Buy 1 Credit - $10'}
-                  </Button>
-                  <Button 
-                    variant="ghost"
-                    className="w-full" 
-                    size="lg"
-                    onClick={() => handleCheckout('listing_credit', 5)}
-                    disabled={loading === 'listing_credit' || role === 'investor'}
-                  >
-                    Buy 5 Credits - $50
+                    <Link to="/auth?mode=signup">Join as Wholesaler</Link>
                   </Button>
                 </div>
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <CreditCard className="w-4 h-4" />
-                  <span>Credits never expire</span>
+                  <Building2 className="w-4 h-4" />
+                  <span>Reach 1000+ cache buyers</span>
                 </div>
               </CardContent>
             </Card>
@@ -297,16 +330,16 @@ const Pricing = () => {
                     </div>
                     <div>
                       <h3 className="text-xl font-bold flex items-center gap-2">
-                        AI Deal Scraper
-                        <Badge variant="secondary">Add-on</Badge>
+                        AI Hunter Engine
+                        <Badge variant="secondary">Pro Tier</Badge>
                       </h3>
                       <p className="text-muted-foreground">
-                        Scrape Facebook for deals matching your buy box with 85%+ confidence
+                        Sourcing deals from MLS, Craigslist, and Public Records with Gemini AI
                       </p>
                     </div>
                   </div>
                   <div className="text-center md:text-right">
-                    <p className="text-2xl font-bold">$100<span className="text-base font-normal text-muted-foreground">/mo</span></p>
+                    <p className="text-2xl font-bold">$99<span className="text-base font-normal text-muted-foreground">/mo</span></p>
                     <p className="text-sm text-muted-foreground mb-3">10 scrapes/month</p>
                     <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
                       <Link to="/scraper">Learn More</Link>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RealQuickLiqi</string>
+    <string name="title_activity_main">RealQuickLiqi</string>
+    <string name="package_name">app.lovable.c035772912944f42b85217b8a3f315b3</string>
+    <string name="custom_url_scheme">app.lovable.c035772912944f42b85217b8a3f315b3</string>
+</resources>

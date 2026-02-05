@@ -10,15 +10,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
-import { 
-  MessageSquare, 
-  Send, 
+import {
+  MessageSquare,
+  Send,
   ArrowLeft,
   Home,
   Loader2,
   User,
   Check,
-  CheckCheck
+  CheckCheck,
+  ShieldCheck,
+  AlertTriangle,
+  Lock
 } from 'lucide-react';
 
 interface Conversation {
@@ -60,7 +63,7 @@ export default function Messages() {
   const { user, role } = useAuth();
   const [searchParams] = useSearchParams();
   const selectedConversationId = searchParams.get('conversation');
-  
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -125,7 +128,7 @@ export default function Messages() {
 
   const fetchConversations = async () => {
     if (!user) return;
-    
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -143,7 +146,7 @@ export default function Messages() {
       const conversationsWithDetails = await Promise.all(
         (data || []).map(async (conv) => {
           const otherUserId = conv.investor_id === user.id ? conv.seller_id : conv.investor_id;
-          
+
           // Get other user's profile
           const { data: profileData } = await supabase
             .from('profiles')
@@ -219,6 +222,16 @@ export default function Messages() {
 
     setIsSending(true);
     try {
+      // PII Safety Filter
+      const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+      const phoneRegex = /(\+?\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/g;
+
+      if (emailRegex.test(newMessage) || phoneRegex.test(newMessage)) {
+        toast.error("Security Warning: Sharing personal contact info (email/phone) is prohibited for deal security. Please keep all communication inside QuickLiqi.");
+        setIsSending(false);
+        return;
+      }
+
       const { error } = await supabase
         .from('messages')
         .insert({
@@ -236,10 +249,10 @@ export default function Messages() {
         .eq('id', selectedConversation.id);
 
       setNewMessage('');
-      
+
       // Send notification to the other party
-      const recipientId = selectedConversation.investor_id === user.id 
-        ? selectedConversation.seller_id 
+      const recipientId = selectedConversation.investor_id === user.id
+        ? selectedConversation.seller_id
         : selectedConversation.investor_id;
 
       // Create in-app notification
@@ -312,7 +325,7 @@ export default function Messages() {
                     <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No conversations yet</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {role === 'investor' 
+                      {role === 'investor'
                         ? 'Start a conversation by contacting a seller on a property'
                         : 'Investors will reach out to you about your listings'
                       }
@@ -327,16 +340,15 @@ export default function Messages() {
                           setSelectedConversation(conv);
                           fetchMessages(conv.id);
                         }}
-                        className={`w-full p-4 text-left hover:bg-muted/50 transition-colors ${
-                          selectedConversation?.id === conv.id ? 'bg-muted' : ''
-                        }`}
+                        className={`w-full p-4 text-left hover:bg-muted/50 transition-colors ${selectedConversation?.id === conv.id ? 'bg-muted' : ''
+                          }`}
                       >
                         <div className="flex gap-3">
                           <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {conv.property?.image_urls?.[0] ? (
-                              <img 
-                                src={conv.property.image_urls[0]} 
-                                alt="" 
+                              <img
+                                src={conv.property.image_urls[0]}
+                                alt=""
                                 className="h-full w-full object-cover"
                               />
                             ) : (
@@ -379,9 +391,9 @@ export default function Messages() {
                 {/* Chat Header */}
                 <CardHeader className="border-b">
                   <div className="flex items-center gap-4">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="lg:hidden"
                       onClick={() => setSelectedConversation(null)}
                     >
@@ -391,10 +403,16 @@ export default function Messages() {
                       <User className="h-5 w-5 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium">
-                        {selectedConversation.other_user?.full_name || 'User'}
-                      </p>
-                      <Link 
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">
+                          {selectedConversation.other_user?.full_name || 'User'}
+                        </p>
+                        <Badge variant="secondary" className="bg-success/10 text-success border-success/20 text-[10px] h-4 px-1 flex items-center gap-0.5">
+                          <ShieldCheck className="h-2.5 w-2.5" />
+                          Secure
+                        </Badge>
+                      </div>
+                      <Link
                         to={`/property/${selectedConversation.property_id}`}
                         className="text-sm text-primary hover:underline"
                       >
@@ -405,8 +423,17 @@ export default function Messages() {
                 </CardHeader>
 
                 {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
+                <ScrollArea className="flex-1 p-4 bg-muted/5">
                   <div className="space-y-4">
+                    <div className="mb-6 p-4 bg-primary/5 rounded-xl border border-primary/10 text-center space-y-2">
+                      <div className="p-2 bg-primary/10 rounded-full w-fit mx-auto mb-1">
+                        <Lock className="h-4 w-4 text-primary" />
+                      </div>
+                      <p className="text-xs font-semibold text-primary uppercase tracking-wider">Secure Deal Protection Active</p>
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        Your Joint Venture agreement is binding. All deals discussed here are protected by QuickLiqi's anti-circumvention policy. Sharing personal contact info is prohibited to ensure deal security.
+                      </p>
+                    </div>
                     {messages.map((message) => {
                       const isOwn = message.sender_id === user?.id;
                       return (
@@ -415,19 +442,16 @@ export default function Messages() {
                           className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                              isOwn
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
-                            }`}
+                            className={`max-w-[70%] rounded-lg px-4 py-2 ${isOwn
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                              }`}
                           >
                             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                            <div className={`flex items-center gap-1 mt-1 ${
-                              isOwn ? 'justify-end' : 'justify-start'
-                            }`}>
-                              <span className={`text-xs ${
-                                isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                            <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'
                               }`}>
+                              <span className={`text-xs ${isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                                }`}>
                                 {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
                               </span>
                               {isOwn && (
@@ -462,7 +486,7 @@ export default function Messages() {
                       className="resize-none"
                       rows={2}
                     />
-                    <Button 
+                    <Button
                       onClick={handleSendMessage}
                       disabled={!newMessage.trim() || isSending}
                       size="icon"
@@ -474,6 +498,10 @@ export default function Messages() {
                         <Send className="h-5 w-5" />
                       )}
                     </Button>
+                  </div>
+                  <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground/60 justify-center uppercase tracking-widest font-medium">
+                    <ShieldCheck className="h-3 w-3" />
+                    End-to-End Deal Protection Enabled
                   </div>
                 </div>
               </>

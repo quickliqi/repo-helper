@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
-      
+
       if (profileData) {
         setProfile(profileData as Profile);
       }
@@ -47,14 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('user_roles')
         .select('role')
         .eq('user_id', userId);
-      
+
       if (rolesData && rolesData.length > 0) {
         const roles = rolesData.map(r => r.role as AppRole);
         setAllRoles(roles);
-        
+
         // Check if there's a saved active role in localStorage
         const savedRole = localStorage.getItem(ACTIVE_ROLE_KEY) as AppRole | null;
-        
+
         if (savedRole && roles.includes(savedRole)) {
           setRole(savedRole);
         } else {
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
           // Defer Supabase calls with setTimeout
           setTimeout(() => {
@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -193,15 +193,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      profile, 
+    <AuthContext.Provider value={{
+      user,
+      session,
+      profile,
       role,
       allRoles,
-      isLoading, 
-      signUp, 
-      signIn, 
+      isLoading,
+      signUp,
+      signIn,
       signOut,
       refreshProfile,
       switchRole,

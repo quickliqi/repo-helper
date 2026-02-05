@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/hooks/useSubscription";
-import { ScrapeSubscriptionProvider } from "@/hooks/useScrapeSubscription";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -46,7 +45,7 @@ function PushNotificationInitializer() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -54,17 +53,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, role, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -72,98 +71,98 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (!user || role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
 function AppRoutes() {
   const { user } = useAuth();
-  
+
   return (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
       <Route path="/marketplace" element={<Marketplace />} />
       <Route path="/pricing" element={<Pricing />} />
-      <Route 
-        path="/dashboard" 
+      <Route
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/buy-box" 
+      <Route
+        path="/buy-box"
         element={
           <ProtectedRoute>
             <BuyBox />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/post-deal" 
+      <Route
+        path="/post-deal"
         element={
           <ProtectedRoute>
             <PostDeal />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/notifications" 
+      <Route
+        path="/notifications"
         element={
           <ProtectedRoute>
             <Notifications />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/profile" 
+      <Route
+        path="/profile"
         element={
           <ProtectedRoute>
             <Profile />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/scraper" 
+      <Route
+        path="/scraper"
         element={
           <ProtectedRoute>
             <Scraper />
           </ProtectedRoute>
-        } 
+        }
       />
       <Route path="/property/:id" element={<PropertyDetail />} />
-      <Route 
-        path="/matches" 
+      <Route
+        path="/matches"
         element={
           <ProtectedRoute>
             <Matches />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/my-listings" 
+      <Route
+        path="/my-listings"
         element={
           <ProtectedRoute>
             <MyListings />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/buyer-demand" 
+      <Route
+        path="/buyer-demand"
         element={
           <ProtectedRoute>
             <BuyerDemand />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/messages" 
+      <Route
+        path="/messages"
         element={
           <ProtectedRoute>
             <Messages />
@@ -171,28 +170,28 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/profile-setup" 
+        path="/profile-setup"
         element={
           <ProtectedRoute>
             <ProfileSetup />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/verify" 
+      <Route
+        path="/verify"
         element={
           <ProtectedRoute>
             <Verify />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/admin" 
+      <Route
+        path="/admin"
         element={
           <AdminRoute>
             <Admin />
           </AdminRoute>
-        } 
+        }
       />
       <Route path="/user/:userId" element={<PublicProfile />} />
       <Route 
@@ -223,16 +222,14 @@ const App = () => (
     <HelmetProvider>
       <AuthProvider>
         <SubscriptionProvider>
-          <ScrapeSubscriptionProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <PushNotificationInitializer />
-                <AppRoutes />
-              </BrowserRouter>
-            </TooltipProvider>
-          </ScrapeSubscriptionProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <PushNotificationInitializer />
+              <AppRoutes />
+            </BrowserRouter>
+          </TooltipProvider>
         </SubscriptionProvider>
       </AuthProvider>
     </HelmetProvider>

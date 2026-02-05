@@ -18,10 +18,10 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { US_STATES } from '@/types/database';
-import { 
-  User, 
-  Building2, 
-  Phone, 
+import {
+  User,
+  Building2,
+  Phone,
   MapPin,
   Camera,
   ArrowRight,
@@ -107,7 +107,7 @@ export default function ProfileSetup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) return;
 
     if (!formData.full_name.trim()) {
@@ -128,7 +128,7 @@ export default function ProfileSetup() {
     setIsSaving(true);
     try {
       let avatarUrl = profile?.avatar_url || null;
-      
+
       if (avatarFile) {
         avatarUrl = await uploadAvatar();
       }

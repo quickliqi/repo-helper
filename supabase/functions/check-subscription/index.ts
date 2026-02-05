@@ -45,7 +45,7 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    
+
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
@@ -78,7 +78,7 @@ serve(async (req) => {
 
     if (customers.data.length === 0) {
       logStep("No Stripe customer found");
-      
+
       // Check listing credits from database
       const { data: credits } = await supabaseAdmin
         .from("listing_credits")
@@ -111,22 +111,32 @@ serve(async (req) => {
     let trialing = false;
     let subscriptionEnd = null;
     let trialEnd = null;
+    let planTier: 'basic' | 'pro' | null = null;
 
     if (subscriptions.data.length > 0) {
       const subscription = subscriptions.data[0];
       subscribed = ["active", "trialing"].includes(subscription.status);
       trialing = subscription.status === "trialing";
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      
+
       if (subscription.trial_end) {
         trialEnd = new Date(subscription.trial_end * 1000).toISOString();
       }
 
-      logStep("Subscription found", { 
-        status: subscription.status, 
-        subscribed, 
+      // Determine plan tier
+      const priceId = subscription.items.data[0]?.price.id;
+      if (priceId === "price_1SjI8j0VL3B5XXLHB1xRD8Bb") {
+        planTier = 'basic';
+      } else if (priceId === "price_1SjI9J0VL3B5XXLH4pGYfKkC") {
+        planTier = 'pro';
+      }
+
+      logStep("Subscription found", {
+        status: subscription.status,
+        subscribed,
         trialing,
-        subscriptionEnd 
+        subscriptionEnd,
+        planTier
       });
     }
 
@@ -137,12 +147,36 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
+    // Get scrape credits (Pro only)
+    let scrapeCredits = 0;
+    if (planTier === 'pro') {
+      const { data: sCredits } = await supabaseAdmin
+        .from("scrape_credits")
+        .select("credits_remaining")
+        .eq("user_id", user.id)
+        .single();
+
+      if (sCredits) {
+        scrapeCredits = sCredits.credits_remaining;
+      } else {
+        // Initialize credits if Pro but no record
+        await supabaseAdmin.from("scrape_credits").insert({
+          user_id: user.id,
+          credits_remaining: 10,
+          subscription_active: true
+        });
+        scrapeCredits = 10;
+      }
+    }
+
     return new Response(JSON.stringify({
       subscribed,
       trialing,
       subscription_end: subscriptionEnd,
       trial_end: trialEnd,
+      plan_tier: planTier,
       listing_credits: credits?.credits_remaining || 0,
+      scrape_credits: scrapeCredits,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

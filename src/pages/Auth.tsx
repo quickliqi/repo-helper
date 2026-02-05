@@ -24,7 +24,7 @@ const calculatePasswordStrength = (password: string): { score: number; label: st
   if (/[a-z]/.test(password)) score += 10;
   if (/[0-9]/.test(password)) score += 15;
   if (/[^A-Za-z0-9]/.test(password)) score += 15;
-  
+
   if (score < 30) return { score, label: 'Weak', color: 'bg-destructive' };
   if (score < 60) return { score, label: 'Fair', color: 'bg-yellow-500' };
   if (score < 80) return { score, label: 'Good', color: 'bg-blue-500' };
@@ -41,7 +41,7 @@ export default function AuthPage() {
   const [searchParams] = useSearchParams();
   const isSignUp = searchParams.get('mode') === 'signup';
   const addRoleParam = searchParams.get('addRole') as AppRole | null;
-  
+
   const [mode, setMode] = useState<'signin' | 'signup'>(isSignUp ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -61,7 +61,7 @@ export default function AuthPage() {
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
-    
+
     try {
       emailSchema.parse(email);
     } catch (e) {
@@ -93,22 +93,22 @@ export default function AuthPage() {
       .eq('user_id', userId)
       .eq('role', roleToAdd)
       .maybeSingle();
-    
+
     if (existingRole) {
       toast.info(`You already have the ${ROLE_LABELS[roleToAdd]} role!`);
       return false;
     }
-    
+
     const { error } = await supabase
       .from('user_roles')
       .insert({ user_id: userId, role: roleToAdd });
-    
+
     if (error) {
       console.error('Error adding role:', error);
       toast.error('Failed to add role. Please try again.');
       return false;
     }
-    
+
     if (roleToAdd === 'investor') {
       await supabase
         .from('subscriptions')
@@ -121,13 +121,13 @@ export default function AuthPage() {
           current_period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         });
     }
-    
+
     if (roleToAdd === 'wholesaler') {
       await supabase
         .from('listing_credits')
         .insert({ user_id: userId, credits_remaining: 1, credits_used: 0 });
     }
-    
+
     await refreshProfile();
     toast.success(`${ROLE_LABELS[roleToAdd]} role added to your account!`);
     return true;
@@ -154,7 +154,7 @@ export default function AuthPage() {
           supabase.functions.invoke('send-welcome-email', {
             body: { email, name: fullName, role: selectedRole },
           }).catch(err => console.error('Failed to send welcome email:', err));
-          
+
           toast.success('Account created! Let\'s set up your profile.');
           navigate('/profile-setup');
         }
@@ -208,7 +208,7 @@ export default function AuthPage() {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth?mode=reset`,
       });
-      
+
       if (error) {
         toast.error(error.message);
       } else {
@@ -242,7 +242,7 @@ export default function AuthPage() {
             </p>
             <p className="text-sm text-muted-foreground">
               Didn't receive the email? Check your spam folder or{' '}
-              <button 
+              <button
                 onClick={() => setSignupComplete(false)}
                 className="text-primary hover:underline"
               >
@@ -269,17 +269,17 @@ export default function AuthPage() {
             </span>
           </Link>
         </div>
-        
+
         <div className="space-y-8">
           <h1 className="font-display text-4xl font-bold text-white leading-tight">
             Connect with the right deals,<br />
             at the right time.
           </h1>
           <p className="text-lg text-white/80 max-w-md">
-            The professional marketplace for real estate wholesalers and investors. 
+            The professional marketplace for real estate wholesalers and investors.
             Post deals, set your criteria, and let our matching engine do the rest.
           </p>
-          
+
           <div className="grid grid-cols-2 gap-6 pt-8">
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
@@ -319,19 +319,19 @@ export default function AuthPage() {
                 QuickLiqi
               </span>
             </Link>
-            
+
             <CardTitle className="font-display text-2xl">
-              {showAddRolePrompt 
+              {showAddRolePrompt
                 ? `Add ${pendingRole ? ROLE_LABELS[pendingRole] : ''} Role`
-                : mode === 'signup' 
-                  ? 'Create your account' 
+                : mode === 'signup'
+                  ? 'Create your account'
                   : 'Welcome back'
               }
             </CardTitle>
             <CardDescription>
               {showAddRolePrompt
                 ? 'Sign in to add a new role to your existing account'
-                : mode === 'signup' 
+                : mode === 'signup'
                   ? 'Start matching with real estate opportunities today'
                   : 'Sign in to access your dashboard'
               }
@@ -347,7 +347,7 @@ export default function AuthPage() {
                   <p className="text-sm font-medium">Adding {ROLE_LABELS[pendingRole]} role</p>
                   <p className="text-xs text-muted-foreground">Sign in to add this role to your account</p>
                 </div>
-                <button 
+                <button
                   onClick={() => {
                     setShowAddRolePrompt(false);
                     setPendingRole(null);
@@ -358,7 +358,7 @@ export default function AuthPage() {
                 </button>
               </div>
             )}
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === 'signup' && (
                 <div className="space-y-2">
@@ -447,8 +447,8 @@ export default function AuthPage() {
               {mode === 'signup' && (
                 <div className="space-y-3">
                   <Label>I am a...</Label>
-                  <RadioGroup 
-                    value={selectedRole} 
+                  <RadioGroup
+                    value={selectedRole}
                     onValueChange={(value) => setSelectedRole(value as AppRole)}
                     className="grid grid-cols-2 gap-3"
                   >
@@ -479,12 +479,12 @@ export default function AuthPage() {
               )}
 
               <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                {isLoading 
-                  ? 'Please wait...' 
+                {isLoading
+                  ? 'Please wait...'
                   : showAddRolePrompt
                     ? `Sign In & Add ${pendingRole ? ROLE_LABELS[pendingRole] : ''} Role`
-                    : mode === 'signup' 
-                      ? 'Create Account' 
+                    : mode === 'signup'
+                      ? 'Create Account'
                       : 'Sign In'
                 }
               </Button>
@@ -495,7 +495,7 @@ export default function AuthPage() {
                 {mode === 'signup' ? (
                   <>
                     Already have an account?{' '}
-                    <button 
+                    <button
                       onClick={() => setMode('signin')}
                       className="font-medium text-primary hover:underline"
                     >
@@ -505,7 +505,7 @@ export default function AuthPage() {
                 ) : (
                   <>
                     Don't have an account?{' '}
-                    <button 
+                    <button
                       onClick={() => {
                         setMode('signup');
                         setShowAddRolePrompt(false);

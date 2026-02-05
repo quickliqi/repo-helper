@@ -17,8 +17,8 @@ const RATE_LIMIT_WINDOW_MINUTES = 1;
 
 // Stripe price IDs
 const PRICES = {
-  investor_pro: "price_1SjI8j0VL3B5XXLHB1xRD8Bb", // $49/month subscription
-  listing_credit: "price_1SjI9J0VL3B5XXLH4pGYfKkC", // $10 one-time payment
+  investor_basic: "price_1SjI8j0VL3B5XXLHB1xRD8Bb", // $49/month subscription
+  investor_pro: "price_1SjI9J0VL3B5XXLH4pGYfKkC", // $99/month
 };
 
 serve(async (req) => {
@@ -72,7 +72,7 @@ serve(async (req) => {
 
     const { priceType, quantity = 1 } = await req.json();
     const priceId = PRICES[priceType as keyof typeof PRICES];
-    
+
     if (!priceId) throw new Error("Invalid price type");
 
     logStep("Processing checkout", { priceType, quantity, priceId });
@@ -89,8 +89,8 @@ serve(async (req) => {
       logStep("Existing customer found", { customerId });
     }
 
-    const origin = req.headers.get("origin") || "https://quickliqi.lovable.app";
-    const isSubscription = priceType === "investor_pro";
+    const origin = req.headers.get("origin") || "https://quickliqi.com";
+    const isSubscription = priceType === "investor_basic" || priceType === "investor_pro";
 
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,

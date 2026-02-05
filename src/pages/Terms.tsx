@@ -22,19 +22,19 @@ export default function Terms() {
               <section>
                 <h2 className="text-xl font-semibold text-foreground mb-3">1. Acceptance of Terms</h2>
                 <p className="text-muted-foreground">
-                  By accessing or using DealMatch ("the Service"), you agree to be bound by these Terms of Service. 
-                  If you do not agree to these terms, please do not use the Service. We reserve the right to 
-                  update these terms at any time, and your continued use of the Service constitutes acceptance 
+                  By accessing or using QuickLiqi ("the Service"), you agree to be bound by these Terms of Service.
+                  If you do not agree to these terms, please do not use the Service. We reserve the right to
+                  update these terms at any time, and your continued use of the Service constitutes acceptance
                   of any changes.
                 </p>
               </section>
 
-              <section>
-                <h2 className="text-xl font-semibold text-foreground mb-3">2. Description of Service</h2>
+              <section className="mb-8">
+                <h2 className="text-xl font-semibold mb-3">2. Description of Service</h2>
                 <p className="text-muted-foreground">
-                  DealMatch is a real estate marketplace platform that connects wholesalers with investors. 
-                  The Service provides tools for posting property deals, creating buy boxes, matching deals 
-                  with buyer criteria, and facilitating connections between parties. We do not provide real 
+                  QuickLiqi is a real estate marketplace platform that connects wholesalers with investors.
+                  The Service provides tools for posting property deals, creating buy boxes, matching deals
+                  with buyer criteria, and facilitating connections between parties. We do not provide real
                   estate, legal, or financial advice.
                 </p>
               </section>
@@ -56,9 +56,9 @@ export default function Terms() {
               <section>
                 <h2 className="text-xl font-semibold text-foreground mb-3">4. Identity Verification</h2>
                 <p className="text-muted-foreground">
-                  Users may be required to complete identity verification to access certain features. 
-                  By submitting verification documents, you confirm that all information provided is 
-                  accurate and that you have the legal right to provide such documents. We reserve the 
+                  Users may be required to complete identity verification to access certain features.
+                  By submitting verification documents, you confirm that all information provided is
+                  accurate and that you have the legal right to provide such documents. We reserve the
                   right to reject or revoke verification status at our discretion.
                 </p>
               </section>
@@ -81,9 +81,9 @@ export default function Terms() {
               <section>
                 <h2 className="text-xl font-semibold text-foreground mb-3">6. Property Listings</h2>
                 <p className="text-muted-foreground">
-                  Users who post property listings represent and warrant that they have the legal right 
-                  to market such properties, all information is accurate to the best of their knowledge, 
-                  and the listing complies with all applicable laws and regulations. DealMatch does not 
+                  Users who post property listings represent and warrant that they have the legal right
+                  to market such properties, all information is accurate to the best of their knowledge,
+                  and the listing complies with all applicable laws and regulations. QuickLiqi does not
                   verify the accuracy of listings and is not responsible for any misrepresentations.
                 </p>
               </section>
@@ -91,9 +91,9 @@ export default function Terms() {
               <section>
                 <h2 className="text-xl font-semibold text-foreground mb-3">7. Fees and Payments</h2>
                 <p className="text-muted-foreground">
-                  Certain features of the Service require payment. All fees are non-refundable unless 
-                  otherwise stated. We reserve the right to change our pricing at any time. Subscription 
-                  fees are billed in advance on a recurring basis. You are responsible for providing 
+                  Certain features of the Service require payment. All fees are non-refundable unless
+                  otherwise stated. We reserve the right to change our pricing at any time. Subscription
+                  fees are billed in advance on a recurring basis. You are responsible for providing
                   valid payment information and for all charges incurred under your account.
                 </p>
               </section>
@@ -101,9 +101,9 @@ export default function Terms() {
               <section>
                 <h2 className="text-xl font-semibold text-foreground mb-3">8. Intellectual Property</h2>
                 <p className="text-muted-foreground">
-                  The Service and its original content, features, and functionality are owned by DealMatch 
-                  and are protected by intellectual property laws. You retain ownership of content you 
-                  submit but grant us a license to use, display, and distribute such content in connection 
+                  The Service and its original content, features, and functionality are owned by QuickLiqi
+                  and are protected by intellectual property laws. You retain ownership of content you
+                  submit but grant us a license to use, display, and distribute such content in connection
                   with the Service.
                 </p>
               </section>
@@ -111,28 +111,28 @@ export default function Terms() {
               <section>
                 <h2 className="text-xl font-semibold text-foreground mb-3">9. Disclaimer of Warranties</h2>
                 <p className="text-muted-foreground">
-                  THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. WE DO NOT GUARANTEE 
-                  THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE. WE ARE NOT RESPONSIBLE 
-                  FOR THE CONDUCT OF USERS OR THE ACCURACY OF PROPERTY LISTINGS. ANY TRANSACTIONS 
+                  THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. WE DO NOT GUARANTEE
+                  THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE. WE ARE NOT RESPONSIBLE
+                  FOR THE CONDUCT OF USERS OR THE ACCURACY OF PROPERTY LISTINGS. ANY TRANSACTIONS
                   BETWEEN USERS ARE SOLELY BETWEEN THOSE PARTIES.
                 </p>
               </section>
 
-              <section>
-                <h2 className="text-xl font-semibold text-foreground mb-3">10. Limitation of Liability</h2>
+              <section className="mb-8">
+                <h2 className="text-xl font-semibold mb-3">10. Limitation of Liability</h2>
                 <p className="text-muted-foreground">
-                  TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEALMATCH SHALL NOT BE LIABLE FOR ANY INDIRECT, 
-                  INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR 
-                  REVENUES, WHETHER INCURRED DIRECTLY OR INDIRECTLY, OR ANY LOSS OF DATA, USE, GOODWILL, 
+                  TO THE MAXIMUM EXTENT PERMITTED BY LAW, QUICKLIQI SHALL NOT BE LIABLE FOR ANY INDIRECT,
+                  INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR
+                  REVENUES, WHETHER INCURRED DIRECTLY OR INDIRECTLY, OR ANY LOSS OF DATA, USE, GOODWILL,
                   OR OTHER INTANGIBLE LOSSES.
                 </p>
               </section>
 
-              <section>
-                <h2 className="text-xl font-semibold text-foreground mb-3">11. Indemnification</h2>
+              <section className="mb-8">
+                <h2 className="text-xl font-semibold mb-3">11. Indemnification</h2>
                 <p className="text-muted-foreground">
-                  You agree to indemnify and hold harmless DealMatch and its officers, directors, employees, 
-                  and agents from any claims, damages, losses, liabilities, and expenses arising from your 
+                  You agree to indemnify and hold harmless QuickLiqi and its officers, directors, employees,
+                  and agents from any claims, damages, losses, liabilities, and expenses arising from your
                   use of the Service or violation of these Terms.
                 </p>
               </section>
@@ -140,8 +140,8 @@ export default function Terms() {
               <section>
                 <h2 className="text-xl font-semibold text-foreground mb-3">12. Termination</h2>
                 <p className="text-muted-foreground">
-                  We may terminate or suspend your account and access to the Service immediately, without 
-                  prior notice, for any reason, including breach of these Terms. Upon termination, your 
+                  We may terminate or suspend your account and access to the Service immediately, without
+                  prior notice, for any reason, including breach of these Terms. Upon termination, your
                   right to use the Service will immediately cease.
                 </p>
               </section>
@@ -149,7 +149,7 @@ export default function Terms() {
               <section>
                 <h2 className="text-xl font-semibold text-foreground mb-3">13. Governing Law</h2>
                 <p className="text-muted-foreground">
-                  These Terms shall be governed by the laws of the State of Delaware, without regard to 
+                  These Terms shall be governed by the laws of the State of Delaware, without regard to
                   its conflict of law provisions. Any disputes shall be resolved in the courts of Delaware.
                 </p>
               </section>
@@ -157,7 +157,7 @@ export default function Terms() {
               <section>
                 <h2 className="text-xl font-semibold text-foreground mb-3">14. Contact Information</h2>
                 <p className="text-muted-foreground">
-                  If you have any questions about these Terms, please contact us at legal@dealmatch.com.
+                  If you have any questions about these Terms, please contact us at support@quickliqi.com.
                 </p>
               </section>
             </CardContent>

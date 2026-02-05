@@ -8,6 +8,8 @@ interface SubscriptionStatus {
   trialEnd: string | null;
   subscriptionEnd: string | null;
   listingCredits: number;
+  scrapeCredits: number;
+  planTier: 'basic' | 'pro' | null;
   isLoading: boolean;
 }
 
@@ -27,6 +29,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     trialEnd: null,
     subscriptionEnd: null,
     listingCredits: 0,
+    scrapeCredits: 0,
+    planTier: null,
     isLoading: true,
   });
 
@@ -38,47 +42,32 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Fetch credits + subscription directly from the database (avoids JWT issues with the check-subscription function)
-      const [creditsRes, subscriptionRes] = await Promise.all([
-        supabase
-          .from('listing_credits')
-          .select('credits_remaining')
-          .eq('user_id', user.id)
-          .maybeSingle(),
-        supabase
-          .from('subscriptions')
-          .select('status, trial_ends_at, current_period_end')
-          .eq('user_id', user.id)
-          .maybeSingle(),
-      ]);
+      const { data, error } = await supabase.functions.invoke('check-subscription');
 
-      if (creditsRes.error) {
-        console.error('Error fetching listing credits:', creditsRes.error);
+      if (error) {
+        // Handle gracefully - user might not have subscription
+        console.error('Error fetching subscription status:', error);
+        setStatus({
+          isSubscribed: false,
+          isTrialing: false,
+          trialEnd: null,
+          subscriptionEnd: null,
+          listingCredits: 0,
+          scrapeCredits: 0,
+          planTier: null,
+          isLoading: false,
+        });
+        return;
       }
-      if (subscriptionRes.error) {
-        console.error('Error fetching subscription record:', subscriptionRes.error);
-      }
-
-      const listingCredits = creditsRes.data?.credits_remaining ?? 0;
-      const subscription = subscriptionRes.data;
-
-      const trialEnd = subscription?.trial_ends_at ?? null;
-      const subscriptionEnd = subscription?.current_period_end ?? null;
-      const now = Date.now();
-
-      const isTrialing =
-        subscription?.status === 'trialing' &&
-        !!trialEnd &&
-        new Date(trialEnd).getTime() > now;
-
-      const isSubscribed = subscription?.status === 'active';
 
       setStatus({
-        isSubscribed,
-        isTrialing,
-        trialEnd,
-        subscriptionEnd,
-        listingCredits,
+        isSubscribed: data?.subscribed || false,
+        isTrialing: data?.trialing || false,
+        trialEnd: data?.trial_end || null,
+        subscriptionEnd: data?.subscription_end || null,
+        listingCredits: data?.listing_credits || 0,
+        scrapeCredits: data?.scrape_credits || 0,
+        planTier: data?.plan_tier || null,
         isLoading: false,
       });
     } catch (error) {
@@ -89,6 +78,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         trialEnd: null,
         subscriptionEnd: null,
         listingCredits: 0,
+        scrapeCredits: 0,
+        planTier: null,
         isLoading: false,
       });
     }
@@ -105,6 +96,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         trialEnd: null,
         subscriptionEnd: null,
         listingCredits: 0,
+        scrapeCredits: 0,
+        planTier: null,
         isLoading: false,
       });
     }
@@ -131,8 +124,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [role, status.isSubscribed, status.isTrialing]);
 
   const hasCredits = useCallback(() => {
-    return status.listingCredits > 0;
-  }, [status.listingCredits]);
+    return status.listingCredits > 0 || status.scrapeCredits > 0;
+  }, [status.listingCredits, status.scrapeCredits]);
 
   return (
     <SubscriptionContext.Provider value={{

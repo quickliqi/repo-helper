@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { EnhancedPropertyCard } from '@/components/marketplace/EnhancedPropertyCard';
-import { AdvancedFilters, FilterState, SortOption } from '@/components/marketplace/AdvancedFilters';
+import { AdvancedFilters, FilterState } from '@/components/marketplace/AdvancedFilters';
 import { SaveSearchDialog } from '@/components/marketplace/SaveSearchDialog';
 import { PullToRefresh } from '@/components/ui/PullToRefresh';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +12,6 @@ import { Helmet } from 'react-helmet-async';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MarketplaceGate } from '@/components/marketplace/MarketplaceGate';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Link } from 'react-router-dom';
 
 interface SellerInfo {
@@ -92,38 +91,38 @@ function MarketplaceContent() {
   const filteredAndSortedProperties = useMemo(() => {
     let result = properties.filter((property) => {
       // Search query
-      const matchesSearch = !filters.searchQuery || 
+      const matchesSearch = !filters.searchQuery ||
         property.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
         property.city.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
         property.address.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
         property.state.toLowerCase().includes(filters.searchQuery.toLowerCase());
-      
+
       // Property types
-      const matchesType = filters.propertyTypes.length === 0 || 
+      const matchesType = filters.propertyTypes.length === 0 ||
         filters.propertyTypes.includes(property.property_type as PropertyType);
-      
+
       // Deal types
-      const matchesDeal = filters.dealTypes.length === 0 || 
+      const matchesDeal = filters.dealTypes.length === 0 ||
         filters.dealTypes.includes(property.deal_type as DealType);
-      
+
       // Conditions
-      const matchesCondition = filters.conditions.length === 0 || 
+      const matchesCondition = filters.conditions.length === 0 ||
         filters.conditions.includes(property.condition as PropertyCondition);
-      
+
       // States
-      const matchesState = filters.states.length === 0 || 
+      const matchesState = filters.states.length === 0 ||
         filters.states.includes(property.state);
-      
+
       // Price range
       const matchesMinPrice = !filters.minPrice || property.asking_price >= filters.minPrice;
       const matchesMaxPrice = !filters.maxPrice || property.asking_price <= filters.maxPrice;
-      
+
       // Equity
-      const matchesEquity = !filters.minEquity || 
+      const matchesEquity = !filters.minEquity ||
         (property.equity_percentage && property.equity_percentage >= filters.minEquity);
 
-      return matchesSearch && matchesType && matchesDeal && matchesCondition && 
-             matchesState && matchesMinPrice && matchesMaxPrice && matchesEquity;
+      return matchesSearch && matchesType && matchesDeal && matchesCondition &&
+        matchesState && matchesMinPrice && matchesMaxPrice && matchesEquity;
     });
 
     // Sort
@@ -217,8 +216,8 @@ function MarketplaceContent() {
             <p className="text-lg text-muted-foreground mb-4">
               No properties match your filters.
             </p>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setFilters({
                 ...filters,
                 searchQuery: '',
@@ -239,14 +238,13 @@ function MarketplaceContent() {
             <p className="text-sm text-muted-foreground mb-4 md:mb-6">
               Showing {filteredAndSortedProperties.length} {filteredAndSortedProperties.length === 1 ? 'property' : 'properties'}
             </p>
-            <div className={`grid gap-4 md:gap-6 ${
-              viewMode === 'grid' 
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
+            <div className={`grid gap-4 md:gap-6 ${viewMode === 'grid'
+                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
                 : 'grid-cols-1'
-            }`}>
+              }`}>
               {filteredAndSortedProperties.map((property) => (
-                <EnhancedPropertyCard 
-                  key={property.id} 
+                <EnhancedPropertyCard
+                  key={property.id}
                   property={property}
                   sellerInfo={sellerInfoMap[property.user_id]}
                 />

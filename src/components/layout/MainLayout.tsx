@@ -24,7 +24,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <span className="font-display text-xl font-bold text-foreground">QuickLiqi</span>
               </Link>
               <p className="text-sm text-muted-foreground max-w-sm">
-                The professional marketplace connecting off-market real estate deals with qualified investors. 
+                The professional marketplace connecting off-market real estate deals with qualified investors.
                 Stop searching. Start matching.
               </p>
             </div>
@@ -62,7 +62,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               © {new Date().getFullYear()} QuickLiqi. All rights reserved.
             </p>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Built for real estate professionals who move fast.
+              Built for real estate professionals. Founded by Damien Thomas.
             </p>
           </div>
         </div>
