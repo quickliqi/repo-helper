@@ -113,7 +113,7 @@ export default function Privacy() {
                   <li>Lodge a complaint with a supervisory authority</li>
                 </ul>
                 <p className="text-muted-foreground mt-2">
-                  To exercise these rights, please contact us at quickliqi123@gmail.com.
+                  To exercise these rights, please contact us at quickliqi@realquickliqi.com.
                 </p>
               </section>
 
@@ -180,7 +180,7 @@ export default function Privacy() {
                   contact us at:
                 </p>
                 <ul className="list-none text-muted-foreground mt-2 space-y-1">
-                  <li>Email: quickliqi123@gmail.com</li>
+                  <li>Email: quickliqi@realquickliqi.com</li>
                   <li>Address: QuickLiqi Inc., 26799 State Route 525, Coupeville, WA 98239</li>
                 </ul>
               </section>
