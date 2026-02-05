@@ -236,7 +236,7 @@ export default function Funnel() {
                     <div className="space-y-6">
                       <div className="p-4 bg-secondary rounded-lg">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium">123 Oak Street</span>
+                          <span className="text-sm font-medium">26799 State Route 525</span>
                           <Badge className="bg-accent/10 text-accent text-xs">Hot 🔥</Badge>
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-center">
@@ -260,7 +260,7 @@ export default function Funnel() {
                         </div>
                         <div>
                           <p className="font-medium text-sm">New buyer inquiry!</p>
-                          <p className="text-xs text-muted-foreground">"I'm interested in 123 Oak St..."</p>
+                          <p className="text-xs text-muted-foreground">"I'm interested in 26799 State Route 525..."</p>
                         </div>
                       </div>
                     </div>

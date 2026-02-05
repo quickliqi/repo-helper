@@ -453,7 +453,7 @@ export default function PostDeal() {
                     id="address"
                     value={formData.address}
                     onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="123 Main St"
+                    placeholder="26799 State Route 525"
                   />
                 </div>
                 <div className="grid md:grid-cols-3 gap-4">
@@ -463,7 +463,7 @@ export default function PostDeal() {
                       id="city"
                       value={formData.city}
                       onChange={e => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                      placeholder="Miami"
+                      placeholder="Coupeville"
                     />
                   </div>
                   <div className="space-y-2">

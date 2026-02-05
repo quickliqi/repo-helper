@@ -53,7 +53,12 @@ const Pricing = () => {
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      toast.error('Failed to start checkout. Please try again.');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : 'Unknown error occurred';
+      toast.error(`Checkout failed: ${errorMessage}`);
     } finally {
       setLoading(null);
     }
@@ -74,7 +79,12 @@ const Pricing = () => {
       }
     } catch (error) {
       console.error('Portal error:', error);
-      toast.error('Failed to open subscription management. Please try again.');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : 'Unknown error occurred';
+      toast.error(`Portal access failed: ${errorMessage}`);
     } finally {
       setLoading(null);
     }
