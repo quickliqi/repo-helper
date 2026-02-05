@@ -34,6 +34,7 @@ import PublicProfile from "./components/profile/PublicProfile";
 import SavedProperties from "./pages/SavedProperties";
 import Blog from "./pages/Blog";
 import BlogArticle from "./pages/BlogArticle";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
@@ -212,6 +213,7 @@ function AppRoutes() {
       <Route path="/go" element={<AdLanding />} />
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogArticle />} />
+      <Route path="/about" element={<About />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
