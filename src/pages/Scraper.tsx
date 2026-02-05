@@ -87,7 +87,7 @@ export default function Scraper() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to start checkout",
+        description: error.message || error?.error || "Failed to start checkout. Please try again.",
         variant: "destructive",
       });
     } finally {
