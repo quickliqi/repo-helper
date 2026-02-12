@@ -6,11 +6,11 @@ import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { SubscriptionBadge } from '@/components/subscription/SubscriptionGate';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Building2, 
-  Bell, 
-  User, 
-  LogOut, 
+import {
+  Building2,
+  Bell,
+  User,
+  LogOut,
   LayoutDashboard,
   Menu,
   X,
@@ -61,28 +61,30 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-6">
             {user ? (
               <>
-                <Link 
-                  to="/dashboard" 
+                <Link
+                  to="/dashboard"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Dashboard
                 </Link>
-                <Link 
-                  to="/marketplace" 
+                <Link
+                  to="/marketplace"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Marketplace
                 </Link>
-                {role === 'investor' && (
+                {(role === 'investor' || role === 'admin') && (
                   <>
-                    <Link 
-                      to="/buy-box" 
-                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      My Buy Box
-                    </Link>
-                    <Link 
-                      to="/scraper" 
+                    {role === 'investor' && (
+                      <Link
+                        to="/buy-box"
+                        className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        My Buy Box
+                      </Link>
+                    )}
+                    <Link
+                      to="/scraper"
                       className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                     >
                       <Scan className="h-3.5 w-3.5" />
@@ -91,21 +93,21 @@ export function Navbar() {
                   </>
                 )}
                 {role === 'wholesaler' && (
-                  <Link 
-                    to="/my-listings" 
+                  <Link
+                    to="/my-listings"
                     className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                   >
                     My Listings
                   </Link>
                 )}
-                <Link 
-                  to="/pricing" 
+                <Link
+                  to="/pricing"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Pricing
                 </Link>
-                <Link 
-                  to="/blog" 
+                <Link
+                  to="/blog"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
@@ -114,14 +116,14 @@ export function Navbar() {
               </>
             ) : (
               <>
-                <Link 
-                  to="/pricing" 
+                <Link
+                  to="/pricing"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Pricing
                 </Link>
-                <Link 
-                  to="/blog" 
+                <Link
+                  to="/blog"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
@@ -150,7 +152,7 @@ export function Navbar() {
                   <Link to="/messages">
                     <MessageSquare className="h-5 w-5" />
                     {unreadCount > 0 && (
-                      <Badge 
+                      <Badge
                         className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-destructive text-destructive-foreground"
                       >
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -225,9 +227,9 @@ export function Navbar() {
             )}
 
             {/* Mobile menu button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -242,31 +244,33 @@ export function Navbar() {
             <div className="flex flex-col gap-2">
               {user ? (
                 <>
-                  <Link 
-                    to="/dashboard" 
+                  <Link
+                    to="/dashboard"
                     className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Dashboard
                   </Link>
-                  <Link 
-                    to="/marketplace" 
+                  <Link
+                    to="/marketplace"
                     className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Marketplace
                   </Link>
-                  {role === 'investor' && (
+                  {(role === 'investor' || role === 'admin') && (
                     <>
-                      <Link 
-                        to="/buy-box" 
-                        className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        My Buy Box
-                      </Link>
-                      <Link 
-                        to="/scraper" 
+                      {role === 'investor' && (
+                        <Link
+                          to="/buy-box"
+                          className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          My Buy Box
+                        </Link>
+                      )}
+                      <Link
+                        to="/scraper"
                         className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
                         onClick={() => setMobileMenuOpen(false)}
                       >
@@ -276,23 +280,23 @@ export function Navbar() {
                     </>
                   )}
                   {role === 'wholesaler' && (
-                    <Link 
-                      to="/my-listings" 
+                    <Link
+                      to="/my-listings"
                       className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       My Listings
                     </Link>
                   )}
-                  <Link 
-                    to="/pricing" 
+                  <Link
+                    to="/pricing"
                     className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Pricing
                   </Link>
-                  <Link 
-                    to="/blog" 
+                  <Link
+                    to="/blog"
                     className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -302,23 +306,23 @@ export function Navbar() {
                 </>
               ) : (
                 <>
-                  <Link 
-                    to="/pricing" 
+                  <Link
+                    to="/pricing"
                     className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Pricing
                   </Link>
-                  <Link 
-                    to="/blog" 
+                  <Link
+                    to="/blog"
                     className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     Learn
                   </Link>
-                  <Link 
-                    to="/auth" 
+                  <Link
+                    to="/auth"
                     className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >

@@ -15,10 +15,10 @@ const logStep = (step: string, details?: any) => {
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MINUTES = 1;
 
-// Stripe price IDs
+// Stripe price IDs (from .lovable/plan.md)
 const PRICES = {
-  investor_basic: "price_1SjI8j0VL3B5XXLHB1xRD8Bb", // $49/month subscription
-  investor_pro: "price_1SjI9J0VL3B5XXLH4pGYfKkC", // $99/month
+  investor_basic: "price_1SjI8j0VL3B5XXLHB1xRD8Bb", // Investor Pro subscription ($49/month)
+  investor_pro: "price_1SjI8j0VL3B5XXLHB1xRD8Bb",   // Investor Pro subscription ($49/month) - same price, single tier in Stripe
 };
 
 serve(async (req) => {
@@ -42,10 +42,26 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const authHeader = req.headers.get("Authorization")!;
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      logStep("ERROR: STRIPE_SECRET_KEY is not set");
+      throw new Error("Stripe configuration error: Secret key missing");
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      logStep("ERROR: No Authorization header");
+      throw new Error("No authorization header provided");
+    }
+
     const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseAuth.auth.getUser(token);
-    const user = data.user;
+    const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+    if (userError) {
+      logStep("ERROR: Auth verification failed", { error: userError.message });
+      throw new Error(`Authentication error: ${userError.message}`);
+    }
+
+    const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
     logStep("User authenticated", { userId: user.id, email: user.email });
@@ -70,14 +86,25 @@ serve(async (req) => {
       });
     }
 
-    const { priceType, quantity = 1 } = await req.json();
-    const priceId = PRICES[priceType as keyof typeof PRICES];
+    let priceType, quantity;
+    try {
+      const body = await req.json();
+      priceType = body.priceType;
+      quantity = body.quantity || 1;
+    } catch (e) {
+      logStep("ERROR: Failed to parse request body");
+      throw new Error("Invalid request body");
+    }
 
-    if (!priceId) throw new Error("Invalid price type");
+    const priceId = PRICES[priceType as keyof typeof PRICES];
+    if (!priceId) {
+      logStep("ERROR: Invalid price type", { priceType });
+      throw new Error(`Invalid price type: ${priceType}`);
+    }
 
     logStep("Processing checkout", { priceType, quantity, priceId });
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripe = new Stripe(stripeKey, {
       apiVersion: "2025-08-27.basil",
     });
 
@@ -108,14 +135,18 @@ serve(async (req) => {
       };
     }
 
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    try {
+      const session = await stripe.checkout.sessions.create(sessionConfig);
+      logStep("Checkout session created", { sessionId: session.id, url: session.url });
 
-    logStep("Checkout session created", { sessionId: session.id, url: session.url });
-
-    return new Response(JSON.stringify({ url: session.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+      return new Response(JSON.stringify({ url: session.url }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    } catch (stripeError: any) {
+      logStep("ERROR: Stripe session creation failed", { message: stripeError.message });
+      throw new Error(`Stripe error: ${stripeError.message}`);
+    }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });

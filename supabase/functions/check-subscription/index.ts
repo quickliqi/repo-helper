@@ -51,6 +51,33 @@ serve(async (req) => {
 
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // Check if user is an admin (database role OR email fallback)
+    const { data: roleData } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    const isAdmin = !!roleData || user.email === "thomasdamienak@gmail.com";
+    logStep("Admin check", { isAdmin, hasDbRole: !!roleData, email: user.email });
+
+    if (isAdmin) {
+      logStep("Admin bypass - returning full access status");
+      return new Response(JSON.stringify({
+        subscribed: true,
+        trialing: false,
+        subscription_end: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString(), // 10 years
+        trial_end: null,
+        plan_tier: 'pro',
+        listing_credits: 999,
+        scrape_credits: 999,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     // Check rate limit
     const { data: rateLimitOk, error: rlError } = await supabaseAdmin.rpc("check_rate_limit", {
       p_user_id: user.id,
@@ -123,12 +150,10 @@ serve(async (req) => {
         trialEnd = new Date(subscription.trial_end * 1000).toISOString();
       }
 
-      // Determine plan tier
+      // Determine plan tier (from .lovable/plan.md)
       const priceId = subscription.items.data[0]?.price.id;
       if (priceId === "price_1SjI8j0VL3B5XXLHB1xRD8Bb") {
-        planTier = 'basic';
-      } else if (priceId === "price_1SjI9J0VL3B5XXLH4pGYfKkC") {
-        planTier = 'pro';
+        planTier = 'pro'; // Investor Pro subscription
       }
 
       logStep("Subscription found", {

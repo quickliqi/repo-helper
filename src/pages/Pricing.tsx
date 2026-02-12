@@ -51,13 +51,16 @@ const Pricing = () => {
         }
         window.open(data.url, '_blank');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Checkout error:', error);
-      const errorMessage = error instanceof Error
-        ? error.message
-        : typeof error === 'object' && error !== null && 'message' in error
-          ? String((error as { message: unknown }).message)
-          : 'Unknown error occurred';
+
+      let errorMessage = 'Unknown error occurred';
+      if (error.context?.json?.error) {
+        errorMessage = error.context.json.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast.error(`Checkout failed: ${errorMessage}`);
     } finally {
       setLoading(null);
