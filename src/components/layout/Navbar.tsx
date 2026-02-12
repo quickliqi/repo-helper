@@ -18,7 +18,8 @@ import {
   Scan,
   ShieldCheck,
   MessageSquare,
-  BookOpen
+  BookOpen,
+  Info
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -113,6 +114,12 @@ export function Navbar() {
                   <BookOpen className="h-3.5 w-3.5" />
                   Learn
                 </Link>
+                <Link
+                  to="/about"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  About
+                </Link>
               </>
             ) : (
               <>
@@ -128,6 +135,12 @@ export function Navbar() {
                 >
                   <BookOpen className="h-3.5 w-3.5" />
                   Learn
+                </Link>
+                <Link
+                  to="/about"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  About
                 </Link>
               </>
             )}
@@ -303,6 +316,13 @@ export function Navbar() {
                     <BookOpen className="h-3.5 w-3.5" />
                     Learn
                   </Link>
+                  <Link
+                    to="/about"
+                    className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    About
+                  </Link>
                 </>
               ) : (
                 <>
@@ -320,6 +340,13 @@ export function Navbar() {
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     Learn
+                  </Link>
+                  <Link
+                    to="/about"
+                    className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    About
                   </Link>
                   <Link
                     to="/auth"

@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { PDFDocument, rgb, StandardFonts } from "https://cdn.skypack.dev/pdf-lib@^1.17.1?dts";
+import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -96,7 +96,7 @@ serve(async (req) => {
 
         const pdfBytes = await pdfDoc.save();
 
-        return new Response(pdfBytes, {
+        return new Response(pdfBytes as unknown as BodyInit, {
             headers: {
                 ...corsHeaders,
                 "Content-Type": "application/pdf",
