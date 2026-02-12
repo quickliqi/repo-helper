@@ -48,8 +48,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select('role')
         .eq('user_id', userId);
 
-      if (rolesData && rolesData.length > 0) {
-        const roles = rolesData.map(r => r.role as AppRole);
+      const roles: AppRole[] = rolesData ? rolesData.map(r => r.role as AppRole) : [];
+
+      // Admin email fallback — ensures admin access even if DB migration hasn't run
+      const currentUser = (await supabase.auth.getUser()).data.user;
+      if (currentUser?.email === 'thomasdamienak@gmail.com' && !roles.includes('admin')) {
+        roles.push('admin');
+      }
+
+      if (roles.length > 0) {
         setAllRoles(roles);
 
         // Check if there's a saved active role in localStorage

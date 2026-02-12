@@ -41,6 +41,21 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Admin bypass — full access without needing Edge Function
+    if (role === 'admin') {
+      setStatus({
+        isSubscribed: true,
+        isTrialing: false,
+        trialEnd: null,
+        subscriptionEnd: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString(),
+        listingCredits: 999,
+        scrapeCredits: 999,
+        planTier: 'pro',
+        isLoading: false,
+      });
+      return;
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('check-subscription');
 
@@ -83,7 +98,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         isLoading: false,
       });
     }
-  }, [user?.id]);
+  }, [user?.id, role]);
 
   // Fetch on mount and when user changes
   useEffect(() => {
