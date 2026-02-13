@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,6 +52,7 @@ import {
 import { processAndLogDeal } from '@/lib/calculations';
 import { GovernanceResult, DealInput } from '@/types/deal-types';
 import { MatchResult } from '@/lib/matching-engine';
+import { useGovernanceSettings } from '@/hooks/useGovernanceSettings';
 import { CurrencyDisplay, PercentDisplay } from '@/components/common/NumberDisplay';
 
 export default function PropertyDetail() {
@@ -73,20 +74,21 @@ export default function PropertyDetail() {
   // Governance & Intelligence State
   const [governance, setGovernance] = useState<GovernanceResult | null>(null);
   const [match, setMatch] = useState<MatchResult | null>(null);
+  const { data: governanceSettings } = useGovernanceSettings();
 
   useEffect(() => {
     if (id) {
       fetchProperty();
       incrementViewCount();
     }
-  }, [id]);
+  }, [id, fetchProperty, incrementViewCount]);
 
   useEffect(() => {
     if (id && user && property) {
       checkExistingContact();
       checkJVSigned();
     }
-  }, [id, user, property]);
+  }, [id, user, property, checkExistingContact, checkJVSigned]);
 
   // Run Governance Agent when property loads
   useEffect(() => {
@@ -98,12 +100,12 @@ export default function PropertyDetail() {
           // Ensure enums match (should match if types are aligned)
         } as unknown as DealInput;
 
-        const result = await processAndLogDeal(dealInput, user?.id);
+        const result = await processAndLogDeal(dealInput, user?.id, governanceSettings);
         setGovernance(result);
       };
       runAnalysis();
     }
-  }, [property, user?.id]);
+  }, [property, user?.id, governanceSettings]);
 
   // Run Investor Context Agent when governance results or buy box changes
   useEffect(() => {
@@ -113,7 +115,7 @@ export default function PropertyDetail() {
     }
   }, [property, governance, buyBox, evaluateDeal]);
 
-  const fetchProperty = async () => {
+  const fetchProperty = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -140,9 +142,9 @@ export default function PropertyDetail() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
 
-  const checkExistingContact = async () => {
+  const checkExistingContact = useCallback(async () => {
     if (!id || !user || !property) return;
     try {
       const { data } = await supabase
@@ -155,9 +157,9 @@ export default function PropertyDetail() {
     } catch (error) {
       console.error('Error checking contact status:', error);
     }
-  };
+  }, [id, user, property]);
 
-  const checkJVSigned = async () => {
+  const checkJVSigned = useCallback(async () => {
     if (!id || !user) return;
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -171,16 +173,16 @@ export default function PropertyDetail() {
     } catch (error) {
       console.error('Error checking JV status:', error);
     }
-  };
+  }, [id, user]);
 
-  const incrementViewCount = async () => {
+  const incrementViewCount = useCallback(async () => {
     if (!id) return;
     try {
       await supabase.rpc('increment_views', { p_property_id: id });
     } catch (error) {
       // Silently fail
     }
-  };
+  }, [id]);
 
   const handleContactSeller = async () => {
     if (!user || !property || !seller || !profile) return;

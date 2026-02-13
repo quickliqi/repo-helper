@@ -19,19 +19,19 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { UpgradePrompt } from '@/components/subscription/SubscriptionGate';
-import { 
-  PropertyType, 
-  DealType, 
+import {
+  PropertyType,
+  DealType,
   PropertyCondition,
   PROPERTY_TYPE_LABELS,
   DEAL_TYPE_LABELS,
   CONDITION_LABELS,
   US_STATES
 } from '@/types/database';
-import { 
-  Building2, 
-  MapPin, 
-  DollarSign, 
+import {
+  Building2,
+  MapPin,
+  DollarSign,
   Home,
   Camera,
   X,
@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { validateDeal } from '@/lib/dealValidation';
 import { DealQualityIndicator } from '@/components/deals/DealQualityIndicator';
+import { useGovernanceSettings } from '@/hooks/useGovernanceSettings';
 
 const PROPERTY_TYPES: PropertyType[] = ['single_family', 'multi_family', 'condo', 'townhouse', 'commercial', 'land', 'mobile_home', 'other'];
 const DEAL_TYPES: DealType[] = ['fix_and_flip', 'buy_and_hold', 'wholesale', 'subject_to', 'seller_finance', 'other'];
@@ -107,6 +108,9 @@ export default function PostDeal() {
   // Check if user is verified - wholesalers must verify to post deals
   const isVerified = profile?.verification_status === 'approved' || profile?.is_verified;
 
+  // New Governance Settings Hook
+  const { data: governanceSettings } = useGovernanceSettings();
+
   // Real-time deal validation
   const validation = useMemo(() => {
     return validateDeal({
@@ -121,11 +125,12 @@ export default function PostDeal() {
       asking_price: formData.asking_price,
       arv: formData.arv,
       repair_estimate: formData.repair_estimate,
+      assignment_fee: formData.assignment_fee, // Ensure assignment fee is passed
       description: formData.description,
       imageCount: images.length,
       isVerified: isVerified || false,
-    });
-  }, [formData, images.length, isVerified]);
+    }, governanceSettings); // Pass settings here
+  }, [formData, images.length, isVerified, governanceSettings]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -171,11 +176,11 @@ export default function PostDeal() {
 
   const uploadImages = async (): Promise<string[]> => {
     const urls: string[] = [];
-    
+
     for (const image of images) {
       const fileExt = image.name.split('.').pop();
       const fileName = `${user?.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('property-images')
         .upload(fileName, image);
@@ -194,7 +199,7 @@ export default function PostDeal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) {
       toast.error('Please sign in to post a deal');
       return;
@@ -211,7 +216,7 @@ export default function PostDeal() {
     try {
       // First, deduct a listing credit
       const { data: creditData, error: creditError } = await supabase.functions.invoke('use-listing-credit');
-      
+
       if (creditError || !creditData?.success) {
         const errorMsg = creditData?.error || creditError?.message || 'Failed to use listing credit';
         toast.error(errorMsg);
@@ -661,8 +666,8 @@ export default function PostDeal() {
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       {imagePreviews.map((preview, index) => (
                         <div key={index} className="relative group">
-                          <img 
-                            src={preview} 
+                          <img
+                            src={preview}
                             alt={`Preview ${index + 1}`}
                             className="w-full h-24 object-cover rounded-lg border border-border"
                           />
@@ -677,7 +682,7 @@ export default function PostDeal() {
                       ))}
                     </div>
                   )}
-                  
+
                   {images.length < 10 && (
                     <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-muted-foreground/50 transition-colors">
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -718,15 +723,15 @@ export default function PostDeal() {
                     rows={4}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label>Deal Highlights</Label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {formData.highlights.map((highlight, index) => (
                       <Badge key={index} variant="secondary" className="gap-1">
                         {highlight}
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
+                        <X
+                          className="h-3 w-3 cursor-pointer"
                           onClick={() => removeHighlight(index)}
                         />
                       </Badge>
@@ -760,11 +765,11 @@ export default function PostDeal() {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex gap-4">
-                <Button 
-                  type="submit" 
-                  size="lg" 
+                <Button
+                  type="submit"
+                  size="lg"
                   disabled={isSubmitting || !validation.isValid}
                   className="flex-1 md:flex-none"
                 >
@@ -780,9 +785,9 @@ export default function PostDeal() {
                     </>
                   )}
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   size="lg"
                   onClick={() => navigate('/dashboard')}
                 >
