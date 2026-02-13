@@ -17,16 +17,16 @@ const RATE_LIMIT_WINDOW_MS = 60000;
 function checkRateLimit(identifier: string): boolean {
   const now = Date.now();
   const entry = rateLimitMap.get(identifier);
-  
+
   if (!entry || now > entry.resetTime) {
     rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
     return true;
   }
-  
+
   if (entry.count >= RATE_LIMIT_MAX) {
     return false;
   }
-  
+
   entry.count++;
   return true;
 }
@@ -47,7 +47,7 @@ interface NotificationEmailRequest {
 
 const getEmailContent = (data: NotificationEmailRequest) => {
   const siteUrl = "https://quickliqi.lovable.app";
-  
+
   switch (data.type) {
     case "match":
       return {
@@ -195,10 +195,10 @@ serve(async (req) => {
       console.log("[SEND-NOTIFICATION-EMAIL] Request authorized via service role key");
     }
 
-    const clientIP = req.headers.get("x-forwarded-for") || 
-                     req.headers.get("x-real-ip") || 
-                     userId;
-    
+    const clientIP = req.headers.get("x-forwarded-for") ||
+      req.headers.get("x-real-ip") ||
+      userId;
+
     if (!checkRateLimit(clientIP)) {
       console.error("[SEND-NOTIFICATION-EMAIL] Rate limit exceeded for:", clientIP);
       return new Response(
@@ -218,9 +218,9 @@ serve(async (req) => {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-      
+
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(recipientEmail);
-      
+
       if (authError || !authUser?.user?.email) {
         console.error("[SEND-NOTIFICATION-EMAIL] Could not resolve user email:", authError?.message);
         return new Response(
@@ -228,7 +228,7 @@ serve(async (req) => {
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
-      
+
       recipientEmail = authUser.user.email;
       console.log("[SEND-NOTIFICATION-EMAIL] Resolved to email:", recipientEmail);
     }
@@ -262,9 +262,10 @@ serve(async (req) => {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[SEND-NOTIFICATION-EMAIL] Error:", error);
-    return new Response(JSON.stringify({ error: error.message || "Internal server error" }), {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({ error: message || "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });

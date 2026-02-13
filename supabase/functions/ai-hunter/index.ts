@@ -1,18 +1,169 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
+// ─── Interfaces ─────────────────────────────────────────────────────────────
+
+interface PropertyAddress {
+    line?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    state_code?: string;
+    postal_code?: string;
+    zip?: string;
+}
+
+interface MlsListing {
+    list_price?: number;
+    price?: number;
+    property_id?: string;
+    href?: string;
+    location?: { address?: PropertyAddress };
+    address?: PropertyAddress;
+    description?: {
+        text?: string;
+        sqft?: number;
+        lot_sqft?: number;
+        beds?: number;
+        bedrooms?: number;
+        baths?: number;
+        bathrooms?: number;
+        type?: string;
+        year_built?: number;
+    };
+    sqft?: number;
+    beds?: number;
+    baths?: number;
+    prop_type?: string;
+    year_built?: number;
+}
+
+interface Deal {
+    title: string;
+    price: number;
+    asking_price: number;
+    location: string;
+    source: string;
+    description: string;
+    link: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+    bedrooms?: number;
+    bathrooms?: number;
+    sqft?: number;
+    year_built?: number;
+    property_type?: string;
+    deal_type?: string;
+    condition?: string;
+    arv?: number;
+    repair_estimate?: number;
+    ai_score?: number;
+    reasoning?: string;
+    metrics?: DealMetrics | null;
+    validated?: boolean;
+}
+
+interface ScrapeData {
+    data?: {
+        markdown?: string;
+    };
+    markdown?: string;
+}
+
+interface LovableAiResponse {
+    choices?: Array<{
+        message?: {
+            content?: string;
+        };
+    }>;
+}
+
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: unknown) => {
     const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
     console.log(`[AI-HUNTER] ${step}${detailsStr}`);
 };
 
 // Admin email for bypass
 const ADMIN_EMAIL = "thomasdamienak@gmail.com";
+
+// ─── Calculator Agent (inline for Deno edge function) ──────────────
+const DEFAULT_CLOSING_COSTS_PERCENT = 0.03;
+const DEFAULT_HOLDING_COSTS_PERCENT = 0.02;
+
+interface DealMetrics {
+    grossEquity: number;
+    equityPercentage: number;
+    mao: number;
+    projectedProfit: number;
+    roi: number;
+    score: number;
+    riskFactors: string[];
+}
+
+function calculateDealMetrics(deal: {
+    asking_price: number;
+    arv?: number;
+    repair_estimate?: number;
+    condition?: string;
+}): DealMetrics | null {
+    if (!deal.asking_price) return null;
+
+    const arv = deal.arv || deal.asking_price;
+    const repairs = deal.repair_estimate || 0;
+
+    const totalCostBasis = deal.asking_price + repairs;
+    const grossEquity = arv - totalCostBasis;
+    const equityPercentage = arv > 0 ? (grossEquity / arv) * 100 : 0;
+    const standardMao = (arv * 0.70) - repairs;
+
+    const closingCosts = arv * DEFAULT_CLOSING_COSTS_PERCENT;
+    const holdingCosts = arv * DEFAULT_HOLDING_COSTS_PERCENT;
+    const totalInvested = deal.asking_price + repairs + closingCosts + holdingCosts;
+    const projectedProfit = arv - totalInvested;
+    const roi = totalInvested > 0 ? (projectedProfit / totalInvested) * 100 : 0;
+
+    let score = 50;
+    if (equityPercentage > 20) score += 20;
+    if (equityPercentage > 30) score += 10;
+    if (roi > 15) score += 10;
+    if (roi > 30) score += 10;
+    if (deal.condition === 'distressed' || deal.condition === 'poor') score -= 10;
+    score = Math.max(0, Math.min(100, score));
+
+    const riskFactors: string[] = [];
+    if (!deal.arv) riskFactors.push("ARV is missing; using Asking Price as proxy.");
+    if (equityPercentage < 10) riskFactors.push("Low equity margin (<10%).");
+    if (repairs === 0 && deal.condition !== 'excellent') riskFactors.push("No repair estimate provided.");
+
+    return { grossEquity, equityPercentage, mao: standardMao, projectedProfit, roi, score, riskFactors };
+}
+
+// ─── Property Type Mapping ─────────────────────────────────────────
+function mapPropertyType(apiType: string): string {
+    const mapping: Record<string, string> = {
+        'single_family': 'single_family',
+        'multi_family': 'multi_family',
+        'condo': 'condo',
+        'condos': 'condo',
+        'townhome': 'townhouse',
+        'townhomes': 'townhouse',
+        'townhouse': 'townhouse',
+        'mobile': 'mobile_home',
+        'land': 'land',
+        'farm': 'land',
+        'commercial': 'commercial',
+        'duplex_triplex': 'multi_family',
+        'apartment': 'multi_family',
+    };
+    return mapping[apiType?.toLowerCase()] || 'other';
+}
 
 serve(async (req) => {
     if (req.method === "OPTIONS") {
@@ -45,11 +196,10 @@ serve(async (req) => {
         const userEmail = userData.user.email;
         logStep("User authenticated", { userId, email: userEmail });
 
-        // Admin bypass — skip plan and credit checks
+        // Admin bypass
         const isAdmin = userEmail === ADMIN_EMAIL;
 
         if (!isAdmin) {
-            // Check if user has an active Pro subscription via check-subscription logic
             const { data: roleData } = await supabaseAdmin
                 .from("user_roles")
                 .select("role")
@@ -58,7 +208,6 @@ serve(async (req) => {
                 .maybeSingle();
 
             if (!roleData) {
-                // Non-admin: check scrape credits
                 const { data: credits } = await supabaseAdmin
                     .from("scrape_credits")
                     .select("*")
@@ -73,7 +222,6 @@ serve(async (req) => {
 
         logStep("Access check passed", { isAdmin });
 
-        // Parse request body — frontend sends { city, state }
         const body = await req.json();
         const { city, state } = body;
 
@@ -83,55 +231,291 @@ serve(async (req) => {
 
         logStep("Request received", { city, state });
 
-        // Get user's buy boxes for AI analysis context
+        // Get user's buy boxes for filtering context
         const { data: buyBoxes } = await supabaseAdmin
             .from("buy_boxes")
             .select("*")
             .eq("user_id", userId)
             .eq("is_active", true);
 
-        // Use Gemini AI to generate realistic deal analysis for the target market
-        const geminiKey = Deno.env.get("GEMINI_API_KEY");
+        // Derive price range from buy boxes
+        let minPrice = 0;
+        let maxPrice = 5000000;
+        if (buyBoxes && buyBoxes.length > 0) {
+            const mins = buyBoxes.filter(b => b.min_price).map(b => b.min_price);
+            const maxs = buyBoxes.filter(b => b.max_price).map(b => b.max_price);
+            if (mins.length > 0) minPrice = Math.min(...mins);
+            if (maxs.length > 0) maxPrice = Math.max(...maxs);
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // SOURCE 1: Real Estate API (MLS Listings)
+        // ═══════════════════════════════════════════════════════════
+        let mlsDeals: Deal[] = [];
+        const rapidApiKey = Deno.env.get("RAPIDAPI_KEY");
+
+        if (rapidApiKey) {
+            try {
+                logStep("Fetching MLS listings via RapidAPI");
+
+                const params = new URLSearchParams({
+                    city: city,
+                    state_code: state,
+                    limit: "10",
+                    offset: "0",
+                    sort: "newest",
+                });
+
+                const mlsResponse = await fetch(
+                    `https://us-real-estate.p.rapidapi.com/v3/for-sale?${params.toString()}`,
+                    {
+                        method: "GET",
+                        headers: {
+                            "x-rapidapi-key": rapidApiKey,
+                            "x-rapidapi-host": "us-real-estate.p.rapidapi.com",
+                        },
+                    }
+                );
+
+                if (mlsResponse.ok) {
+                    const mlsData = await mlsResponse.json();
+                    const listings: MlsListing[] = mlsData?.data?.home_search?.results || mlsData?.data?.results || [];
+                    logStep("MLS listings received", { count: listings.length });
+
+                    mlsDeals = listings
+                        .filter((listing) => {
+                            const price = listing.list_price || listing.price;
+                            return price !== undefined && price >= minPrice && price <= maxPrice;
+                        })
+                        .slice(0, 8)
+                        .map((listing) => {
+                            const price = listing.list_price || listing.price || 0;
+                            const address = listing.location?.address || listing.address || {};
+                            const description = listing.description || {};
+                            const sqft = description.sqft || listing.sqft || description.lot_sqft;
+                            const beds = description.beds || listing.beds || description.bedrooms;
+                            const baths = description.baths || listing.baths || description.bathrooms;
+                            const propType = description.type || listing.prop_type || 'single_family';
+                            const listingUrl = listing.href
+                                ? `https://www.realtor.com${listing.href}`
+                                : listing.property_id
+                                    ? `https://www.realtor.com/realestateandhomes-detail/${listing.property_id}`
+                                    : `https://www.realtor.com/realestateandhomes-search/${city}_${state}`;
+
+                            const streetAddr = address.line || address.street || "Address Available on Source";
+                            const cityName = address.city || city;
+                            const stateCode = address.state_code || address.state || state;
+                            const zipCode = address.postal_code || address.zip || "";
+
+                            return {
+                                title: `${beds || '?'}BR/${baths || '?'}BA - ${streetAddr}`,
+                                price: price,
+                                asking_price: price,
+                                location: `${cityName}, ${stateCode}`,
+                                source: "MLS",
+                                description: `${beds || '?'} bed ${baths || '?'} bath, ${sqft ? sqft.toLocaleString() + ' sqft' : 'sqft N/A'}. ${description.text || ''}`.trim().substring(0, 300),
+                                link: listingUrl,
+                                address: streetAddr,
+                                city: cityName,
+                                state: stateCode,
+                                zip_code: zipCode,
+                                bedrooms: beds ? Number(beds) : undefined,
+                                bathrooms: baths ? Number(baths) : undefined,
+                                sqft: sqft ? Number(sqft) : undefined,
+                                year_built: description.year_built || listing.year_built || undefined,
+                                property_type: mapPropertyType(propType),
+                                deal_type: "wholesale",
+                                condition: "fair",
+                            };
+                        });
+
+                    logStep("MLS deals processed", { count: mlsDeals.length });
+                } else {
+                    const errorText = await mlsResponse.text();
+                    logStep("MLS API error", { status: mlsResponse.status, error: errorText.substring(0, 200) });
+                }
+            } catch (mlsError: unknown) {
+                const message = mlsError instanceof Error ? mlsError.message : String(mlsError);
+                logStep("MLS fetch failed", { error: message });
+            }
+        } else {
+            logStep("No RAPIDAPI_KEY configured, skipping MLS source");
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // SOURCE 2: Firecrawl FSBO Scraping
+        // ═══════════════════════════════════════════════════════════
+        let fsboDeals: Deal[] = [];
+        const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
         const lovableKey = Deno.env.get("LOVABLE_API_KEY");
 
-        let deals = [];
+        if (firecrawlKey) {
+            try {
+                logStep("Scraping FSBO listings via Firecrawl");
 
-        if (geminiKey || lovableKey) {
-            const analysisPrompt = `You are a real estate investment AI analyzing the ${city}, ${state} market.
-            
-Investor Buy Box Criteria: ${JSON.stringify(buyBoxes || [])}
+                const citySlug = city.toLowerCase().replace(/\s+/g, '');
+                // Craigslist FSBO search for the metro area
+                const craigslistUrl = `https://${citySlug}.craigslist.org/search/rea?purveyor=owner&min_price=${minPrice}&max_price=${maxPrice}`;
 
-TASK: Generate 3-5 realistic-looking off-market real estate deal leads for ${city}, ${state}.
-For each deal, include realistic data points that would be found from Craigslist FSBO, probate records, and MLS.
+                const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${firecrawlKey}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        url: craigslistUrl,
+                        formats: ["markdown"],
+                        onlyMainContent: true,
+                        waitFor: 3000,
+                    }),
+                });
 
-Return ONLY valid JSON in this exact format:
+                if (scrapeResponse.ok) {
+                    const scrapeData: ScrapeData = await scrapeResponse.json();
+                    const markdown = scrapeData.data?.markdown || scrapeData.markdown || "";
+                    logStep("Firecrawl FSBO content received", { contentLength: markdown.length });
+
+                    // Use AI to extract structured deals from raw content
+                    if (markdown.length > 100 && lovableKey) {
+                        const extractionPrompt = `You are a real estate data extraction AI. Extract property listings from this Craigslist FSBO page content.
+
+SCRAPED CONTENT:
+${markdown.substring(0, 8000)}
+
+TASK: Extract up to 5 property listings. For each, extract all available data.
+
+Return ONLY valid JSON:
 {
   "deals": [
     {
-      "title": "Property title/address",
-      "price": "$XXX,XXX",
-      "location": "${city}, ${state}",
-      "source": "Craigslist FSBO|Probate Records|MLS Filtered",
-      "description": "Brief property description",
-      "link": "https://example.com",
-      "ai_score": 85,
-      "reasoning": "Why this is a good deal based on market analysis"
+      "title": "Brief property description",
+      "price": 165000,
+      "address": "Street address if available",
+      "city": "${city}",
+      "state": "${state}",
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "sqft": 1450,
+      "description": "Full listing description",
+      "link": "https://craigslist.org/actual/post/url",
+      "condition": "fair"
     }
   ]
 }
 
-Requirements:
-- ai_score should be between 70-98
-- Prices should be realistic for ${city}, ${state} market
-- Include mix of sources
-- Description should mention key details like beds/baths/sqft
-- Reasoning should reference ARV, equity potential, or motivation signals`;
+Rules:
+- price MUST be a number, not a string
+- Only include listings with a clear asking price
+- If data is unavailable, omit the field
+- link should be the actual posting URL if found in content`;
 
-            let aiResponse;
+                        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                            method: "POST",
+                            headers: {
+                                "Authorization": `Bearer ${lovableKey}`,
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                model: "google/gemini-2.5-flash",
+                                messages: [
+                                    { role: "system", content: "You are a precise real estate data extraction AI. Respond with valid JSON only. No markdown, no code fences." },
+                                    { role: "user", content: extractionPrompt }
+                                ],
+                            }),
+                        });
 
-            if (lovableKey) {
-                logStep("Using Lovable AI gateway");
-                aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                        if (aiResponse.ok) {
+                            const aiData: LovableAiResponse = await aiResponse.json();
+                            const aiContent = aiData.choices?.[0]?.message?.content || "{}";
+
+                            try {
+                                const cleaned = aiContent.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+                                const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+                                if (jsonMatch) {
+                                    const parsed = JSON.parse(jsonMatch[0]);
+                                    fsboDeals = (parsed.deals || []).map((d: Partial<Deal>) => ({
+                                        ...d,
+                                        title: d.title || "FSBO Deal",
+                                        price: typeof d.price === 'number' ? d.price : 0,
+                                        asking_price: typeof d.price === 'string' ? parseInt((d.price as string).replace(/[$,]/g, '')) : (d.price || 0),
+                                        location: `${d.city || city}, ${d.state || state}`,
+                                        city: d.city || city,
+                                        state: d.state || state,
+                                        property_type: d.property_type || 'single_family',
+                                        deal_type: "wholesale",
+                                        link: d.link || craigslistUrl,
+                                        source: "Craigslist FSBO",
+                                        description: d.description || "",
+                                        address: d.address || "",
+                                        zip_code: d.zip_code,
+                                        bedrooms: d.bedrooms,
+                                        bathrooms: d.bathrooms,
+                                        sqft: d.sqft,
+                                        condition: d.condition,
+                                    }));
+                                    logStep("FSBO deals extracted", { count: fsboDeals.length });
+                                }
+                            } catch (parseErr: unknown) {
+                                const message = parseErr instanceof Error ? parseErr.message : String(parseErr);
+                                logStep("FSBO JSON parse error", { error: message });
+                            }
+                        }
+                    }
+                } else {
+                    logStep("Firecrawl error", { status: scrapeResponse.status });
+                }
+            } catch (fsboError: unknown) {
+                const message = fsboError instanceof Error ? fsboError.message : String(fsboError);
+                logStep("FSBO scrape failed", { error: message });
+            }
+        } else {
+            logStep("No FIRECRAWL_API_KEY configured, skipping FSBO source");
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // MERGE & VALIDATE through Calculator Agent
+        // ═══════════════════════════════════════════════════════════
+        let allDeals = [...mlsDeals, ...fsboDeals];
+        logStep("Total raw deals", { mls: mlsDeals.length, fsbo: fsboDeals.length, total: allDeals.length });
+
+        // If no real data sources returned results, use AI-generated market analysis as fallback
+        if (allDeals.length === 0 && lovableKey) {
+            logStep("No real data sources available, using AI market analysis fallback");
+
+            const fallbackPrompt = `You are a real estate investment AI analyzing the ${city}, ${state} market.
+
+Investor Buy Box: ${JSON.stringify(buyBoxes || [])}
+
+Generate 3-5 realistic property listings that would currently exist in ${city}, ${state}.
+Base them on real market conditions. Include realistic addresses (use real street names).
+
+Return ONLY valid JSON:
+{
+  "deals": [
+    {
+      "title": "Property description",
+      "price": 165000,
+      "address": "123 Real Street Name",
+      "city": "${city}",
+      "state": "${state}",
+      "zip_code": "30301",
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "sqft": 1450,
+      "arv": 255000,
+      "repair_estimate": 25000,
+      "description": "Brief property description",
+      "link": "https://www.realtor.com/realestateandhomes-search/${city}_${state}",
+      "source": "MLS",
+      "condition": "fair",
+      "property_type": "single_family"
+    }
+  ]
+}`;
+
+            try {
+                const fallbackResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${lovableKey}`,
@@ -140,88 +524,105 @@ Requirements:
                     body: JSON.stringify({
                         model: "google/gemini-2.5-flash",
                         messages: [
-                            { role: "system", content: "You are a precise real estate data extraction AI. Respond with valid JSON only. No markdown, no code fences." },
-                            { role: "user", content: analysisPrompt }
+                            { role: "system", content: "You are a real estate data AI. Respond with valid JSON only." },
+                            { role: "user", content: fallbackPrompt }
                         ],
                     }),
                 });
-            } else if (geminiKey) {
-                logStep("Using Gemini API directly");
-                aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: analysisPrompt }] }],
-                        generationConfig: { responseMimeType: "application/json" }
-                    }),
-                });
-            }
 
-            if (aiResponse && aiResponse.ok) {
-                const aiData = await aiResponse.json();
-                logStep("AI response received");
-
-                let aiContent = "";
-                if (lovableKey) {
-                    aiContent = aiData.choices?.[0]?.message?.content || "{}";
-                } else {
-                    aiContent = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-                }
-
-                try {
-                    // Strip markdown code fences if present
-                    const cleaned = aiContent.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+                if (fallbackResponse.ok) {
+                    const fbData: LovableAiResponse = await fallbackResponse.json();
+                    const fbContent = fbData.choices?.[0]?.message?.content || "{}";
+                    const cleaned = fbContent.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
                     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
                     if (jsonMatch) {
                         const parsed = JSON.parse(jsonMatch[0]);
-                        deals = parsed.deals || [];
+                        allDeals = (parsed.deals || []).map((d: Partial<Deal>) => ({
+                            ...d,
+                            title: d.title || "Market Analysis Deal",
+                            price: d.price || 0,
+                            asking_price: d.price || 0,
+                            location: `${d.city || city}, ${d.state || state}`,
+                            deal_type: d.deal_type || "wholesale",
+                            source: "AI Market Analysis",
+                            description: d.description || "",
+                            link: d.link || "",
+                            address: d.address,
+                            city: d.city,
+                            state: d.state,
+                            zip_code: d.zip_code,
+                            bedrooms: d.bedrooms,
+                            bathrooms: d.bathrooms,
+                            sqft: d.sqft,
+                            condition: d.condition,
+                            property_type: d.property_type
+                        }));
+                        logStep("AI fallback deals generated", { count: allDeals.length });
                     }
-                } catch (parseError) {
-                    logStep("JSON parse error", { error: parseError.message, content: aiContent.substring(0, 200) });
                 }
-            } else {
-                logStep("AI response error", { status: aiResponse?.status });
+            } catch (fbErr: unknown) {
+                const message = fbErr instanceof Error ? fbErr.message : String(fbErr);
+                logStep("AI fallback failed", { error: message });
             }
         }
 
-        // If AI didn't return results, provide sample data
-        if (deals.length === 0) {
-            logStep("Using fallback sample data");
-            deals = [
-                {
-                    title: `3BR/2BA Ranch - ${city} Metro`,
-                    price: "$165,000",
-                    location: `${city}, ${state}`,
-                    source: "Craigslist FSBO",
-                    description: "Owner motivated, 3 bed 2 bath ranch, 1,450 sqft, built 1985. Needs cosmetic updates. Estate sale.",
-                    link: "https://craigslist.org",
-                    ai_score: 92,
-                    reasoning: "Priced 35% below ARV of $255K. Estate sale signals motivation. Cosmetic rehab estimated $25K."
-                },
-                {
-                    title: `Probate Listing - ${city} Downtown`,
-                    price: "$89,000",
-                    location: `${city}, ${state}`,
-                    source: "Probate Records",
-                    description: "2 bed 1 bath bungalow, 980 sqft. Probate case filed 60 days ago. Property vacant.",
-                    link: "https://publicrecords.com",
-                    ai_score: 88,
-                    reasoning: "Deep discount probate property. Vacant = faster closing. ARV estimated $145K after $20K rehab."
-                },
-                {
-                    title: `Investment Duplex - ${city} Eastside`,
-                    price: "$210,000",
-                    location: `${city}, ${state}`,
-                    source: "MLS Filtered",
-                    description: "Duplex, each unit 2BR/1BA. Total 2,100 sqft. Roof replaced 2023. Both units rented.",
-                    link: "https://mls.com",
-                    ai_score: 85,
-                    reasoning: "Cash-flowing duplex at 8.2% cap rate. Below market rents = upside potential."
-                }
-            ];
-        }
+        // Run Calculator Agent on all deals
+        const validatedDeals = allDeals.map((deal) => {
+            const metrics = calculateDealMetrics({
+                asking_price: deal.asking_price || deal.price,
+                arv: deal.arv,
+                repair_estimate: deal.repair_estimate,
+                condition: deal.condition,
+            });
 
-        logStep("Deals generated", { count: deals.length });
+            // Calculate AI score from metrics
+            let aiScore = 50;
+            if (metrics) {
+                aiScore = metrics.score;
+                // Boost score for high-equity deals
+                if (metrics.equityPercentage > 25) aiScore = Math.min(98, aiScore + 10);
+                if (metrics.roi > 20) aiScore = Math.min(98, aiScore + 5);
+            }
+
+            return {
+                title: deal.title,
+                price: deal.asking_price || deal.price,
+                location: deal.location,
+                source: deal.source || "MLS",
+                description: deal.description || "",
+                link: deal.link || "",
+                ai_score: aiScore,
+                reasoning: metrics
+                    ? `${metrics.equityPercentage > 0 ? `${metrics.equityPercentage.toFixed(0)}% equity` : 'Negative equity'}. MAO: $${Math.round(metrics.mao).toLocaleString()}. ROI: ${metrics.roi.toFixed(1)}%. ${metrics.riskFactors.join(' ')}`
+                    : "Insufficient data for full analysis.",
+                metrics: metrics ? {
+                    arv: deal.arv || deal.asking_price || deal.price,
+                    mao: Math.round(metrics.mao),
+                    roi: Math.round(metrics.roi * 10) / 10,
+                    equityPercentage: Math.round(metrics.equityPercentage * 10) / 10,
+                    score: metrics.score,
+                    riskFactors: metrics.riskFactors,
+                    grossEquity: Math.round(metrics.grossEquity),
+                    projectedProfit: Math.round(metrics.projectedProfit),
+                } : null,
+                validated: metrics !== null,
+                // Preserve structured fields for audit pipeline
+                address: deal.address,
+                city: deal.city,
+                state: deal.state,
+                zip_code: deal.zip_code,
+                bedrooms: deal.bedrooms,
+                bathrooms: deal.bathrooms,
+                sqft: deal.sqft,
+                property_type: deal.property_type,
+                condition: deal.condition,
+            };
+        });
+
+        // Sort by AI score descending
+        validatedDeals.sort((a, b) => (b.ai_score || 0) - (a.ai_score || 0));
+
+        logStep("Deals validated & sorted", { count: validatedDeals.length, validated: validatedDeals.filter((d) => d.validated).length });
 
         // Deduct credit for non-admin users
         if (!isAdmin) {
@@ -243,14 +644,23 @@ Requirements:
             }
         }
 
-        return new Response(JSON.stringify({ deals }), {
+        return new Response(JSON.stringify({
+            deals: validatedDeals,
+            sources: {
+                mls: mlsDeals.length,
+                fsbo: fsboDeals.length,
+                fallback: allDeals.length === 0 ? 0 : (mlsDeals.length === 0 && fsboDeals.length === 0 ? validatedDeals.length : 0),
+            },
+            total: validatedDeals.length,
+        }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
-    } catch (error: any) {
-        logStep("ERROR", { message: error.message });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        logStep("ERROR", { message });
         return new Response(JSON.stringify({
-            error: error.message
+            error: message
         }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: unknown) => {
   console.log(`[SEND-PURCHASE-CONFIRMATION] ${step}`, details ? JSON.stringify(details) : "");
 };
 
@@ -165,7 +165,7 @@ serve(async (req) => {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logStep("ERROR", { message: error.message });
     return new Response(
       JSON.stringify({ error: error.message }),

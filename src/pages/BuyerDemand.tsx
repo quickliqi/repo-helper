@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { BuyBox, PROPERTY_TYPE_LABELS, DEAL_TYPE_LABELS, CONDITION_LABELS } from '@/types/database';
+import { BuyBox, PropertyType, DealType, PROPERTY_TYPE_LABELS, DEAL_TYPE_LABELS, CONDITION_LABELS } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Target, 
+import {
+  Target,
   MapPin,
   DollarSign,
   Home,
@@ -63,16 +63,16 @@ export default function BuyerDemand() {
   };
 
   const filteredBuyBoxes = buyBoxes.filter(bb => {
-    const matchesSearch = 
+    const matchesSearch =
       bb.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       bb.target_cities?.some(c => c.toLowerCase().includes(searchQuery.toLowerCase())) ||
       bb.target_states?.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesPropertyType = propertyTypeFilter === 'all' || 
-      bb.property_types.includes(propertyTypeFilter as any);
-    
-    const matchesDealType = dealTypeFilter === 'all' || 
-      bb.deal_types.includes(dealTypeFilter as any);
+
+    const matchesPropertyType = propertyTypeFilter === 'all' ||
+      bb.property_types.includes(propertyTypeFilter as PropertyType);
+
+    const matchesDealType = dealTypeFilter === 'all' ||
+      bb.deal_types.includes(dealTypeFilter as DealType);
 
     return matchesSearch && matchesPropertyType && matchesDealType;
   });

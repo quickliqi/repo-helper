@@ -51,14 +51,16 @@ const Pricing = () => {
         }
         window.open(data.url, '_blank');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Checkout error:', error);
 
       let errorMessage = 'Unknown error occurred';
-      if (error.context?.json?.error) {
-        errorMessage = error.context.json.error;
-      } else if (error.message) {
-        errorMessage = error.message;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const err = error as any; // Temporary safe cast for property access or use improved narrowing
+      if (err?.context?.json?.error) {
+        errorMessage = err.context.json.error;
+      } else if (err?.message) {
+        errorMessage = err.message;
       }
 
       toast.error(`Checkout failed: ${errorMessage}`);

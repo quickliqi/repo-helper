@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: unknown) => {
   console.log(`[USE-LISTING-CREDIT] ${step}`, details ? JSON.stringify(details) : "");
 };
 
@@ -39,10 +39,10 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    
+
     const user = userData.user;
     if (!user) throw new Error("User not authenticated");
-    
+
     logStep("User authenticated", { userId: user.id });
 
     // Check rate limit
@@ -104,16 +104,16 @@ serve(async (req) => {
       throw new Error(`Error updating credits: ${updateError.message}`);
     }
 
-    logStep("Credit deducted", { 
-      userId: user.id, 
+    logStep("Credit deducted", {
+      userId: user.id,
       previousCredits: credits.credits_remaining,
       newCredits: credits.credits_remaining - 1
     });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        credits_remaining: credits.credits_remaining - 1 
+      JSON.stringify({
+        success: true,
+        credits_remaining: credits.credits_remaining - 1
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

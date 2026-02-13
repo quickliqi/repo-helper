@@ -9,7 +9,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: unknown) => {
   console.log(`[TEST-EMAIL] ${step}`, details ? JSON.stringify(details) : "");
 };
 
@@ -190,18 +190,19 @@ serve(async (req) => {
     logStep("Test email sent successfully", { response: emailResponse });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: `Test ${type} email sent to ${user.email}`,
-        data: emailResponse 
+        data: emailResponse
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
-  } catch (error: any) {
-    logStep("Error sending test email", { error: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    logStep("Error sending test email", { error: message });
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

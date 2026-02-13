@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Link } from 'react-router-dom';
 
 interface SellerInfo {
+  user_id: string;
   full_name: string;
   company_name?: string;
   avatar_url?: string;
@@ -76,7 +77,7 @@ export default function SavedProperties() {
 
         if (sellersData) {
           const map: Record<string, SellerInfo> = {};
-          sellersData.forEach((seller: any) => {
+          sellersData.forEach((seller: SellerInfo) => {
             map[seller.user_id] = seller;
           });
           setSellerInfoMap(map);
@@ -143,8 +144,8 @@ export default function SavedProperties() {
         ) : (
           <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {properties.map((property) => (
-              <EnhancedPropertyCard 
-                key={property.id} 
+              <EnhancedPropertyCard
+                key={property.id}
                 property={property}
                 sellerInfo={sellerInfoMap[property.user_id]}
               />

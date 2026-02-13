@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { useInvestorContext } from '@/hooks/useInvestorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -44,12 +44,21 @@ import {
   Lock,
   CheckCircle2,
   Share2,
-  Bookmark
+  Bookmark,
+  AlertTriangle,
+  BrainCircuit,
+  Target
 } from 'lucide-react';
+import { processAndLogDeal } from '@/lib/calculations';
+import { GovernanceResult, DealInput } from '@/types/deal-types';
+import { MatchResult } from '@/lib/matching-engine';
+import { CurrencyDisplay, PercentDisplay } from '@/components/common/NumberDisplay';
 
 export default function PropertyDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, profile, role } = useAuth();
+  const { buyBox, evaluateDeal } = useInvestorContext();
+
   const [property, setProperty] = useState<Property | null>(null);
   const [seller, setSeller] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,11 +67,12 @@ export default function PropertyDetail() {
   const [isSending, setIsSending] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [hasContactedSeller, setHasContactedSeller] = useState(false);
-  const [sellerEmail, setSellerEmail] = useState<string | null>(null);
   const [hasSignedJV, setHasSignedJV] = useState(false);
   const [showJVSignDialog, setShowJVSignDialog] = useState(false);
 
-  // Verification status accessed via profile.verification_status or profile.is_verified
+  // Governance & Intelligence State
+  const [governance, setGovernance] = useState<GovernanceResult | null>(null);
+  const [match, setMatch] = useState<MatchResult | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -78,6 +88,31 @@ export default function PropertyDetail() {
     }
   }, [id, user, property]);
 
+  // Run Governance Agent when property loads
+  useEffect(() => {
+    if (property) {
+      const runAnalysis = async () => {
+        // Map Property to DealInput safely
+        const dealInput: DealInput = {
+          ...property,
+          // Ensure enums match (should match if types are aligned)
+        } as unknown as DealInput;
+
+        const result = await processAndLogDeal(dealInput, user?.id);
+        setGovernance(result);
+      };
+      runAnalysis();
+    }
+  }, [property, user?.id]);
+
+  // Run Investor Context Agent when governance results or buy box changes
+  useEffect(() => {
+    if (property && governance && buyBox) {
+      const result = evaluateDeal(property, governance.metrics);
+      setMatch(result);
+    }
+  }, [property, governance, buyBox, evaluateDeal]);
+
   const fetchProperty = async () => {
     setIsLoading(true);
     try {
@@ -90,7 +125,6 @@ export default function PropertyDetail() {
       if (error) throw error;
       setProperty(data as Property);
 
-      // Fetch seller profile (without exposing contact details yet)
       if (data?.user_id) {
         const { data: sellerData } = await supabase
           .from('profiles')
@@ -110,19 +144,14 @@ export default function PropertyDetail() {
 
   const checkExistingContact = async () => {
     if (!id || !user || !property) return;
-
     try {
-      // Check for existing conversation
       const { data } = await supabase
         .from('conversations')
         .select('id')
         .eq('property_id', id)
         .eq('investor_id', user.id)
         .maybeSingle();
-
-      if (data) {
-        setHasContactedSeller(true);
-      }
+      if (data) setHasContactedSeller(true);
     } catch (error) {
       console.error('Error checking contact status:', error);
     }
@@ -131,16 +160,14 @@ export default function PropertyDetail() {
   const checkJVSigned = async () => {
     if (!id || !user) return;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from('jv_agreements')
         .select('id')
         .eq('property_id', id)
         .eq('investor_id', user.id)
         .maybeSingle();
-
-      if (data) {
-        setHasSignedJV(true);
-      }
+      if (data) setHasSignedJV(true);
     } catch (error) {
       console.error('Error checking JV status:', error);
     }
@@ -148,20 +175,17 @@ export default function PropertyDetail() {
 
   const incrementViewCount = async () => {
     if (!id) return;
-    // Use atomic increment via RPC to avoid race conditions
     try {
       await supabase.rpc('increment_views', { p_property_id: id });
     } catch (error) {
-      // Silently fail - not critical
+      // Silently fail
     }
   };
 
   const handleContactSeller = async () => {
     if (!user || !property || !seller || !profile) return;
-
     setIsSending(true);
     try {
-      // Check if conversation already exists
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
@@ -171,7 +195,6 @@ export default function PropertyDetail() {
 
       let conversationId = existingConv?.id;
 
-      // Create conversation if it doesn't exist
       if (!conversationId) {
         const { data: newConv, error: convError } = await supabase
           .from('conversations')
@@ -187,7 +210,6 @@ export default function PropertyDetail() {
         conversationId = newConv.id;
       }
 
-      // Send the first message
       const { error: msgError } = await supabase
         .from('messages')
         .insert({
@@ -198,7 +220,6 @@ export default function PropertyDetail() {
 
       if (msgError) throw msgError;
 
-      // Create a notification in the database
       await supabase.from('notifications').insert({
         user_id: property.user_id,
         title: 'New Message',
@@ -207,7 +228,6 @@ export default function PropertyDetail() {
         related_property_id: property.id,
       });
 
-      // Send notification email to the seller (without contact info)
       await supabase.functions.invoke('send-notification-email', {
         body: {
           type: 'new_message',
@@ -238,26 +258,15 @@ export default function PropertyDetail() {
       toast.error('Please sign in to contact the seller');
       return;
     }
-
     if (role === 'wholesaler') {
       toast.error('Wholesalers cannot contact other wholesalers for deals');
       return;
     }
-
     if (!hasSignedJV) {
       setShowJVSignDialog(true);
       return;
     }
-
     setShowContactDialog(true);
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(price);
   };
 
   const getStatusColor = (status: Property['status']) => {
@@ -319,6 +328,7 @@ export default function PropertyDetail() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
+
               {/* Image Gallery */}
               <div className="rounded-xl overflow-hidden bg-muted aspect-video">
                 {property.image_urls && property.image_urls.length > 0 ? (
@@ -341,6 +351,13 @@ export default function PropertyDetail() {
                     {STATUS_LABELS[property.status]}
                   </Badge>
                   <Badge variant="outline">{DEAL_TYPE_LABELS[property.deal_type]}</Badge>
+                  {/* Governance Confidence Badge */}
+                  {governance && (
+                    <Badge variant={governance.confidenceScore > 80 ? "default" : "destructive"} className="gap-1">
+                      <BrainCircuit className="h-3 w-3" />
+                      Confidence: {governance.confidenceScore}%
+                    </Badge>
+                  )}
                 </div>
                 <h1 className="font-display text-3xl font-bold text-foreground mb-2">
                   {property.title}
@@ -351,35 +368,113 @@ export default function PropertyDetail() {
                 </div>
               </div>
 
+              {/* Governance & Match Alerts */}
+              {match && (
+                <div className={`p-4 rounded-lg border flex items-start gap-3 ${match.isMatch
+                  ? 'bg-green-500/10 border-green-500/20'
+                  : 'bg-yellow-500/10 border-yellow-500/20'
+                  }`}>
+                  <Target className={`h-5 w-5 mt-0.5 ${match.isMatch ? 'text-green-600' : 'text-yellow-600'}`} />
+                  <div>
+                    <h3 className={`font-semibold ${match.isMatch ? 'text-green-700' : 'text-yellow-700'}`}>
+                      Investor Fit Score: {match.score}%
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {match.reasons.positive.length > 0 && (
+                        <span className="text-green-600 block">✓ {match.reasons.positive[0]}</span>
+                      )}
+                      {match.reasons.negative.length > 0 && (
+                        <span className="text-red-500 block">⚠ {match.reasons.negative[0]}</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Risks Display */}
+              {governance?.flags && governance.flags.length > 0 && (
+                <div className="p-4 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-900">
+                  <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 font-semibold mb-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Risk Flags Detected</span>
+                  </div>
+                  <ul className="list-disc list-inside text-sm text-orange-800 dark:text-orange-300 space-y-1">
+                    {governance.flags.map((flag, i) => (
+                      <li key={i}>{flag.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* Price & Key Metrics */}
               <Card>
                 <CardContent className="pt-6">
                   <div className="grid md:grid-cols-4 gap-6">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Asking Price</p>
-                      <p className="text-3xl font-bold text-foreground">{formatPrice(property.asking_price)}</p>
+                      <p className="text-3xl font-bold text-foreground">
+                        <CurrencyDisplay value={property.asking_price} />
+                      </p>
                     </div>
-                    {property.arv && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">ARV</p>
-                        <p className="text-2xl font-semibold text-foreground">{formatPrice(property.arv)}</p>
-                      </div>
-                    )}
-                    {property.repair_estimate && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Repair Estimate</p>
-                        <p className="text-2xl font-semibold text-foreground">{formatPrice(property.repair_estimate)}</p>
-                      </div>
-                    )}
-                    {property.equity_percentage && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Equity</p>
-                        <p className="text-2xl font-semibold text-green-600">{property.equity_percentage}%</p>
-                      </div>
-                    )}
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">ARV</p>
+                      <p className="text-2xl font-semibold text-foreground">
+                        <CurrencyDisplay value={property.arv} />
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Repair Est.</p>
+                      <p className="text-2xl font-semibold text-foreground">
+                        <CurrencyDisplay value={property.repair_estimate} />
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Equity</p>
+                      <p className="text-2xl font-semibold text-green-600">
+                        {governance?.metrics ? (
+                          <PercentDisplay value={governance.metrics.equityPercentage} />
+                        ) : (
+                          property.equity_percentage + '%'
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Advanced Analytics Card (New) */}
+              {governance?.metrics && (
+                <Card className="bg-slate-50 dark:bg-slate-900/50">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <BrainCircuit className="h-5 w-5 text-purple-500" />
+                      AI Deal Analysis
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-3 gap-6">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Calculated MAO (70%)</p>
+                        <p className="font-mono font-medium text-lg">
+                          <CurrencyDisplay value={governance.metrics.mao} fractionDigits={0} />
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Proj. ROI (Flip)</p>
+                        <p className={`font-mono font-medium text-lg ${governance.metrics.roi > 15 ? 'text-green-600' : ''}`}>
+                          <PercentDisplay value={governance.metrics.roi} />
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Gross Equity</p>
+                        <p className="font-mono font-medium text-lg">
+                          <CurrencyDisplay value={governance.metrics.grossEquity} />
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Property Details */}
               <Card>
@@ -612,7 +707,9 @@ export default function PropertyDetail() {
                       <DollarSign className="h-8 w-8 text-primary" />
                       <div>
                         <p className="text-sm text-muted-foreground">Assignment Fee</p>
-                        <p className="text-2xl font-bold text-primary">{formatPrice(property.assignment_fee)}</p>
+                        <p className="text-2xl font-bold text-primary">
+                          <CurrencyDisplay value={property.assignment_fee} />
+                        </p>
                       </div>
                     </div>
                   </CardContent>

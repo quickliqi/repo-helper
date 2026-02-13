@@ -3,6 +3,10 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Helmet } from 'react-helmet-async';
+import { RiskDisclaimer } from '@/components/blog/RiskDisclaimer';
+import { MarketDataWidget } from '@/components/blog/MarketDataWidget';
+import { LeadMagnet } from '@/components/blog/LeadMagnet';
 import {
   ArrowLeft,
   Clock,
@@ -16,35 +20,46 @@ import {
   TrendingUp,
   CheckCircle2,
   AlertTriangle,
+  Signal
 } from 'lucide-react';
 
-// Article content database
-const ARTICLES: Record<string, {
+// Article content database with Tiers and SEO metadata
+type ArticleTier = 1 | 2 | 3 | 4;
+
+interface ArticleData {
   title: string;
+  metaDescription: string;
   category: string;
+  tier: ArticleTier;
   readTime: number;
   icon: React.ReactNode;
   content: React.ReactNode;
-}> = {
+}
+
+const ARTICLES: Record<string, ArticleData> = {
   'deal-analysis-fundamentals': {
     title: 'Deal Analysis Fundamentals: How to Evaluate Any Real Estate Deal',
+    metaDescription: 'Master the 70% Rule and Maximum Allowable Offer (MAO) formula. A complete guide to underwriting wholesale real estate deals with profitability protection.',
     category: 'Deal Analysis',
+    tier: 1, // Foundational
     readTime: 12,
     icon: <Calculator className="h-6 w-6" />,
     content: (
       <div className="prose prose-lg max-w-none dark:prose-invert">
+        <MarketDataWidget mode="fix_flip" className="mb-8" />
+
         <h2>The Foundation of Profitable Wholesaling</h2>
         <p>
-          Before you put a single property under contract, you need to know if it's actually a good deal. 
+          Before you put a single property under contract, you need to know if it's actually a good deal.
           This isn't about gut feelings—it's about running the numbers and letting math guide your decisions.
         </p>
 
         <h2>The 70% Rule Explained</h2>
         <p>
-          The 70% rule is the cornerstone of wholesale deal analysis. It states that you should pay 
+          The 70% rule is the cornerstone of wholesale deal analysis. It states that you should pay
           no more than 70% of the After Repair Value (ARV), minus repair costs.
         </p>
-        
+
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 my-6">
           <h3 className="text-primary mt-0">The MAO Formula</h3>
           <p className="font-mono text-lg">MAO = (ARV × 0.70) - Repair Costs - Assignment Fee</p>
@@ -60,6 +75,13 @@ const ARTICLES: Record<string, {
           <li><strong>Your Assignment Fee:</strong> $10,000</li>
           <li><strong>MAO:</strong> ($250,000 × 0.70) - $40,000 - $10,000 = <strong>$125,000</strong></li>
         </ul>
+
+        <LeadMagnet
+          title="Download the MAO Calculator"
+          description="Get the exact spreadsheet we use to underwrite deals in under 60 seconds."
+          buttonText="Get The Calculator"
+          className="my-8"
+        />
 
         <h2>Why 70%? The Investor's Perspective</h2>
         <p>
@@ -84,7 +106,7 @@ const ARTICLES: Record<string, {
 
         <h2>Calculating ARV (After Repair Value)</h2>
         <p>ARV estimation is both art and science. Here's how to get it right:</p>
-        
+
         <h3>1. Find Comparable Sales (Comps)</h3>
         <ul>
           <li>Same neighborhood (within 0.5 miles)</li>
@@ -96,7 +118,7 @@ const ARTICLES: Record<string, {
 
         <h3>2. Calculate Price Per Square Foot</h3>
         <p>
-          Take 3-5 comps and calculate the average price per square foot. Apply this to your subject 
+          Take 3-5 comps and calculate the average price per square foot. Apply this to your subject
           property's square footage for a baseline ARV.
         </p>
 
@@ -155,22 +177,24 @@ const ARTICLES: Record<string, {
     ),
   },
   'creative-financing-strategies': {
-    title: 'Creative Financing Strategies: Subject-To, Seller Finance & More',
-    category: 'Creative Finance',
+    title: 'Liquidity Structuring: Creative Financing & Subject-To Protocols',
+    metaDescription: 'Operational guide to Subject-To, Seller Finance, and Lease Options. Structure high-leverage real estate deals without traditional bank financing.',
+    category: 'Capital Structure',
+    tier: 2, // Advanced Execution
     readTime: 15,
     icon: <Lightbulb className="h-6 w-6" />,
     content: (
       <div className="prose prose-lg max-w-none dark:prose-invert">
         <h2>Beyond Traditional Financing</h2>
         <p>
-          Creative financing opens doors that traditional bank loans can't. These strategies let you 
-          acquire properties with little to no money down, help sellers in tough situations, and create 
+          Creative financing opens doors that traditional bank loans can't. These strategies let you
+          acquire properties with little to no money down, help sellers in tough situations, and create
           win-win deals that wouldn't be possible otherwise.
         </p>
 
         <h2>Subject-To Financing</h2>
         <p>
-          In a "subject-to" deal, you take ownership of the property while the existing mortgage 
+          In a "subject-to" deal, you take ownership of the property while the existing mortgage
           stays in the seller's name. You make the payments, but the loan isn't transferred.
         </p>
 
@@ -182,14 +206,21 @@ const ARTICLES: Record<string, {
           <li>Interest rate on existing loan is favorable</li>
         </ul>
 
+        <LeadMagnet
+          title="Creative Financing Contract Templates"
+          description="Download our attorney-reviewed Subject-To and Seller Finance addendums."
+          buttonText="Download Templates"
+          className="my-8"
+        />
+
         <h3>Key Considerations</h3>
         <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 my-6">
           <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-medium text-amber-600 m-0">Due-on-Sale Clause</p>
             <p className="text-sm text-muted-foreground m-0">
-              Most mortgages have a due-on-sale clause that technically allows the lender to call the 
-              loan due upon transfer. In practice, banks rarely exercise this as long as payments are 
+              Most mortgages have a due-on-sale clause that technically allows the lender to call the
+              loan due upon transfer. In practice, banks rarely exercise this as long as payments are
               current, but it's a risk to understand.
             </p>
           </div>
@@ -197,7 +228,7 @@ const ARTICLES: Record<string, {
 
         <h2>Seller Financing</h2>
         <p>
-          The seller becomes the bank, carrying a note on the property instead of receiving all cash 
+          The seller becomes the bank, carrying a note on the property instead of receiving all cash
           at closing. This creates incredible flexibility in deal structure.
         </p>
 
@@ -219,7 +250,7 @@ const ARTICLES: Record<string, {
 
         <h2>Lease Options</h2>
         <p>
-          A lease option combines a rental agreement with an option to purchase. You control the 
+          A lease option combines a rental agreement with an option to purchase. You control the
           property without owning it, then either exercise the option or assign it.
         </p>
 
@@ -231,7 +262,7 @@ const ARTICLES: Record<string, {
 
         <h3>Sandwich Lease Option</h3>
         <p>
-          The "sandwich" strategy involves leasing a property with an option, then sub-leasing it 
+          The "sandwich" strategy involves leasing a property with an option, then sub-leasing it
           to a tenant-buyer at a higher rate. You profit from:
         </p>
         <ul>
@@ -242,8 +273,8 @@ const ARTICLES: Record<string, {
 
         <h2>Wraparound Mortgages</h2>
         <p>
-          A wrap combines elements of subject-to and seller financing. The seller carries a new 
-          note that "wraps around" the existing mortgage, collecting payments from the buyer while 
+          A wrap combines elements of subject-to and seller financing. The seller carries a new
+          note that "wraps around" the existing mortgage, collecting payments from the buyer while
           continuing to pay the underlying loan.
         </p>
 
@@ -261,7 +292,7 @@ const ARTICLES: Record<string, {
           <div>
             <p className="font-medium text-success m-0">Win-Win Mindset</p>
             <p className="text-sm text-muted-foreground m-0">
-              The best creative finance deals solve real problems for sellers while creating profitable 
+              The best creative finance deals solve real problems for sellers while creating profitable
               opportunities for you. If both parties don't benefit, the deal isn't structured right.
             </p>
           </div>
@@ -270,20 +301,22 @@ const ARTICLES: Record<string, {
     ),
   },
   'finding-and-sourcing-deals': {
-    title: 'Finding & Sourcing Wholesale Deals: A Complete Guide',
-    category: 'Deal Sourcing',
+    title: 'Deal Flow Architecture: Pipeline Generation SOPs',
+    metaDescription: 'Systemize your off-market lead generation. Direct mail, driving for dollars, and digital sourcing strategies for consistent wholesale deal flow.',
+    category: 'Acquisition Ops',
+    tier: 1, // Foundational
     readTime: 10,
     icon: <Search className="h-6 w-6" />,
     content: (
       <div className="prose prose-lg max-w-none dark:prose-invert">
         <h2>Building a Consistent Deal Pipeline</h2>
         <p>
-          The wholesalers who succeed long-term are the ones who master lead generation. A consistent 
+          The wholesalers who succeed long-term are the ones who master lead generation. A consistent
           pipeline means you're never desperate for deals—and desperation leads to bad decisions.
         </p>
 
         <h2>Marketing Channels That Work</h2>
-        
+
         <h3>1. Direct Mail</h3>
         <p>Still one of the most effective channels. Target:</p>
         <ul>
@@ -335,7 +368,7 @@ const ARTICLES: Record<string, {
 
         <h2>Building Your Buyers List</h2>
         <p>
-          Your buyers list is as important as your deal flow. A strong list means quick closes and 
+          Your buyers list is as important as your deal flow. A strong list means quick closes and
           repeat business.
         </p>
         <ul>
@@ -349,15 +382,17 @@ const ARTICLES: Record<string, {
     ),
   },
   'due-diligence-closing': {
-    title: 'Due Diligence & Closing: Protect Yourself and Close More Deals',
-    category: 'Due Diligence',
+    title: 'Risk Mitigation: Due Diligence & Closing Logic',
+    metaDescription: 'Protect your capital with rigorous due diligence. Title search, physical inspection protocols, and essential contract contingencies.',
+    category: 'Risk Management',
+    tier: 2, // Advanced
     readTime: 14,
     icon: <FileSearch className="h-6 w-6" />,
     content: (
       <div className="prose prose-lg max-w-none dark:prose-invert">
         <h2>Due Diligence Protects Your Profits</h2>
         <p>
-          Skipping due diligence is the fastest way to lose money in real estate. Take the time to 
+          Skipping due diligence is the fastest way to lose money in real estate. Take the time to
           verify everything before you commit.
         </p>
 
@@ -413,15 +448,17 @@ const ARTICLES: Record<string, {
     ),
   },
   'ai-deal-analyzer-guide': {
-    title: 'How to Use Our AI Deal Analyzer for Maximum Profit',
-    category: 'Platform Guide',
+    title: 'Algorithmic Underwriting: Platform Analyzer Documentation',
+    metaDescription: 'Technical documentation for QuickLiqi AI Deal Analyzer. Learn how our automated risk scoring models validate deals against marketplace standards.',
+    category: 'Platform Docs',
+    tier: 4, // Docs
     readTime: 8,
     icon: <Bot className="h-6 w-6" />,
     content: (
       <div className="prose prose-lg max-w-none dark:prose-invert">
         <h2>AI-Powered Deal Analysis</h2>
         <p>
-          QuickLiqi's AI deal analyzer takes the guesswork out of evaluating wholesale deals. 
+          QuickLiqi's AI deal analyzer takes the guesswork out of evaluating wholesale deals.
           In seconds, you'll know if a property meets marketplace standards and is worth pursuing.
         </p>
 
@@ -434,7 +471,7 @@ const ARTICLES: Record<string, {
         </ul>
 
         <h2>Understanding the Results</h2>
-        
+
         <h3>Deal Quality Tiers</h3>
         <ul>
           <li><strong>Excellent Deal (≤60% ARV):</strong> Strong margins for all parties</li>
@@ -466,7 +503,7 @@ const ARTICLES: Record<string, {
           <div>
             <p className="font-medium text-success m-0">Quality Marketplace</p>
             <p className="text-sm text-muted-foreground m-0">
-              Every deal on QuickLiqi passes our quality check, so investors can browse with confidence 
+              Every deal on QuickLiqi passes our quality check, so investors can browse with confidence
               knowing all listings meet professional standards.
             </p>
           </div>
@@ -475,15 +512,17 @@ const ARTICLES: Record<string, {
     ),
   },
   'negotiation-tactics': {
-    title: 'Negotiation Tactics That Win Deals',
-    category: 'Negotiation',
+    title: 'Counterparty Negotiation: Settlement & Acquisition Protocols',
+    metaDescription: 'Zero-sum negotiation frameworks for distressed asset acquisition. Psychological leverage points and contract settlement mechanics.',
+    category: 'Acquisition Ops',
+    tier: 2, // Advanced
     readTime: 11,
     icon: <Handshake className="h-6 w-6" />,
     content: (
       <div className="prose prose-lg max-w-none dark:prose-invert">
         <h2>The Psychology of Successful Negotiation</h2>
         <p>
-          Great negotiators understand that every deal has two sides. Your goal isn't to "win"—it's 
+          Great negotiators understand that every deal has two sides. Your goal isn't to "win"—it's
           to create outcomes where both parties feel good about the agreement.
         </p>
 
@@ -496,29 +535,29 @@ const ARTICLES: Record<string, {
         </ol>
 
         <h2>Key Negotiation Strategies</h2>
-        
+
         <h3>1. Listen More Than You Talk</h3>
         <p>
-          The seller will often tell you exactly what they need. Your job is to listen for pain 
+          The seller will often tell you exactly what they need. Your job is to listen for pain
           points and then address them directly.
         </p>
 
         <h3>2. Anchor Appropriately</h3>
         <p>
-          The first number mentioned often influences the final outcome. Start with a reasonable 
+          The first number mentioned often influences the final outcome. Start with a reasonable
           but favorable anchor, then work toward the middle.
         </p>
 
         <h3>3. Use Silence</h3>
         <p>
-          After making an offer, stop talking. Silence creates pressure and often leads the other 
+          After making an offer, stop talking. Silence creates pressure and often leads the other
           party to make concessions or reveal information.
         </p>
 
         <h3>4. Separate People from Problems</h3>
         <p>
-          Focus on interests, not positions. "I need $200,000" is a position. "I need to pay off 
-          my mortgage and have money for a down payment on my next house" is an interest you can 
+          Focus on interests, not positions. "I need $200,000" is a position. "I need to pay off
+          my mortgage and have money for a down payment on my next house" is an interest you can
           work with.
         </p>
 
@@ -532,15 +571,17 @@ const ARTICLES: Record<string, {
     ),
   },
   'building-buyers-list': {
-    title: 'Building a Cash Buyer List That Closes Deals Fast',
-    category: 'Deal Sourcing',
+    title: 'Disposition Network: Liquidity Provider Integration',
+    metaDescription: 'Systematize your exit velocity. Build a robust list of qualified institutional buyers and high-volume operators for rapid contract disposition.',
+    category: 'Disposition Ops',
+    tier: 1, // Foundational
     readTime: 9,
     icon: <TrendingUp className="h-6 w-6" />,
     content: (
       <div className="prose prose-lg max-w-none dark:prose-invert">
         <h2>Your Buyers List Is Your Business</h2>
         <p>
-          A wholesaler without a buyers list is just a person with contracts. Your ability to close 
+          A wholesaler without a buyers list is just a person with contracts. Your ability to close
           deals quickly depends entirely on having qualified, active buyers ready to purchase.
         </p>
 
@@ -580,7 +621,7 @@ const ARTICLES: Record<string, {
           <div>
             <p className="font-medium text-primary m-0">QuickLiqi Advantage</p>
             <p className="text-sm text-muted-foreground m-0">
-              Our platform automatically matches your deals to investors whose buy boxes align with 
+              Our platform automatically matches your deals to investors whose buy boxes align with
               your property criteria—no manual list building required.
             </p>
           </div>
@@ -588,6 +629,75 @@ const ARTICLES: Record<string, {
       </div>
     ),
   },
+  'market-liquidity-report-q3': {
+    title: 'Market Intelligence Bulletin: Q3 Liquidity Shifts & Buy Box Contraction',
+    metaDescription: 'Data-driven analysis of Q3 wholesale disposition trends. Active cash buyer volume, median ARV shifts, and rising inventory age in key markets.',
+    category: 'Market Intelligence',
+    tier: 3, // Signal
+    readTime: 6,
+    icon: <Signal className="h-6 w-6" />,
+    content: (
+      <div className="prose prose-lg max-w-none dark:prose-invert">
+        <MarketDataWidget mode="market" className="mb-8" />
+
+        <div className="p-4 bg-muted border-l-4 border-primary mb-8">
+          <p className="font-bold text-sm text-primary uppercase tracking-widest mb-1">Executive Signal</p>
+          <p className="m-0 font-medium">
+            Cash buyers are tightening criteria on pre-1980 vintage assets.
+            Expect disposition times to increase by 15-20% for unrenovated inventory.
+          </p>
+        </div>
+
+        <h2>Data Snapshot</h2>
+        <p>
+          QuickLiqi platform data indicates a measurable shift in investor sentiment entering Q3.
+          While overall deal volume remains stable, the <strong>Time to Disposition</strong> has widened for specific asset classes.
+        </p>
+
+        <h3>Key Metrics (30-Day Rolling)</h3>
+        <ul>
+          <li><strong>Median ARV:</strong> Stabilizing at $245k (down 2% MoM)</li>
+          <li><strong>Active Buy Boxes:</strong> +12% increase in "Turnkey/Light Rehab" preferences</li>
+          <li><strong>Dead Inventory:</strong> Heavy rehab (&gt; $50k est. repair) sitting 14+ days longer</li>
+        </ul>
+
+        <h2>Observed Shifts</h2>
+        <h3>The "Heavy Lift" Retreat</h3>
+        <p>
+          Institutional buyers are reducing exposure to deep-renovation projects. Labor shortages and
+          material cost volatility have compressed margins on heavy rehabs.
+        </p>
+        <p>
+          <strong>Wholesaler Action:</strong> Adjust your Maximum Allowable Offer (MAO) calculation.
+          If estimating &gt;$60/sqft in repairs, increase your investor profit buffer from 15% to 20% to ensure liquidity.
+        </p>
+
+        <h3>Regional Liquidity Signals</h3>
+        <p>
+          Sunbelt markets (FL, TX, AZ) are seeing a surge in "Buy and Hold" demand, while "Fix and Flip"
+          demand dominates the Midwest. Know your exit strategy before contracting.
+        </p>
+
+        <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg my-6">
+          <h4 className="text-destructive font-bold flex items-center gap-2 m-0 mb-2">
+            <AlertTriangle className="h-5 w-5" />
+            Risk Warning
+          </h4>
+          <p className="text-sm m-0">
+            Over-leveraging on projected ARV appreciation is dangerous in this cycle.
+            Underwrite to <strong>today's</strong> values, not tomorrow's hopes.
+          </p>
+        </div>
+      </div>
+    ),
+  }
+};
+
+const TIER_LABELS: Record<ArticleTier, { label: string; color: string }> = {
+  1: { label: 'Foundational Standard', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+  2: { label: 'Advanced Execution', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
+  3: { label: 'Market Intelligence', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' },
+  4: { label: 'Platform Documentation', color: 'bg-zinc-100 text-zinc-100 dark:bg-zinc-800/50 dark:text-zinc-300' },
 };
 
 export default function BlogArticle() {
@@ -597,6 +707,10 @@ export default function BlogArticle() {
   if (!article) {
     return (
       <MainLayout>
+        <Helmet>
+          <title>Article Not Found | QuickLiqi</title>
+          <meta name="robots" content="noindex" />
+        </Helmet>
         <div className="container mx-auto px-4 py-20 text-center">
           <BookOpen className="h-16 w-16 text-muted-foreground/30 mx-auto mb-6" />
           <h1 className="text-2xl font-bold text-foreground mb-2">Article Not Found</h1>
@@ -614,8 +728,41 @@ export default function BlogArticle() {
     );
   }
 
+  const tierInfo = TIER_LABELS[article.tier];
+
   return (
     <MainLayout>
+      <Helmet>
+        <title>{article.title} | QuickLiqi Knowledge Base</title>
+        <meta name="description" content={article.metaDescription} />
+        <meta property="og:title" content={article.title} />
+        <meta property="og:description" content={article.metaDescription} />
+        <meta property="og:type" content="article" />
+        <link rel="canonical" href={`https://quickliqi.com/blog/${slug}`} />
+
+        {/* Schema.org markup for Google */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": article.title,
+            "description": article.metaDescription,
+            "author": {
+              "@type": "Organization",
+              "name": "QuickLiqi Research"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "QuickLiqi",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://quickliqi.com/logo.png"
+              }
+            }
+          })}
+        </script>
+      </Helmet>
+
       <div className="bg-background min-h-screen">
         {/* Header */}
         <div className="bg-gradient-to-b from-primary/5 to-background border-b border-border">
@@ -626,20 +773,25 @@ export default function BlogArticle() {
                 Back to Blog
               </Link>
             </Button>
-            
-            <div className="flex items-center gap-3 mb-4">
-              <Badge variant="secondary">{article.category}</Badge>
+
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <Badge variant="secondary" className="bg-background/80 backdrop-blur">
+                {article.category}
+              </Badge>
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${tierInfo.color}`}>
+                {tierInfo.label}
+              </span>
               <span className="text-sm text-muted-foreground flex items-center gap-1">
-                <Clock className="h-4 w-4" />
+                <Clock className="h-3.5 w-3.5" />
                 {article.readTime} min read
               </span>
             </div>
-            
+
             <div className="flex items-start gap-4">
-              <div className="p-4 bg-primary/10 rounded-xl text-primary hidden md:block">
+              <div className="p-4 bg-primary/10 rounded-xl text-primary hidden md:block mt-1">
                 {article.icon}
               </div>
-              <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">
+              <h1 className="font-display text-2xl md:text-3xl lg:text-4xl font-bold text-foreground leading-tight">
                 {article.title}
               </h1>
             </div>
@@ -649,27 +801,41 @@ export default function BlogArticle() {
         {/* Content */}
         <div className="container mx-auto px-4 py-12">
           <div className="max-w-3xl mx-auto">
+            {/* Risk Disclaimer for Tier 2 and 3 Content */}
+            {(article.tier === 2 || article.tier === 3) && (
+              <RiskDisclaimer />
+            )}
+
             {article.content}
 
             {/* CTA */}
             <Card className="mt-12 bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20">
               <CardContent className="py-8 text-center">
                 <h3 className="text-xl font-bold text-foreground mb-2">
-                  Ready to Find Your Next Deal?
+                  Ready to Execute?
                 </h3>
                 <p className="text-muted-foreground mb-4">
-                  Browse verified wholesale deals that meet our quality standards.
+                  Turn this protocol into active deal flow on QuickLiqi.
                 </p>
                 <div className="flex gap-3 justify-center">
                   <Button asChild>
-                    <Link to="/marketplace">Browse Marketplace</Link>
+                    <Link to="/marketplace">Browse Live Deals</Link>
                   </Button>
                   <Button asChild variant="outline">
-                    <Link to="/blog">More Articles</Link>
+                    <Link to="/blog">More Protocols</Link>
                   </Button>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Footer Disclaimer */}
+            <div className="mt-8 pt-8 border-t border-border text-center">
+              <p className="text-xs text-muted-foreground max-w-lg mx-auto">
+                © {new Date().getFullYear()} QuickLiqi. All rights reserved.
+                Content provided for operational informational purposes only.
+                Does not constitute financial, legal, or investment advice.
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Helmet } from 'react-helmet-async';
 import {
   BookOpen,
   Search,
@@ -17,6 +18,11 @@ import {
   Clock,
   ArrowRight,
   ChevronRight,
+  ShieldCheck,
+  Scale,
+  GanttChartSquare,
+  Network,
+  Signal
 } from 'lucide-react';
 
 interface BlogPost {
@@ -28,78 +34,96 @@ interface BlogPost {
   readTime: number;
   icon: React.ReactNode;
   featured?: boolean;
+  tier: 1 | 2 | 3 | 4;
 }
 
 const BLOG_POSTS: BlogPost[] = [
   {
+    id: 'market-q3',
+    slug: 'market-liquidity-report-q3',
+    title: 'Market Intelligence: Q3 Liquidity Shifts & Buy Box Contraction',
+    excerpt: 'Executive Signal: Cash buyers are tightening criteria on pre-1980 assets. Disposition times increasing for unrenovated inventory.',
+    category: 'Market Intelligence',
+    readTime: 6,
+    icon: <Signal className="h-6 w-6" />,
+    featured: true,
+    tier: 3
+  },
+  {
     id: '1',
     slug: 'deal-analysis-fundamentals',
-    title: 'Deal Analysis Fundamentals: How to Evaluate Any Real Estate Deal',
-    excerpt: 'Master the art of analyzing wholesale deals. Learn the MAO formula, ARV calculations, repair cost estimation, and profit margin analysis that separates successful investors from the rest.',
-    category: 'Deal Analysis',
+    title: 'Deal Evaluation Standard: The 70% ARV Protocol',
+    excerpt: 'QuickLiqi\'s algorithmic underwriting standard for marketplace listing approval. Maximum Allowable Offer (MAO) logic and margin verification.',
+    category: 'Underwriting',
     readTime: 12,
     icon: <Calculator className="h-6 w-6" />,
     featured: true,
+    tier: 1
   },
   {
     id: '2',
     slug: 'creative-financing-strategies',
-    title: 'Creative Financing Strategies: Subject-To, Seller Finance & More',
-    excerpt: 'Unlock deals that traditional financing can\'t touch. Learn how to structure subject-to agreements, seller financing terms, lease options, and hybrid creative finance deals.',
-    category: 'Creative Finance',
+    title: 'Liquidity Structuring: Creative Financing & Subject-To',
+    excerpt: 'Deploy capital into high-leverage assets. Structuring subject-to agreements, seller financing terms, and hybrid liquidity positions.',
+    category: 'Capital Structure',
     readTime: 15,
-    icon: <Lightbulb className="h-6 w-6" />,
+    icon: <Scale className="h-6 w-6" />,
     featured: true,
+    tier: 2
   },
   {
     id: '3',
     slug: 'finding-and-sourcing-deals',
-    title: 'Finding & Sourcing Wholesale Deals: A Complete Guide',
-    excerpt: 'Build a consistent deal pipeline with proven marketing strategies, lead generation techniques, and relationship building tactics that top wholesalers use.',
-    category: 'Deal Sourcing',
+    title: 'Deal Flow Architecture: Pipeline Generation SOPs',
+    excerpt: 'Operationalize off-market acquisition. Data-driven sourcing, probate vectors, and direct-to-vendor pipeline management.',
+    category: 'Acquisition Ops',
     readTime: 10,
-    icon: <Search className="h-6 w-6" />,
+    icon: <Network className="h-6 w-6" />,
+    tier: 1
   },
   {
     id: '4',
     slug: 'due-diligence-closing',
-    title: 'Due Diligence & Closing: Protect Yourself and Close More Deals',
-    excerpt: 'Navigate title searches, property inspections, contract contingencies, and closing procedures like a pro. Avoid the costly mistakes that sink most deals.',
-    category: 'Due Diligence',
+    title: 'Risk Mitigation: Due Diligence & Closing Logic',
+    excerpt: 'Asset verification protocols. Title hygiene, physical audit standards, and contingency frameworks for capital protection.',
+    category: 'Risk Management',
     readTime: 14,
-    icon: <FileSearch className="h-6 w-6" />,
+    icon: <ShieldCheck className="h-6 w-6" />,
+    tier: 2
   },
   {
     id: '5',
     slug: 'ai-deal-analyzer-guide',
-    title: 'How to Use Our AI Deal Analyzer for Maximum Profit',
-    excerpt: 'Leverage QuickLiqi\'s AI-powered deal analyzer to instantly evaluate properties, identify red flags, and calculate potential returns with precision accuracy.',
-    category: 'Platform Guide',
+    title: 'Algorithmic Underwriting: Platform Analyzer Docs',
+    excerpt: 'Technical documentation for QuickLiqi\'s AI underwriting engine. Understanding automated risk scoring and yield projection models.',
+    category: 'Platform Docs',
     readTime: 8,
     icon: <Bot className="h-6 w-6" />,
-    featured: true,
+    tier: 4
   },
   {
     id: '6',
     slug: 'negotiation-tactics',
-    title: 'Negotiation Tactics That Win Deals',
-    excerpt: 'Learn proven negotiation strategies that create win-win scenarios. From initial offers to final terms, master the psychology of successful real estate negotiations.',
-    category: 'Negotiation',
+    title: 'Counterparty Negotiation: Settlement Protocols',
+    excerpt: 'Zero-sum negotiation frameworks for distressed asset acquisition. Psychological leverage points and contract settlement mechanics.',
+    category: 'Acquisition Ops',
     readTime: 11,
     icon: <Handshake className="h-6 w-6" />,
+    tier: 2
   },
   {
     id: '7',
     slug: 'building-buyers-list',
-    title: 'Building a Cash Buyer List That Closes Deals Fast',
-    excerpt: 'Your buyers list is your most valuable asset. Learn how to find, qualify, and nurture relationships with serious cash buyers who close quickly.',
-    category: 'Deal Sourcing',
+    title: 'Disposition Network: Liquidity Provider Integration',
+    excerpt: 'Systematizing exit velocity. Integrating qualified institutional buyers and high-volume operators into your disposition workflow.',
+    category: 'Disposition Ops',
     readTime: 9,
-    icon: <TrendingUp className="h-6 w-6" />,
+    icon: <GanttChartSquare className="h-6 w-6" />,
+    tier: 1
   },
 ];
 
-const CATEGORIES = ['All', 'Deal Analysis', 'Creative Finance', 'Deal Sourcing', 'Due Diligence', 'Negotiation', 'Platform Guide'];
+const CATEGORIES = ['All', 'Market Intelligence', 'Underwriting', 'Capital Structure', 'Acquisition Ops', 'Risk Management', 'Disposition Ops', 'Platform Docs'];
 
 export default function Blog() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,26 +140,31 @@ export default function Blog() {
 
   return (
     <MainLayout>
+      <Helmet>
+        <title>QuickLiqi Knowledge Base & Market Intelligence</title>
+        <meta name="description" content="Institutional-grade real estate investing protocols. Access operational SOPs, market liquidity signals, and underwriting standards for wholesalers and investors." />
+      </Helmet>
+
       <div className="bg-background min-h-screen">
         {/* Hero Section */}
         <div className="bg-gradient-to-b from-primary/5 to-background border-b border-border">
           <div className="container mx-auto px-4 py-16 text-center">
             <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">
               <BookOpen className="h-3 w-3 mr-1" />
-              Education Center
+              SOPs & Market Signal
             </Badge>
             <h1 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Master Wholesale Real Estate
+              Institutional-Grade Deal Execution
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-              Learn deal analysis, creative financing, negotiation tactics, and how to find deals that make money for everyone involved.
+              Operational protocols, underwriting standards, and liquidity structuring for professional asset acquisition.
             </p>
-            
+
             {/* Search */}
             <div className="max-w-xl mx-auto relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Search articles..."
+                placeholder="Search protocols & intelligence..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-12 h-12 text-lg"
@@ -150,21 +179,25 @@ export default function Blog() {
             <section className="mb-16">
               <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
                 <TrendingUp className="h-6 w-6 text-primary" />
-                Featured Articles
+                Featured Protocols
               </h2>
               <div className="grid md:grid-cols-3 gap-6">
                 {featuredPosts.map((post) => (
                   <Link key={post.id} to={`/blog/${post.slug}`}>
-                    <Card className="h-full hover:shadow-lg hover:border-primary/30 transition-all group">
+                    <Card className={`h-full hover:shadow-lg transition-all group border-l-4 ${post.tier === 3 ? 'border-l-accent' : 'border-l-primary/50'
+                      }`}>
                       <CardHeader>
                         <div className="flex items-center justify-between mb-2">
-                          <Badge variant="secondary">{post.category}</Badge>
+                          <Badge variant={post.tier === 3 ? "destructive" : "secondary"}>
+                            {post.category}
+                          </Badge>
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {post.readTime} min read
                           </span>
                         </div>
-                        <div className="p-3 bg-primary/10 rounded-lg w-fit text-primary mb-3">
+                        <div className={`p-3 rounded-lg w-fit mb-3 ${post.tier === 3 ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'
+                          }`}>
                           {post.icon}
                         </div>
                         <CardTitle className="group-hover:text-primary transition-colors">
@@ -176,7 +209,7 @@ export default function Blog() {
                           {post.excerpt}
                         </CardDescription>
                         <div className="mt-4 flex items-center text-primary text-sm font-medium">
-                          Read Article
+                          View Protocol
                           <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
                         </div>
                       </CardContent>
@@ -204,29 +237,37 @@ export default function Blog() {
           {/* All Posts */}
           <section>
             <h2 className="text-2xl font-bold text-foreground mb-6">
-              {selectedCategory === 'All' ? 'All Articles' : selectedCategory}
+              {selectedCategory === 'All' ? 'All Protocols' : selectedCategory}
             </h2>
-            
+
             {filteredPosts.length === 0 ? (
               <div className="text-center py-12">
                 <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                <p className="text-muted-foreground">No articles found matching your search.</p>
+                <p className="text-muted-foreground">No protocols found matching your search.</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {filteredPosts.map((post) => (
                   <Link key={post.id} to={`/blog/${post.slug}`}>
-                    <Card className="hover:shadow-md hover:border-primary/20 transition-all group">
+                    <Card className={`hover:shadow-md hover:border-primary/20 transition-all group ${post.tier === 3 ? 'bg-accent/5 border-l-4 border-l-accent' : ''
+                      }`}>
                       <CardContent className="p-6">
                         <div className="flex items-start gap-4">
-                          <div className="p-3 bg-muted rounded-lg text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors flex-shrink-0">
+                          <div className={`p-3 rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors flex-shrink-0 ${post.tier === 3 ? 'bg-accent/10 text-accent' : 'bg-muted text-muted-foreground'
+                            }`}>
                             {post.icon}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="outline" className="text-xs">
-                                {post.category}
-                              </Badge>
+                              {post.tier === 3 ? (
+                                <Badge className="bg-accent text-accent-foreground hover:bg-accent/90 text-xs">
+                                  Signal
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  Tier {post.tier}
+                                </Badge>
+                              )}
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
                                 {post.readTime} min read
@@ -255,14 +296,14 @@ export default function Blog() {
               <CardContent className="py-12">
                 <Bot className="h-12 w-12 text-primary mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-foreground mb-2">
-                  Ready to Analyze Your Next Deal?
+                  Ready to Validate Asset Viability?
                 </h2>
                 <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-                  Use our AI-powered deal analyzer to instantly evaluate any property and see if it meets marketplace standards.
+                  Run prospective assets through our AI underwriting engine to verify marketplace compliance.
                 </p>
                 <Button asChild size="lg">
                   <Link to="/marketplace">
-                    Browse Marketplace
+                    Access Deal Flow
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Link>
                 </Button>

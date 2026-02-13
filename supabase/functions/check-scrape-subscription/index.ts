@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[CHECK-SCRAPE-SUB] ${step}${detailsStr}`);
 };
@@ -76,7 +76,7 @@ serve(async (req) => {
 
     // Find customer by email
     const customers = await stripe.customers.list({ email: user.email!, limit: 1 });
-    
+
     if (customers.data.length === 0) {
       logStep("No Stripe customer found");
       return new Response(JSON.stringify({
@@ -98,13 +98,13 @@ serve(async (req) => {
       limit: 10,
     });
 
-    const scrapeSubscription = subscriptions.data.find((sub: any) => 
-      sub.items.data.some((item: any) => item.price.product === SCRAPE_PRODUCT_ID)
+    const scrapeSubscription = subscriptions.data.find((sub) =>
+      sub.items.data.some((item) => item.price.product === SCRAPE_PRODUCT_ID)
     );
 
     if (!scrapeSubscription) {
       logStep("No active scrape subscription");
-      
+
       // Check if user has existing credits record
       const { data: existingCredits } = await supabaseAdmin
         .from("scrape_credits")
@@ -121,7 +121,7 @@ serve(async (req) => {
       });
     }
 
-    logStep("Active scrape subscription found", { 
+    logStep("Active scrape subscription found", {
       subscriptionId: scrapeSubscription.id,
       periodEnd: new Date(scrapeSubscription.current_period_end * 1000).toISOString()
     });
@@ -163,8 +163,8 @@ serve(async (req) => {
     }
 
     // Check if we need to reset credits for new billing period
-    const existingPeriodStart = existingCredits.current_period_start 
-      ? new Date(existingCredits.current_period_start).getTime() 
+    const existingPeriodStart = existingCredits.current_period_start
+      ? new Date(existingCredits.current_period_start).getTime()
       : 0;
     const newPeriodStart = scrapeSubscription.current_period_start * 1000;
 
@@ -215,9 +215,10 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (error: any) {
-    logStep("ERROR", { message: error.message });
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    logStep("ERROR", { message });
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

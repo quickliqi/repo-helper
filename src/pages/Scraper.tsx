@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 import {
   Scan,
   Search,
@@ -18,21 +18,92 @@ import {
   MapPin,
   DollarSign,
   TrendingUp,
-  FileText
+  FileText,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
+  BarChart3,
+  ExternalLink,
+  BrainCircuit,
+  AlertTriangle,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
+import { auditScrapedDeals } from '@/lib/scraper-audit/orchestrator';
+import type { ScrapedDeal, AuditReport } from '@/types/scraper-audit-types';
+
+interface DealMetrics {
+  arv: number;
+  mao: number;
+  roi: number;
+  equityPercentage: number;
+  score: number;
+  riskFactors: string[];
+  grossEquity: number;
+  projectedProfit: number;
+}
 
 interface ScrapeResult {
   title: string;
-  price: string;
+  price: number;
   location: string;
   source: string;
   description: string;
   link: string;
   ai_score: number;
   reasoning: string;
+  metrics: DealMetrics | null;
+  validated: boolean;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  sqft?: number;
+  property_type?: string;
+  condition?: string;
+}
+
+interface SourceBreakdown {
+  mls: number;
+  fsbo: number;
+  fallback: number;
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getAuditBadge(dealIndex: number, audit: AuditReport | null) {
+  if (!audit) return null;
+  const integrity = audit.integrity.find(r => r.dealIndex === dealIndex);
+  if (!integrity) return null;
+
+  if (integrity.overallScore >= 80) {
+    return (
+      <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200">
+        <ShieldCheck className="h-3 w-3" /> Verified
+      </Badge>
+    );
+  } else if (integrity.overallScore >= 50) {
+    return (
+      <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200">
+        <ShieldAlert className="h-3 w-3" /> Caution
+      </Badge>
+    );
+  } else {
+    return (
+      <Badge className="gap-1 bg-red-100 text-red-700 border-red-200">
+        <ShieldX className="h-3 w-3" /> Review
+      </Badge>
+    );
+  }
 }
 
 export default function Scraper() {
@@ -40,7 +111,60 @@ export default function Scraper() {
   const [state, setState] = useState('');
   const [isScraping, setIsScraping] = useState(false);
   const [results, setResults] = useState<ScrapeResult[]>([]);
+  const [sources, setSources] = useState<SourceBreakdown | null>(null);
+  const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
+  const [isAuditing, setIsAuditing] = useState(false);
   const { scrapeCredits, planTier, refreshSubscription } = useSubscription();
+
+  // Run audit pipeline when results change
+  useEffect(() => {
+    const runAudit = async () => {
+      if (results.length === 0) {
+        setAuditReport(null);
+        return;
+      }
+
+      setIsAuditing(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Convert results to ScrapedDeal shape for audit
+        const deals: ScrapedDeal[] = results.map(r => ({
+          title: r.title,
+          price: r.price,
+          location: r.location,
+          source: r.source as ScrapedDeal['source'],
+          link: r.link,
+          description: r.description,
+          ai_score: r.ai_score,
+          reasoning: r.reasoning,
+          address: r.address,
+          city: r.city,
+          state: r.state,
+          zip_code: r.zip_code,
+          asking_price: r.price,
+          bedrooms: r.bedrooms,
+          bathrooms: r.bathrooms,
+          sqft: r.sqft,
+          property_type: r.property_type as ScrapedDeal['property_type'],
+          condition: r.condition as ScrapedDeal['condition'],
+          arv: r.metrics?.arv,
+          equity_percentage: r.metrics?.equityPercentage,
+        }));
+
+        // TODO: Fetch user buy boxes for relevance check
+        const report = await auditScrapedDeals(deals, [], user.id);
+        setAuditReport(report);
+        console.log('[SCRAPER] Audit report:', report);
+      } catch (err) {
+        console.error('[SCRAPER] Audit failed:', err);
+      } finally {
+        setIsAuditing(false);
+      }
+    };
+    runAudit();
+  }, [results]);
 
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +186,8 @@ export default function Scraper() {
 
     setIsScraping(true);
     setResults([]);
+    setAuditReport(null);
+    setSources(null);
 
     try {
       const { data, error } = await supabase.functions.invoke('ai-hunter', {
@@ -72,10 +198,11 @@ export default function Scraper() {
 
       if (data?.deals) {
         setResults(data.deals);
+        setSources(data.sources || null);
         toast.success(`Found ${data.deals.length} potential deals!`);
         await refreshSubscription();
       } else {
-        toast.info('No deals found in this location currenty.');
+        toast.info('No deals found in this location currently.');
       }
     } catch (error) {
       console.error('Scrape error:', error);
@@ -97,7 +224,7 @@ export default function Scraper() {
                 AI Hunter Engine
               </h1>
               <p className="text-muted-foreground mt-2">
-                Scan multiple sources for off-market deals using Gemini AI
+                Scan real MLS listings & FSBO sources — validated by our Calculator Agent
               </p>
             </div>
 
@@ -149,15 +276,15 @@ export default function Scraper() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <CheckCircle2 className="h-4 w-4 text-success" />
+                          <span>MLS Listings (Realtor.com)</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className="h-4 w-4 text-success" />
                           <span>Craigslist (For Sale by Owner)</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <CheckCircle2 className="h-4 w-4 text-success" />
-                          <span>Public Records (Probate/Title)</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle2 className="h-4 w-4 text-success" />
-                          <span>Regional MLS Filtered Lists</span>
+                          <span>Calculator Agent Validation</span>
                         </div>
                       </div>
                     </div>
@@ -197,66 +324,194 @@ export default function Scraper() {
                   <Database className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-xl font-medium">No Hunted Deals Yet</h3>
                   <p className="text-muted-foreground text-center max-w-sm mt-2 px-6">
-                    Enter a location and start the hunt to find off-market opportunities analyzed by Gemini AI.
+                    Enter a location and start the hunt. Real MLS listings and FSBO deals, validated by our Calculator Agent.
                   </p>
                 </div>
               ) : isScraping ? (
                 <div className="space-y-6">
                   <div className="p-8 text-center animate-pulse bg-muted rounded-xl">
                     <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-                    <h3 className="text-xl font-medium">Gemini AI is analyzing leads...</h3>
-                    <p className="text-muted-foreground mt-2">Connecting to sources and checking equity data</p>
+                    <h3 className="text-xl font-medium">Scanning Real Listings...</h3>
+                    <p className="text-muted-foreground mt-2">Checking MLS, FSBO sources, and running Calculator Agent validation</p>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between mb-4">
+                  {/* Source breakdown + Audit summary */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+                    {/* Source Breakdown */}
+                    {sources && (
+                      <Card className="bg-primary/5 border-primary/20">
+                        <CardContent className="py-4 px-5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <BarChart3 className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-bold">Sources</span>
+                          </div>
+                          <div className="flex gap-3 text-sm">
+                            {sources.mls > 0 && (
+                              <Badge variant="outline" className="gap-1">
+                                <Globe className="h-3 w-3" /> MLS: {sources.mls}
+                              </Badge>
+                            )}
+                            {sources.fsbo > 0 && (
+                              <Badge variant="outline" className="gap-1">
+                                <Search className="h-3 w-3" /> FSBO: {sources.fsbo}
+                              </Badge>
+                            )}
+                            {sources.fallback > 0 && (
+                              <Badge variant="outline" className="gap-1 border-amber-300">
+                                <BrainCircuit className="h-3 w-3" /> AI: {sources.fallback}
+                              </Badge>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Audit Summary */}
+                    {auditReport && (
+                      <Card className={`border ${auditReport.pass ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                        <CardContent className="py-4 px-5">
+                          <div className="flex items-center gap-2 mb-2">
+                            {auditReport.pass ? (
+                              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                            ) : (
+                              <ShieldAlert className="h-4 w-4 text-amber-600" />
+                            )}
+                            <span className="text-sm font-bold">
+                              Audit: {auditReport.overallScore}/100
+                            </span>
+                            <Badge
+                              className={`ml-auto ${auditReport.pass ? 'bg-emerald-600' : 'bg-amber-600'}`}
+                            >
+                              {auditReport.pass ? 'PASS' : 'REVIEW'}
+                            </Badge>
+                          </div>
+                          <div className="flex gap-2 text-xs text-muted-foreground">
+                            <span>{auditReport.alerts.filter(a => a.severity === 'critical').length} critical</span>
+                            <span>·</span>
+                            <span>{auditReport.alerts.filter(a => a.severity === 'warning').length} warnings</span>
+                            <span>·</span>
+                            <span>{results.filter(r => r.validated).length}/{results.length} validated</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {isAuditing && !auditReport && (
+                      <Card className="bg-muted/50">
+                        <CardContent className="py-4 px-5 flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-sm text-muted-foreground">Running audit pipeline...</span>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between mb-2">
                     <h2 className="text-xl font-bold">Hunt Results</h2>
-                    <Badge variant="outline">{results.length} Matches Found</Badge>
+                    <Badge variant="outline">{results.length} Deals Found</Badge>
                   </div>
 
                   {results.map((result, idx) => (
                     <Card key={idx} className="overflow-hidden border-2 hover:border-primary/50 transition-all">
-                      <div className="flex flex-col md:flex-row">
-                        <div className="flex-1 p-6">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <Badge className="mb-2 bg-primary/10 text-primary hover:bg-primary/20 border-none">
+                      <div className="p-6">
+                        {/* Header row */}
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-none">
                                 {result.source}
                               </Badge>
-                              <CardTitle className="text-xl">{result.title}</CardTitle>
+                              {result.validated ? (
+                                <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200">
+                                  <CheckCircle2 className="h-3 w-3" /> Validated
+                                </Badge>
+                              ) : (
+                                <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200">
+                                  <AlertCircle className="h-3 w-3" /> Unvalidated
+                                </Badge>
+                              )}
+                              {getAuditBadge(idx, auditReport)}
                             </div>
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-primary">{result.price}</div>
-                              <div className="flex items-center text-sm text-muted-foreground justify-end gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {result.location}
+                            <CardTitle className="text-lg">{result.title}</CardTitle>
+                            <div className="flex items-center text-sm text-muted-foreground gap-1 mt-1">
+                              <MapPin className="h-3 w-3" />
+                              {result.location}
+                            </div>
+                          </div>
+                          <div className="text-right ml-4">
+                            <div className="text-2xl font-bold text-primary">
+                              {formatCurrency(result.price)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Calculator Agent Metrics */}
+                        {result.metrics && (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 p-3 bg-muted/50 rounded-lg">
+                            <div className="text-center">
+                              <div className="text-xs text-muted-foreground font-medium">MAO</div>
+                              <div className="text-sm font-bold">{formatCurrency(result.metrics.mao)}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-muted-foreground font-medium">Equity</div>
+                              <div className={`text-sm font-bold ${result.metrics.equityPercentage > 20 ? 'text-emerald-600' : result.metrics.equityPercentage > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+                                {result.metrics.equityPercentage.toFixed(1)}%
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-muted-foreground font-medium">ROI</div>
+                              <div className={`text-sm font-bold ${result.metrics.roi > 15 ? 'text-emerald-600' : result.metrics.roi > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+                                {result.metrics.roi.toFixed(1)}%
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-muted-foreground font-medium">Deal Score</div>
+                              <div className={`text-sm font-bold ${result.metrics.score >= 70 ? 'text-emerald-600' : result.metrics.score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                                {result.metrics.score}/100
                               </div>
                             </div>
                           </div>
+                        )}
 
-                          <div className="bg-success/5 border border-success/20 rounded-lg p-3 mb-4">
-                            <div className="flex items-center gap-2 mb-1">
-                              <TrendingUp className="h-4 w-4 text-success" />
-                              <span className="text-sm font-bold text-success">AI Score: {result.ai_score}/100</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {result.reasoning}
-                            </p>
+                        {/* AI Score & Reasoning */}
+                        <div className="bg-success/5 border border-success/20 rounded-lg p-3 mt-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <TrendingUp className="h-4 w-4 text-success" />
+                            <span className="text-sm font-bold text-success">AI Score: {result.ai_score}/100</span>
                           </div>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {result.reasoning}
+                          </p>
+                        </div>
 
-                          <div className="flex items-center gap-4 mt-4">
+                        {/* Risk factors */}
+                        {result.metrics?.riskFactors && result.metrics.riskFactors.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {result.metrics.riskFactors.map((risk, i) => (
+                              <div key={i} className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded">
+                                <AlertTriangle className="h-3 w-3" />
+                                {risk}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-3 mt-4 pt-3 border-t">
+                          {result.link && (
                             <Button variant="outline" size="sm" asChild>
                               <a href={result.link} target="_blank" rel="noopener noreferrer">
-                                <Globe className="h-4 w-4 mr-2" />
-                                View Source
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                View Listing
                               </a>
                             </Button>
-                            <Button size="sm">
-                              <FileText className="h-4 w-4 mr-2" />
-                              Detailed Analysis
-                            </Button>
-                          </div>
+                          )}
+                          <Button size="sm">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Detailed Analysis
+                          </Button>
                         </div>
                       </div>
                     </Card>

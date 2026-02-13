@@ -15,7 +15,7 @@ interface VerificationEmailRequest {
   admin_notes?: string;
 }
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: unknown) => {
   console.log(`[SEND-VERIFICATION-EMAIL] ${step}`, details ? JSON.stringify(details) : "");
 };
 
@@ -204,10 +204,11 @@ serve(async (req) => {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  } catch (error: any) {
-    logStep("ERROR", { message: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    logStep("ERROR", { message });
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

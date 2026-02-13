@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}`, details ? JSON.stringify(details) : "");
 };
 
@@ -143,9 +143,10 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
-    } catch (stripeError: any) {
-      logStep("ERROR: Stripe session creation failed", { message: stripeError.message });
-      throw new Error(`Stripe error: ${stripeError.message}`);
+    } catch (stripeError: unknown) {
+      const message = stripeError instanceof Error ? stripeError.message : String(stripeError);
+      logStep("ERROR: Stripe session creation failed", { message });
+      throw new Error(`Stripe error: ${message}`);
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);

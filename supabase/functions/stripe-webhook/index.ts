@@ -23,7 +23,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: unknown) => {
   console.log(`[STRIPE-WEBHOOK] ${step}`, details ? JSON.stringify(details) : "");
 };
 
@@ -103,13 +103,13 @@ serve(async (req) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const customerEmail = session.customer_email || session.customer_details?.email;
-        
+
         logStep("Checkout completed", { email: customerEmail, mode: session.mode });
 
         // Get user by email
         const { data: users } = await supabaseAdmin.auth.admin.listUsers();
         const user = users.users.find(u => u.email === customerEmail);
-        
+
         if (!user) {
           logStep("User not found for email", { email: customerEmail });
           break;
@@ -118,15 +118,15 @@ serve(async (req) => {
         if (session.mode === "subscription") {
           const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
           const productId = subscription.items.data[0]?.price?.product as string;
-          
+
           logStep("Subscription product identified", { productId });
-          
+
           // Check if this is a scrape subscription
           if (productId === SCRAPE_PRODUCT_ID) {
             // Handle scrape subscription
             const periodStart = new Date(subscription.current_period_start * 1000).toISOString();
             const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
-            
+
             await supabaseAdmin.from("scrape_credits").upsert({
               user_id: user.id,
               credits_remaining: 10,
@@ -157,8 +157,8 @@ serve(async (req) => {
               stripe_subscription_id: subscription.id,
               status: subscription.status === "trialing" ? "trialing" : "active",
               plan_type: "investor_pro",
-              trial_ends_at: subscription.trial_end 
-                ? new Date(subscription.trial_end * 1000).toISOString() 
+              trial_ends_at: subscription.trial_end
+                ? new Date(subscription.trial_end * 1000).toISOString()
                 : null,
               current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
               current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
@@ -192,7 +192,7 @@ serve(async (req) => {
           if (existingCredits) {
             await supabaseAdmin
               .from("listing_credits")
-              .update({ 
+              .update({
                 credits_remaining: existingCredits.credits_remaining + quantity,
                 stripe_customer_id: session.customer as string,
               })
@@ -244,7 +244,7 @@ serve(async (req) => {
 
         if (subRecord) {
           await supabaseAdmin.from("subscriptions").update({
-            status: subscription.status as any,
+            status: subscription.status as Stripe.Subscription.Status,
             cancel_at_period_end: subscription.cancel_at_period_end,
             current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),

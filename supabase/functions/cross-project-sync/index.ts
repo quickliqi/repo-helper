@@ -61,9 +61,9 @@ serve(async (req) => {
     }
 
     // Parse request body ONCE (the body stream can only be read once)
-    let payload: any;
+    let payload: Record<string, unknown>;
     try {
-      payload = await req.json();
+      payload = await req.json() as Record<string, unknown>;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       logStep("Invalid JSON body", { message: msg });
@@ -92,17 +92,17 @@ serve(async (req) => {
 
         // Look up user by email in auth.users
         const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-        
+
         if (authError) {
           throw new Error(`Auth lookup failed: ${authError.message}`);
         }
 
         const user = authUsers.users.find(u => u.email === email);
-        
+
         if (!user) {
-          return new Response(JSON.stringify({ 
+          return new Response(JSON.stringify({
             exists: false,
-            message: "User not found in QuickLiqi" 
+            message: "User not found in QuickLiqi"
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
@@ -207,10 +207,10 @@ serve(async (req) => {
           .eq("user_id", user_id)
           .maybeSingle();
 
-        logStep("User data retrieved", { 
-          userId: user_id, 
+        logStep("User data retrieved", {
+          userId: user_id,
           buyBoxCount: buyBoxes?.length,
-          propertyCount: properties?.length 
+          propertyCount: properties?.length
         });
 
         return new Response(JSON.stringify({
@@ -241,7 +241,7 @@ serve(async (req) => {
           syncKeys:
             syncData && typeof syncData === "object" ? Object.keys(syncData).slice(0, 12) : [],
         });
-        
+
         // Update profile if provided
         if (syncData?.profile) {
           await supabaseAdmin
@@ -261,8 +261,8 @@ serve(async (req) => {
       }
 
       default:
-        return new Response(JSON.stringify({ 
-          error: "Invalid action. Supported: verify_user, get_user_data, sync_from_external" 
+        return new Response(JSON.stringify({
+          error: "Invalid action. Supported: verify_user, get_user_data, sync_from_external"
         }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

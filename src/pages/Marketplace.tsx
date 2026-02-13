@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
 interface SellerInfo {
+  user_id: string;
   full_name: string;
   company_name?: string;
   avatar_url?: string;
@@ -71,7 +72,7 @@ function MarketplaceContent() {
 
         if (sellersData) {
           const map: Record<string, SellerInfo> = {};
-          sellersData.forEach((seller: any) => {
+          sellersData.forEach((seller: SellerInfo) => {
             map[seller.user_id] = seller;
           });
           setSellerInfoMap(map);
@@ -89,7 +90,7 @@ function MarketplaceContent() {
   }, []);
 
   const filteredAndSortedProperties = useMemo(() => {
-    let result = properties.filter((property) => {
+    const result = properties.filter((property) => {
       // Search query
       const matchesSearch = !filters.searchQuery ||
         property.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
@@ -239,8 +240,8 @@ function MarketplaceContent() {
               Showing {filteredAndSortedProperties.length} {filteredAndSortedProperties.length === 1 ? 'property' : 'properties'}
             </p>
             <div className={`grid gap-4 md:gap-6 ${viewMode === 'grid'
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                : 'grid-cols-1'
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+              : 'grid-cols-1'
               }`}>
               {filteredAndSortedProperties.map((property) => (
                 <EnhancedPropertyCard

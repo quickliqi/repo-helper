@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[CONVERT-TO-LISTING] ${step}${detailsStr}`);
 };
@@ -77,7 +77,7 @@ serve(async (req) => {
     logStep("User role verified", { role: roleData.role });
 
     const { scrape_result_id, overrides } = await req.json();
-    
+
     if (!scrape_result_id) {
       throw new Error("scrape_result_id is required");
     }
@@ -103,8 +103,8 @@ serve(async (req) => {
     logStep("Scrape result found", { id: scrapeResult.id });
 
     // Parse extracted data
-    const extractedData = scrapeResult.extracted_data as any || {};
-    
+    const extractedData = (scrapeResult.extracted_data as Record<string, unknown>) || {};
+
     // Build property data with overrides support
     const propertyData = {
       user_id: user.id,
@@ -133,7 +133,7 @@ serve(async (req) => {
     // Check if user has listing credits (for wholesalers) or handle differently
     const { data: credits } = await supabaseAdmin
       .from("listing_credits")
-      .select("credits_remaining")
+      .select("*")
       .eq("user_id", user.id)
       .single();
 
@@ -160,7 +160,7 @@ serve(async (req) => {
       .from("listing_credits")
       .update({
         credits_remaining: credits.credits_remaining - 1,
-        credits_used: (credits as any).credits_used + 1,
+        credits_used: (credits.credits_used || 0) + 1,
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", user.id);
@@ -178,11 +178,12 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (error: any) {
-    logStep("ERROR", { message: error.message });
-    return new Response(JSON.stringify({ 
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    logStep("ERROR", { message });
+    return new Response(JSON.stringify({
       success: false,
-      error: error.message 
+      error: message
     }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

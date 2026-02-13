@@ -19,10 +19,10 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { US_STATES } from '@/types/database';
-import { 
-  User, 
-  Building2, 
-  Phone, 
+import {
+  User,
+  Building2,
+  Phone,
   MapPin,
   Camera,
   Save,
@@ -66,7 +66,7 @@ export default function Profile() {
         bio: profile.bio || '',
         city: profile.city || '',
         state: profile.state || '',
-        is_actively_buying: (profile as any).is_actively_buying ?? true,
+        is_actively_buying: (profile as unknown as Record<string, unknown>).is_actively_buying ? (profile as unknown as Record<string, unknown>).is_actively_buying as boolean : true,
       });
       setAvatarPreview(profile.avatar_url || null);
       setIsLoading(false);
@@ -111,7 +111,7 @@ export default function Profile() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) return;
 
     if (!formData.full_name.trim()) {
@@ -122,7 +122,7 @@ export default function Profile() {
     setIsSaving(true);
     try {
       let avatarUrl = profile?.avatar_url || null;
-      
+
       if (avatarFile) {
         avatarUrl = await uploadAvatar();
       }
@@ -288,7 +288,7 @@ export default function Profile() {
                         I'm actively seeking to purchase
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        {formData.is_actively_buying 
+                        {formData.is_actively_buying
                           ? "You'll receive match notifications and appear as an active buyer"
                           : "You won't receive new match notifications"}
                       </p>
