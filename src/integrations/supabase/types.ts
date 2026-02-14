@@ -831,6 +831,62 @@ export type Database = {
         }
         Relationships: []
       }
+      scraper_audit_logs: {
+        Row: {
+          alerts_count: number | null
+          audit_report: Json
+          created_at: string | null
+          crosscheck_score: number | null
+          id: string
+          integrity_score: number | null
+          overall_score: number
+          pass: boolean
+          relevance_score: number | null
+          session_id: string | null
+          structural_score: number | null
+          total_deals: number | null
+          user_id: string
+        }
+        Insert: {
+          alerts_count?: number | null
+          audit_report: Json
+          created_at?: string | null
+          crosscheck_score?: number | null
+          id?: string
+          integrity_score?: number | null
+          overall_score: number
+          pass?: boolean
+          relevance_score?: number | null
+          session_id?: string | null
+          structural_score?: number | null
+          total_deals?: number | null
+          user_id: string
+        }
+        Update: {
+          alerts_count?: number | null
+          audit_report?: Json
+          created_at?: string | null
+          crosscheck_score?: number | null
+          id?: string
+          integrity_score?: number | null
+          overall_score?: number
+          pass?: boolean
+          relevance_score?: number | null
+          session_id?: string | null
+          structural_score?: number | null
+          total_deals?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraper_audit_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "scrape_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
