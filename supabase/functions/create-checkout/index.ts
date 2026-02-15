@@ -6,10 +6,17 @@ const ALLOWED_ORIGINS = [
   "https://quickliqi.com",
   "https://www.quickliqi.com",
   "https://quickliqi.lovable.app",
+  "https://realquickliqi.lovable.app",
 ];
 
+function isAllowedOrigin(origin: string): boolean {
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (origin.endsWith(".lovableproject.com") || origin.endsWith(".lovable.app")) return true;
+  return false;
+}
+
 function getCorsHeaders(origin?: string | null) {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowedOrigin = origin && isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
