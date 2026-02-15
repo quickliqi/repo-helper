@@ -198,7 +198,7 @@ const Pricing = () => {
                   <Button
                     className="w-full"
                     onClick={() => handleCheckout('investor_basic')}
-                    disabled={loading === 'investor_basic' || role === 'wholesaler' || subscribed}
+                    disabled={loading === 'investor_basic' || subscribed}
                   >
                     {loading === 'investor_basic' ? 'Loading...' : 'Select Basic'}
                   </Button>
@@ -265,7 +265,7 @@ const Pricing = () => {
                     className="w-full bg-primary hover:bg-primary/90"
                     size="lg"
                     onClick={() => handleCheckout('investor_pro')}
-                    disabled={loading === 'investor_pro' || role === 'wholesaler'}
+                    disabled={loading === 'investor_pro'}
                   >
                     {loading === 'investor_pro' ? 'Loading...' : 'Start Free Trial'}
                   </Button>

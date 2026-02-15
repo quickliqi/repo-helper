@@ -3,12 +3,12 @@ import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { Helmet } from 'react-helmet-async';
-import { 
-  Building2, 
-  TrendingUp, 
-  Users, 
-  Zap, 
-  Shield, 
+import {
+  Building2,
+  TrendingUp,
+  Users,
+  Zap,
+  Shield,
   BarChart3,
   ArrowRight,
   CheckCircle,
@@ -22,7 +22,8 @@ import {
   Handshake,
   DollarSign,
   Timer,
-  Flame
+  Flame,
+  Signal
 } from 'lucide-react';
 import heroImage from '@/assets/hero-deal-matching.jpg';
 import investorImage from '@/assets/investor-analyzing.jpg';
@@ -35,38 +36,39 @@ export default function Index() {
   return (
     <MainLayout>
       <Helmet>
-        <title>QuickLiqi - Sell Wholesale Deals Fast | Find Off-Market Properties</title>
-        <meta name="description" content="Need to sell your wholesale deal fast? Find cash buyers in 24 hours. Investors: get off-market properties matched to your buy box instantly. No cold calls, just deals that close." />
+        <title>QuickLiqi - Institutional-Grade Wholesale Dispositions & Deal Flow</title>
+        <meta name="description" content="Liquidity infrastructure for real estate assets. Match wholesale contracts with verified institutional capital and high-volume operators instantly." />
+        <link rel="canonical" href="https://realquickliqi.com" />
       </Helmet>
 
       {/* Hero Section - Optimized for urgency */}
       <section className="relative overflow-hidden">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
-          <img 
-            src={heroImage} 
-            alt="Wholesalers and investors closing off-market real estate deals" 
+          <img
+            src={heroImage}
+            alt="Wholesalers and investors closing off-market real estate deals"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/85 to-primary/70" />
         </div>
-        
+
         <div className="relative z-10 container mx-auto px-4 py-20 lg:py-32">
           <div className="max-w-3xl">
             {/* Urgency Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/20 text-accent mb-6 backdrop-blur-sm">
-              <Flame className="h-4 w-4 animate-pulse" />
-              <span className="text-sm font-medium">Got a contract? Find buyers in 24 hours</span>
+              <Signal className="h-4 w-4" />
+              <span className="text-sm font-medium">Liquidity Optimization for Wholesale Assets</span>
             </div>
-            
+
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight mb-6">
-              Dispose Wholesale Deals Fast.<br />
-              <span className="text-accent">Find Off-Market Gems Faster.</span>
+              Institutional-Grade<br />
+              <span className="text-accent">Dispositions Infrastructure.</span>
             </h1>
-            
+
             <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mb-8">
-              <strong>Wholesalers:</strong> Stop scrambling for buyers—we match your deals to verified cash investors instantly. 
-              <strong className="block mt-2">Investors:</strong> Off-market properties with ARV, comps, and repair estimates delivered to your inbox.
+              <strong>Wholesalers:</strong> Streamline disposition workflows—match contracts to verified institutional capital instantly.
+              <strong className="block mt-2">Investors:</strong> Access off-market liquidity with standardized data, ARV, and repair analytics.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
@@ -80,8 +82,8 @@ export default function Index() {
               ) : (
                 <Button size="lg" asChild className="text-base bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg">
                   <Link to="/auth?mode=signup">
-                    <Timer className="mr-2 h-5 w-5" />
-                    Find Buyers Now
+                    <BarChart3 className="mr-2 h-5 w-5" />
+                    Access Liquidity Network
                   </Link>
                 </Button>
               )}
@@ -91,15 +93,15 @@ export default function Index() {
             <div className="grid grid-cols-3 gap-4 sm:flex sm:flex-wrap sm:gap-8 text-primary-foreground/80">
               <div className="text-center sm:text-left">
                 <p className="text-xl sm:text-2xl font-bold text-accent">500+</p>
-                <p className="text-xs sm:text-sm">Cash Buyers Ready</p>
+                <p className="text-xs sm:text-sm">Verified Buyers</p>
               </div>
               <div className="text-center sm:text-left">
                 <p className="text-xl sm:text-2xl font-bold text-accent">$2M+</p>
-                <p className="text-xs sm:text-sm">Deals Matched</p>
+                <p className="text-xs sm:text-sm">Transaction Volume</p>
               </div>
               <div className="text-center sm:text-left">
                 <p className="text-xl sm:text-2xl font-bold text-accent">24hrs</p>
-                <p className="text-xs sm:text-sm">Avg. First Response</p>
+                <p className="text-xs sm:text-sm">Avg. Liquidity Event</p>
               </div>
             </div>
           </div>
@@ -112,13 +114,13 @@ export default function Index() {
           <div className="max-w-4xl mx-auto text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10 text-destructive mb-4">
               <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm font-medium">The Wholesale Real Estate Problem</span>
+              <span className="text-sm font-medium">The Market Inefficiency</span>
             </div>
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Great Deals Die When Buyers Can't Be Found Fast
+              Legacy Dispositions Are Failing
             </h2>
             <p className="text-lg text-muted-foreground">
-              You have the contract. The seller is waiting. But your buyers list isn't converting and time is running out.
+              Contract expiration risks and unverified buyer data create pipeline drag.
             </p>
           </div>
 
@@ -130,16 +132,17 @@ export default function Index() {
                   <TrendingUp className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="font-display text-xl font-semibold text-foreground">
-                  Tired of Missing Off-Market Deals?
+                  Acquisition Friction
                 </h3>
               </div>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Deals gone</span> before you even hear about them
+                    <span className="font-medium text-foreground">Deal velocity mismatch</span> leads to missed opportunities
                   </p>
                 </li>
+
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
@@ -168,32 +171,32 @@ export default function Index() {
                   <Building2 className="h-6 w-6 text-accent" />
                 </div>
                 <h3 className="font-display text-xl font-semibold text-foreground">
-                  Need to Sell Your Wholesale Deal ASAP?
+                  Disposition Inefficiency
                 </h3>
               </div>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Contract expiring</span> and your buyers list isn't responding
+                    <span className="font-medium text-foreground">Contract expiration risk</span> due to buyer list unresponsiveness
                   </p>
                 </li>
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Blasting emails</span> to dead lists that never convert
+                    <span className="font-medium text-foreground">Low conversion rates</span> from non-targeted email blasts
                   </p>
                 </li>
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">No idea</span> which investors are actively buying right now
+                    <span className="font-medium text-foreground">Lack of buyer intent data</span> for current market cycle
                   </p>
                 </li>
                 <li className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Losing assignments</span> because you can't find dispositions fast enough
+                    <span className="font-medium text-foreground">Assignment failure</span> caused by slow disposition velocity
                   </p>
                 </li>
               </ul>
@@ -208,22 +211,22 @@ export default function Index() {
           <div className="max-w-4xl mx-auto text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-success/10 text-success mb-4">
               <Sparkles className="h-4 w-4" />
-              <span className="text-sm font-medium">Your Wholesale Dispositions Solution</span>
+              <span className="text-sm font-medium">The Infrastructure Solution</span>
             </div>
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              QuickLiqi: Where Deals Meet Cash Buyers
+              QuickLiqi: Algorithmic Deal Matching
             </h2>
             <p className="text-lg text-muted-foreground">
-              Post once. Get matched to verified investors who want exactly what you have—automatically.
+              Single-point entry. Automated matching to verified institutional buy boxes.
             </p>
           </div>
 
           {/* Matching Visualization */}
           <div className="max-w-5xl mx-auto mb-16">
             <div className="relative rounded-2xl overflow-hidden shadow-xl">
-              <img 
-                src={matchingImage} 
-                alt="Wholesale deal matching with cash buyers visualization" 
+              <img
+                src={matchingImage}
+                alt="Wholesale deal matching with cash buyers visualization"
                 className="w-full h-64 md:h-80 object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/50 to-transparent flex items-end">
@@ -293,9 +296,9 @@ export default function Index() {
             {/* For Investors */}
             <div className="bg-card rounded-2xl overflow-hidden shadow-card">
               <div className="h-48 overflow-hidden">
-                <img 
-                  src={investorImage} 
-                  alt="Real estate investor analyzing fix and flip deals with buy box criteria" 
+                <img
+                  src={investorImage}
+                  alt="Real estate investor analyzing fix and flip deals with buy box criteria"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -354,9 +357,9 @@ export default function Index() {
             {/* For Wholesalers */}
             <div className="bg-card rounded-2xl overflow-hidden shadow-card">
               <div className="h-48 overflow-hidden">
-                <img 
-                  src={wholesalerImage} 
-                  alt="Wholesaler with property under contract needing cash buyer fast" 
+                <img
+                  src={wholesalerImage}
+                  alt="Wholesaler with property under contract needing cash buyer fast"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -558,26 +561,26 @@ export default function Index() {
         <section className="py-20 gradient-primary">
           <div className="container mx-auto px-4 text-center">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-              Got a Contract? Find Cash Buyers Now.
+              Secure Liquidity for Your Contracts
             </h2>
             <p className="text-lg text-primary-foreground/80 max-w-xl mx-auto mb-8">
-              Stop losing deals to slow dispositions. Get your wholesale contract in front of verified investors today.
+              Eliminate disposition friction. Connect your wholesale assets with verified institutional capital today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild className="text-base bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg">
                 <Link to="/auth?mode=signup">
-                  <Timer className="mr-2 h-5 w-5" />
-                  Start Matching Deals Free
+                  <BarChart3 className="mr-2 h-5 w-5" />
+                  Join the Network
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild className="text-base bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
                 <Link to="/pricing">
-                  View Pricing Plans
+                  View Pricing Models
                 </Link>
               </Button>
             </div>
             <p className="text-sm text-primary-foreground/60 mt-4">
-              7-day free trial • No credit card required • Cancel anytime
+              Professional Tier Access • Validated Buyers • Secure Transaction Flow
             </p>
           </div>
         </section>
