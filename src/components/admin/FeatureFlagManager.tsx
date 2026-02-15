@@ -20,11 +20,11 @@ export function FeatureFlagManager() {
         queryKey: ["feature_flags"],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from("feature_flags")
+                .from("feature_flags" as any)
                 .select("*")
                 .order("key");
             if (error) throw error;
-            return data as FeatureFlag[];
+            return data as unknown as FeatureFlag[];
         },
     });
 

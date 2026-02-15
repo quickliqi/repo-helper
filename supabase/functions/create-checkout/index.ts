@@ -119,7 +119,7 @@ serve(async (req) => {
     logStep("Processing checkout", { priceType, quantity, priceId });
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: "2025-04-30.basil",
+      apiVersion: "2025-08-27.basil",
     });
 
     // Check if customer exists
