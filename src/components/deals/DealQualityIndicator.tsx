@@ -18,11 +18,14 @@ export function DealQualityIndicator({
   arv,
   className 
 }: DealQualityIndicatorProps) {
-  const { arvPercentage, potentialProfit, equityPercentage } = validation.metrics;
-  const qualityTier = getDealQualityTier(arvPercentage);
+  const { equityPercentage, projectedProfit } = validation.metrics;
+  const arvPercentage = validation.metrics ? (validation.metrics.mao > 0 ? ((validation.metrics.grossEquity / (validation.metrics.grossEquity + validation.metrics.mao)) * 100) : null) : null;
+  // Calculate ARV percentage from asking price / ARV
+  const arvPct = askingPrice && arv ? (askingPrice / arv) * 100 : null;
+  const qualityTier = getDealQualityTier(arvPct);
   
   // Calculate the progress value (70% = 100 on our scale, lower is better)
-  const progressValue = arvPercentage ? Math.min(100, (arvPercentage / 70) * 100) : 0;
+  const progressValue = arvPct ? Math.min(100, (arvPct / 70) * 100) : 0;
   const maxAllowed = arv ? Math.floor(arv * 0.70) : 0;
 
   if (!askingPrice || !arv) {
@@ -75,7 +78,7 @@ export function DealQualityIndicator({
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Asking Price vs ARV</span>
             <span className={cn("font-medium", qualityTier.color)}>
-              {arvPercentage?.toFixed(1)}% of ARV
+              {arvPct?.toFixed(1)}% of ARV
             </span>
           </div>
           <div className="relative">
@@ -102,7 +105,7 @@ export function DealQualityIndicator({
           <div>
             <p className="text-xs text-muted-foreground">Potential Equity</p>
             <p className="font-semibold text-foreground">
-              ${potentialProfit?.toLocaleString() || 0}
+              ${projectedProfit?.toLocaleString() || 0}
             </p>
           </div>
           <div>
@@ -125,17 +128,7 @@ export function DealQualityIndicator({
           </div>
         )}
 
-        {/* Warnings */}
-        {validation.warnings.length > 0 && validation.isValid && (
-          <div className="space-y-2 pt-2 border-t border-border">
-            {validation.warnings.map((warning, i) => (
-              <div key={i} className="flex items-start gap-2 text-sm text-amber-600">
-                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>{warning}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* No warnings in current DealValidationResult */}
       </CardContent>
     </Card>
   );

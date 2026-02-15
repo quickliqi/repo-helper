@@ -25,11 +25,11 @@ export function GovernanceControls() {
         queryKey: ["platform_settings"],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from("platform_settings")
+                .from("platform_settings" as any)
                 .select("*")
                 .order("key");
             if (error) throw error;
-            return data as PlatformSetting[];
+            return data as unknown as PlatformSetting[];
         },
     });
 
