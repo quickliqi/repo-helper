@@ -76,19 +76,7 @@ export default function PropertyDetail() {
   const [match, setMatch] = useState<MatchResult | null>(null);
   const { data: governanceSettings } = useGovernanceSettings();
 
-  useEffect(() => {
-    if (id) {
-      fetchProperty();
-      incrementViewCount();
-    }
-  }, [id, fetchProperty, incrementViewCount]);
-
-  useEffect(() => {
-    if (id && user && property) {
-      checkExistingContact();
-      checkJVSigned();
-    }
-  }, [id, user, property, checkExistingContact, checkJVSigned]);
+  
 
   // Run Governance Agent when property loads
   useEffect(() => {
@@ -183,6 +171,21 @@ export default function PropertyDetail() {
       // Silently fail
     }
   }, [id]);
+
+  // Effects that depend on callbacks defined above
+  useEffect(() => {
+    if (id) {
+      fetchProperty();
+      incrementViewCount();
+    }
+  }, [id, fetchProperty, incrementViewCount]);
+
+  useEffect(() => {
+    if (id && user && property) {
+      checkExistingContact();
+      checkJVSigned();
+    }
+  }, [id, user, property, checkExistingContact, checkJVSigned]);
 
   const handleContactSeller = async () => {
     if (!user || !property || !seller || !profile) return;

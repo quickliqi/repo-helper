@@ -26,10 +26,10 @@ const logStep = (step: string, details?: unknown) => {
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MINUTES = 1;
 
-// Stripe price IDs (from .lovable/plan.md)
+// Stripe price IDs
 const PRICES = {
-  investor_basic: "price_1SjI8j0VL3B5XXLHB1xRD8Bb", // Investor Pro subscription ($49/month)
-  investor_pro: "price_1SjI8j0VL3B5XXLHB1xRD8Bb",   // Investor Pro subscription ($49/month) - same price, single tier in Stripe
+  investor_basic: "price_1SjI8j0VL3B5XXLHB1xRD8Bb", // Investor Basic subscription ($49/month)
+  investor_pro: "price_1T0w3d0VL3B5XXLHrJ49GcYW",   // Investor Pro subscription ($99/month)
 };
 
 serve(async (req) => {
@@ -119,7 +119,7 @@ serve(async (req) => {
     logStep("Processing checkout", { priceType, quantity, priceId });
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: "2025-04-30.basil",
+      apiVersion: "2025-08-27.basil",
     });
 
     // Check if customer exists
