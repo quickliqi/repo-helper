@@ -1,39 +1,16 @@
+
 /**
  * Agent 2: Relevance & Context Agent (v2)
  *
- * Enhanced relevance scoring with:
+ * Enhanced relevance scoring:
  * - Entity-weighted keyword matching
  * - Domain whitelist/blacklist enforcement
  * - Thin content rejection
  * - Configurable thresholds via scraper_config
  */
 
-import { ScrapedDeal, RelevanceReport } from '../../types/scraper-audit-types';
-import { supabase } from '@/integrations/supabase/client';
+import { ScrapedDeal, RelevanceReport, RelevanceConfig, BuyBoxForAudit } from "../types.ts";
 
-interface BuyBoxCriteria {
-    id: string;
-    name: string;
-    property_types: string[];
-    deal_types: string[];
-    min_price: number | null;
-    max_price: number | null;
-    min_arv: number | null;
-    max_arv: number | null;
-    min_equity_percentage: number | null;
-    target_cities: string[];
-    target_states: string[];
-    target_zip_codes: string[];
-    preferred_conditions: string[];
-}
-
-interface RelevanceConfig {
-    relevanceThreshold: number;
-    minDescriptionLength: number;
-    minRequiredFields: number;
-}
-
-// Entity weight multipliers for keyword scoring
 const ENTITY_WEIGHTS: Record<string, number> = {
     location: 2.0,
     deal_type: 3.0,
@@ -43,7 +20,6 @@ const ENTITY_WEIGHTS: Record<string, number> = {
     financial: 1.8,
 };
 
-// Keywords that boost relevance when found in title/description
 const RELEVANCE_KEYWORDS: Record<string, { keywords: string[]; weight: number }> = {
     high_value: {
         keywords: ['motivated seller', 'below market', 'must sell', 'price reduced', 'distressed', 'foreclosure', 'short sale', 'as-is'],
@@ -64,17 +40,16 @@ const CRITICAL_FIELDS: (keyof ScrapedDeal)[] = [
 ];
 
 /**
- * Fetch relevance config from scraper_config table.
+ * Fetch relevance config from scraper_config table (via wrapper)
  */
-async function fetchRelevanceConfig(): Promise<RelevanceConfig> {
+export async function fetchRelevanceConfig(supabaseClient: any): Promise<RelevanceConfig> {
     const defaults: RelevanceConfig = {
         relevanceThreshold: 30,
         minDescriptionLength: 20,
         minRequiredFields: 4,
     };
-
     try {
-        const { data } = await (supabase as any)
+        const { data } = await supabaseClient
             .from('scraper_config')
             .select('key, value')
             .in('key', ['relevance_threshold', 'min_description_length', 'min_required_fields']);
@@ -89,18 +64,16 @@ async function fetchRelevanceConfig(): Promise<RelevanceConfig> {
     } catch {
         console.warn('[RELEVANCE] Failed to fetch config, using defaults');
     }
-
     return defaults;
 }
 
 /**
  * Check deal source URL against domain whitelist/blacklist.
  */
-async function checkDomainRules(deals: ScrapedDeal[]): Promise<Map<number, string>> {
+async function checkDomainRules(deals: ScrapedDeal[], supabaseClient: any): Promise<Map<number, string>> {
     const rejections = new Map<number, string>();
-
     try {
-        const { data } = await (supabase as any)
+        const { data } = await supabaseClient
             .from('scraper_domain_rules')
             .select('domain, rule_type');
 
@@ -120,8 +93,7 @@ async function checkDomainRules(deals: ScrapedDeal[]): Promise<Map<number, strin
                     return;
                 }
             }
-
-            // If whitelist exists and link has a URL, verify it's whitelisted
+            // Check whitelist if it exists and we have a valid link
             if (whitelist.length > 0 && link.startsWith('http')) {
                 const isWhitelisted = whitelist.some((d: string) => link.includes(d));
                 if (!isWhitelisted) {
@@ -132,13 +104,9 @@ async function checkDomainRules(deals: ScrapedDeal[]): Promise<Map<number, strin
     } catch {
         console.warn('[RELEVANCE] Domain rule check failed, skipping');
     }
-
     return rejections;
 }
 
-/**
- * Check for thin/boilerplate content.
- */
 function checkThinContent(
     deal: ScrapedDeal,
     config: RelevanceConfig
@@ -164,9 +132,6 @@ function checkThinContent(
     return null;
 }
 
-/**
- * Calculate keyword-entity weighted score from deal text.
- */
 function keywordScore(deal: ScrapedDeal): { bonus: number; reasons: string[] } {
     let bonus = 0;
     const reasons: string[] = [];
@@ -181,20 +146,19 @@ function keywordScore(deal: ScrapedDeal): { bonus: number; reasons: string[] } {
                 } else {
                     reasons.push(`Negative keyword: "${keyword}" (${config.weight})`);
                 }
-                break; // Only count once per category
+                break;
             }
         }
     }
-
     return { bonus, reasons };
 }
 
-function scoreDealAgainstBuyBox(deal: ScrapedDeal, bb: BuyBoxCriteria): { score: number; reasons: string[] } {
+function scoreDealAgainstBuyBox(deal: ScrapedDeal, bb: BuyBoxForAudit): { score: number; reasons: string[] } {
     let score = 100;
     const reasons: string[] = [];
     const price = deal.asking_price || deal.price;
 
-    // Critical mismatches (deal breakers) — weighted by entity importance
+    // Critical mismatches (deal breakers) — weighted
     if (bb.property_types.length > 0 && deal.property_type && !bb.property_types.includes(deal.property_type)) {
         score -= Math.round(40 * ENTITY_WEIGHTS.property_type);
         reasons.push(`Property type '${deal.property_type}' not in buy box`);
@@ -269,15 +233,15 @@ function scoreDealAgainstBuyBox(deal: ScrapedDeal, bb: BuyBoxCriteria): { score:
 
 export async function runRelevanceCheck(
     deals: ScrapedDeal[],
-    buyBoxes: BuyBoxCriteria[]
+    buyBoxes: BuyBoxForAudit[],
+    supabaseClient: any
 ): Promise<RelevanceReport> {
-    const config = await fetchRelevanceConfig();
-    const domainRejections = await checkDomainRules(deals);
+    const config = await fetchRelevanceConfig(supabaseClient);
+    const domainRejections = await checkDomainRules(deals, supabaseClient);
 
     if (buyBoxes.length === 0 && domainRejections.size === 0) {
-        // Still run keyword scoring and thin content checks
+        // Fallback: keyword scoring + thin content check
         const perDeal = deals.map((deal, i) => {
-            // Check thin content
             const thinReason = checkThinContent(deal, config);
             if (thinReason) {
                 return {
@@ -307,12 +271,12 @@ export async function runRelevanceCheck(
             relevantCount,
             irrelevantCount: deals.length - relevantCount,
             perDeal,
-            alignmentSummary: `No buy boxes configured. ${relevantCount} of ${deals.length} deals pass keyword relevance (threshold: ${config.relevanceThreshold}).`,
+            alignmentSummary: `No buy boxes configured. ${relevantCount} of ${deals.length} deals pass keyword relevance.`,
         };
     }
 
     const perDeal = deals.map((deal, i) => {
-        // 1. Domain check
+        // 1. Domain
         if (domainRejections.has(i)) {
             return {
                 dealIndex: i,
@@ -323,7 +287,7 @@ export async function runRelevanceCheck(
             };
         }
 
-        // 2. Thin content check
+        // 2. Thin content
         const thinReason = checkThinContent(deal, config);
         if (thinReason) {
             return {
@@ -335,7 +299,7 @@ export async function runRelevanceCheck(
             };
         }
 
-        // 3. Buy box scoring (if available)
+        // 3. Buy boxes
         let bestScore = 0;
         let bestReasons: string[] = [];
         let bestBuyBoxId: string | undefined;
@@ -354,7 +318,7 @@ export async function runRelevanceCheck(
             bestReasons = ['No buy box — base score'];
         }
 
-        // 4. Apply keyword bonus
+        // 4. Keyword bonus
         const { bonus, reasons: kwReasons } = keywordScore(deal);
         bestScore = Math.max(0, Math.min(100, bestScore + bonus));
         bestReasons = [...bestReasons, ...kwReasons];
@@ -371,10 +335,7 @@ export async function runRelevanceCheck(
 
     const relevantCount = perDeal.filter(d => d.isRelevant).length;
     const irrelevantCount = perDeal.length - relevantCount;
-
-    const alignmentSummary = relevantCount === deals.length
-        ? `All ${deals.length} deals pass relevance check (threshold: ${config.relevanceThreshold}).`
-        : `${relevantCount} of ${deals.length} deals pass relevance (threshold: ${config.relevanceThreshold}). ${irrelevantCount} flagged as irrelevant.`;
+    const alignmentSummary = `${relevantCount} of ${deals.length} deals pass relevance (threshold: ${config.relevanceThreshold}).`;
 
     return {
         totalDeals: deals.length,

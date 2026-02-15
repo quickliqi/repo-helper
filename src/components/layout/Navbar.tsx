@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   MessageSquare,
   BookOpen,
-  Info
+  Info,
+  Target
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -108,6 +109,13 @@ export function Navbar() {
                   Pricing
                 </Link>
                 <Link
+                  to="/demand"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <Target className="h-3.5 w-3.5" />
+                  Demand
+                </Link>
+                <Link
                   to="/blog"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
@@ -128,6 +136,13 @@ export function Navbar() {
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Pricing
+                </Link>
+                <Link
+                  to="/demand"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <Target className="h-3.5 w-3.5" />
+                  Demand
                 </Link>
                 <Link
                   to="/blog"
@@ -307,6 +322,14 @@ export function Navbar() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Pricing
+                  </Link>
+                  <Link
+                    to="/demand"
+                    className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Target className="h-3.5 w-3.5" />
+                    Demand
                   </Link>
                   <Link
                     to="/blog"

@@ -143,6 +143,15 @@ export default function Blog() {
       <Helmet>
         <title>QuickLiqi Knowledge Base & Market Intelligence</title>
         <meta name="description" content="Institutional-grade real estate investing protocols. Access operational SOPs, market liquidity signals, and underwriting standards for wholesalers and investors." />
+        <link rel="canonical" href="https://quickliqi.com/blog" />
+        <meta property="og:title" content="QuickLiqi Knowledge Base & Market Intelligence" />
+        <meta property="og:description" content="Institutional-grade real estate investing protocols. Access operational SOPs, market liquidity signals, and underwriting standards for wholesalers and investors." />
+        <meta property="og:url" content="https://quickliqi.com/blog" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="QuickLiqi" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="QuickLiqi Knowledge Base & Market Intelligence" />
+        <meta name="twitter:description" content="Institutional-grade real estate investing protocols. Access operational SOPs, market liquidity signals, and underwriting standards." />
       </Helmet>
 
       <div className="bg-background min-h-screen">

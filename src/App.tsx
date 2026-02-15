@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { SubscriptionProvider } from "@/hooks/useSubscription";
@@ -32,8 +33,9 @@ import Funnel from "./pages/Funnel";
 import AdLanding from "./pages/AdLanding";
 import PublicProfile from "./components/profile/PublicProfile";
 import SavedProperties from "./pages/SavedProperties";
-import Blog from "./pages/Blog";
-import BlogArticle from "./pages/BlogArticle";
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogArticle = lazy(() => import("./pages/BlogArticle"));
+const BuyerDemandPublic = lazy(() => import("./pages/BuyerDemandPublic"));
 import About from "./pages/About";
 
 const queryClient = new QueryClient();
@@ -195,13 +197,13 @@ function AppRoutes() {
         }
       />
       <Route path="/user/:userId" element={<PublicProfile />} />
-      <Route 
-        path="/saved" 
+      <Route
+        path="/saved"
         element={
           <ProtectedRoute>
             <SavedProperties />
           </ProtectedRoute>
-        } 
+        }
       />
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
@@ -211,8 +213,9 @@ function AppRoutes() {
       <Route path="/ad" element={<AdLanding />} />
       <Route path="/lp" element={<AdLanding />} />
       <Route path="/go" element={<AdLanding />} />
-      <Route path="/blog" element={<Blog />} />
-      <Route path="/blog/:slug" element={<BlogArticle />} />
+      <Route path="/blog" element={<Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}><Blog /></Suspense>} />
+      <Route path="/blog/:slug" element={<Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}><BlogArticle /></Suspense>} />
+      <Route path="/demand" element={<Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}><BuyerDemandPublic /></Suspense>} />
       <Route path="/about" element={<About />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -347,7 +347,7 @@ const Pricing = () => {
                     <p className="text-2xl font-bold">$99<span className="text-base font-normal text-muted-foreground">/mo</span></p>
                     <p className="text-sm text-muted-foreground mb-3">10 scrapes/month</p>
                     <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-                      <Link to="/scraper">Learn More</Link>
+                      <Link to="/scraper">Try AI Hunter</Link>
                     </Button>
                   </div>
                 </div>

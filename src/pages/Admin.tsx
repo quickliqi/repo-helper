@@ -18,7 +18,8 @@ import {
   Mail,
   Settings,
   ToggleLeft,
-  UserCog
+  UserCog,
+  Zap
 } from 'lucide-react';
 import { AdminPaymentHistory } from '@/components/admin/AdminPaymentHistory';
 import { AdminSubscriptions } from '@/components/admin/AdminSubscriptions';
@@ -28,7 +29,8 @@ import { AdminEmailTesting } from '@/components/admin/AdminEmailTesting';
 import { GovernanceControls } from '@/components/admin/GovernanceControls';
 import { FeatureFlagManager } from '@/components/admin/FeatureFlagManager';
 import { UserManagement } from '@/components/admin/UserManagement';
-import { ScraperHealth } from '@/components/admin/ScraperHealth';
+import { ScraperCommandCenter } from '@/components/admin/ScraperCommandCenter';
+import { AdminStripeControls } from '@/components/admin/AdminStripeControls';
 
 interface PlatformStats {
   totalUsers: number;
@@ -242,6 +244,10 @@ export default function Admin() {
                 <Mail className="h-4 w-4" />
                 <span className="hidden sm:inline">Emails</span>
               </TabsTrigger>
+              <TabsTrigger value="stripe" className="gap-2">
+                <Zap className="h-4 w-4" />
+                <span className="hidden sm:inline">Stripe</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="analytics">
@@ -261,7 +267,7 @@ export default function Admin() {
             </TabsContent>
 
             <TabsContent value="scraper">
-              <ScraperHealth />
+              <ScraperCommandCenter />
             </TabsContent>
 
             <TabsContent value="verifications">
@@ -278,6 +284,10 @@ export default function Admin() {
 
             <TabsContent value="emails">
               <AdminEmailTesting />
+            </TabsContent>
+
+            <TabsContent value="stripe">
+              <AdminStripeControls />
             </TabsContent>
           </Tabs>
         </div>

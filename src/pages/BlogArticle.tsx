@@ -738,6 +738,11 @@ export default function BlogArticle() {
         <meta property="og:title" content={article.title} />
         <meta property="og:description" content={article.metaDescription} />
         <meta property="og:type" content="article" />
+        <meta property="og:url" content={`https://quickliqi.com/blog/${slug}`} />
+        <meta property="og:site_name" content="QuickLiqi" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={article.title} />
+        <meta name="twitter:description" content={article.metaDescription} />
         <link rel="canonical" href={`https://quickliqi.com/blog/${slug}`} />
 
         {/* Schema.org markup for Google */}

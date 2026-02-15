@@ -2,10 +2,21 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  "https://quickliqi.com",
+  "https://www.quickliqi.com",
+  "https://quickliqi.lovable.app",
+];
+
+function getCorsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
 const logStep = (step: string, details?: unknown) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}`, details ? JSON.stringify(details) : "");
@@ -16,6 +27,9 @@ const RATE_LIMIT_MAX = 30;
 const RATE_LIMIT_WINDOW_MINUTES = 1;
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -98,7 +112,7 @@ serve(async (req) => {
       });
     }
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-04-30.basil" });
 
     // Check subscription status in Stripe
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
@@ -174,23 +188,34 @@ serve(async (req) => {
 
     // Get scrape credits (Pro only)
     let scrapeCredits = 0;
-    if (planTier === 'pro') {
-      const { data: sCredits } = await supabaseAdmin
-        .from("scrape_credits")
-        .select("credits_remaining")
-        .eq("user_id", user.id)
-        .single();
 
-      if (sCredits) {
-        scrapeCredits = sCredits.credits_remaining;
-      } else {
-        // Initialize credits if Pro but no record
+    // Check if user has a credit record
+    const { data: sCredits } = await supabaseAdmin
+      .from("scrape_credits")
+      .select("credits_remaining")
+      .eq("user_id", user.id)
+      .single();
+
+    if (sCredits) {
+      scrapeCredits = sCredits.credits_remaining;
+    } else {
+      // No record found - initialize based on tier
+      if (planTier === 'pro') {
+        // New Pro user: Grant 10 credits
         await supabaseAdmin.from("scrape_credits").insert({
           user_id: user.id,
           credits_remaining: 10,
           subscription_active: true
         });
         scrapeCredits = 10;
+      } else {
+        // New Free user: Grant 1 credit
+        await supabaseAdmin.from("scrape_credits").insert({
+          user_id: user.id,
+          credits_remaining: 1, // 1 Free Scrape
+          subscription_active: false
+        });
+        scrapeCredits = 1;
       }
     }
 

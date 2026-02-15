@@ -2,10 +2,21 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  "https://quickliqi.com",
+  "https://www.quickliqi.com",
+  "https://quickliqi.lovable.app",
+];
+
+function getCorsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
 const logStep = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}`, details ? JSON.stringify(details) : "");
@@ -22,6 +33,9 @@ const PRICES = {
 };
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -105,7 +119,7 @@ serve(async (req) => {
     logStep("Processing checkout", { priceType, quantity, priceId });
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: "2025-08-27.basil",
+      apiVersion: "2025-04-30.basil",
     });
 
     // Check if customer exists
@@ -116,7 +130,6 @@ serve(async (req) => {
       logStep("Existing customer found", { customerId });
     }
 
-    const origin = req.headers.get("origin") || "https://quickliqi.com";
     const isSubscription = priceType === "investor_basic" || priceType === "investor_pro";
 
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
@@ -124,8 +137,8 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       line_items: [{ price: priceId, quantity }],
       mode: isSubscription ? "subscription" : "payment",
-      success_url: `${origin}/dashboard?payment=success`,
-      cancel_url: `${origin}/pricing?payment=canceled`,
+      success_url: `${origin || "https://quickliqi.com"}/dashboard?payment=success`,
+      cancel_url: `${origin || "https://quickliqi.com"}/pricing?payment=canceled`,
     };
 
     // Add 7-day trial for subscriptions
@@ -138,6 +151,15 @@ serve(async (req) => {
     try {
       const session = await stripe.checkout.sessions.create(sessionConfig);
       logStep("Checkout session created", { sessionId: session.id, url: session.url });
+
+      // Audit log
+      await supabaseAdmin.from("financial_audit_log").insert({
+        actor_id: user.id,
+        action: "checkout_session_created",
+        resource_type: "checkout_session",
+        resource_id: session.id,
+        details: { priceType, quantity, priceId },
+      });
 
       return new Response(JSON.stringify({ url: session.url }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

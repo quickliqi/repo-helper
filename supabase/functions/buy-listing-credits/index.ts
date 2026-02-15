@@ -2,10 +2,21 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  "https://quickliqi.com",
+  "https://www.quickliqi.com",
+  "https://quickliqi.lovable.app",
+];
+
+function getCorsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
 const logStep = (step: string, details?: unknown) => {
   console.log(`[BUY-LISTING-CREDITS] ${step}`, details ? JSON.stringify(details) : "");
@@ -18,6 +29,9 @@ const RATE_LIMIT_WINDOW_MINUTES = 1;
 const LISTING_CREDIT_PRICE = "price_1SjI9J0VL3B5XXLH4pGYfKkC"; // $10 per credit
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -38,7 +52,18 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const authHeader = req.headers.get("Authorization")!;
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      logStep("ERROR: STRIPE_SECRET_KEY is not set");
+      throw new Error("Stripe configuration error: Secret key missing");
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      logStep("ERROR: No Authorization header");
+      throw new Error("No authorization header provided");
+    }
+
     const token = authHeader.replace("Bearer ", "");
     const { data } = await supabaseAuth.auth.getUser(token);
     const user = data.user;
@@ -69,8 +94,8 @@ serve(async (req) => {
     const { quantity = 1 } = await req.json();
     logStep("Processing purchase", { quantity });
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2025-08-27.basil",
+    const stripe = new Stripe(stripeKey, {
+      apiVersion: "2025-04-30.basil",
     });
 
     // Check if customer exists
@@ -80,18 +105,25 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
-    const origin = req.headers.get("origin") || "https://quickliqi.lovable.app";
-
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [{ price: LISTING_CREDIT_PRICE, quantity }],
       mode: "payment",
-      success_url: `${origin}/dashboard?credits=success`,
-      cancel_url: `${origin}/pricing?credits=canceled`,
+      success_url: `${origin || "https://quickliqi.com"}/dashboard?credits=success`,
+      cancel_url: `${origin || "https://quickliqi.com"}/pricing?credits=canceled`,
     });
 
     logStep("Checkout session created", { sessionId: session.id });
+
+    // Audit log
+    await supabaseAdmin.from("financial_audit_log").insert({
+      actor_id: user.id,
+      action: "credits_checkout_created",
+      resource_type: "checkout_session",
+      resource_id: session.id,
+      details: { quantity, priceId: LISTING_CREDIT_PRICE },
+    });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

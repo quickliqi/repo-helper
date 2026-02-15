@@ -2,10 +2,21 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  "https://quickliqi.com",
+  "https://www.quickliqi.com",
+  "https://quickliqi.lovable.app",
+];
+
+function getCorsHeaders(origin?: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -20,6 +31,9 @@ const RATE_LIMIT_WINDOW_MINUTES = 1;
 const SCRAPE_PRICE_ID = "price_1SkekM0VL3B5XXLHuT9r6FIr";
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -39,6 +53,12 @@ serve(async (req) => {
 
   try {
     logStep("Function started");
+
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      logStep("ERROR: STRIPE_SECRET_KEY is not set");
+      throw new Error("Stripe configuration error: Secret key missing");
+    }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header");
@@ -70,8 +90,8 @@ serve(async (req) => {
       });
     }
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2025-08-27.basil",
+    const stripe = new Stripe(stripeKey, {
+      apiVersion: "2025-04-30.basil",
     });
 
     // Check for existing customer
@@ -81,8 +101,6 @@ serve(async (req) => {
       customerId = customers.data[0].id;
       logStep("Existing customer found", { customerId });
     }
-
-    const origin = req.headers.get("origin") || "https://quickliqi.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -94,8 +112,8 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${origin}/scraper?success=true`,
-      cancel_url: `${origin}/scraper?canceled=true`,
+      success_url: `${origin || "https://quickliqi.com"}/scraper?success=true`,
+      cancel_url: `${origin || "https://quickliqi.com"}/scraper?canceled=true`,
       metadata: {
         user_id: user.id,
         type: "scrape_subscription",
@@ -103,6 +121,15 @@ serve(async (req) => {
     });
 
     logStep("Checkout session created", { sessionId: session.id });
+
+    // Audit log
+    await supabaseAdmin.from("financial_audit_log").insert({
+      actor_id: user.id,
+      action: "scrape_checkout_created",
+      resource_type: "checkout_session",
+      resource_id: session.id,
+      details: { priceId: SCRAPE_PRICE_ID },
+    });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -16,7 +16,7 @@ interface LeadMagnetProps {
 export function LeadMagnet({
     title = "Download the Deal Analysis Calculator",
     description = "Get the exact spreadsheet used to underwrite over $50M in wholesale transactions. Includes MAO formulas and repair estimators.",
-    buttonText = "Unlock Asset",
+    buttonText = "Get Free Resource",
     assetUrl = "#",
     className
 }: LeadMagnetProps) {
@@ -67,7 +67,7 @@ export function LeadMagnet({
                         <Lock className="h-4 w-4 text-primary" />
                     </div>
                     <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                        Institutional Utility
+                        Free Resource
                     </span>
                 </div>
                 <CardTitle className="text-xl md:text-2xl">{title}</CardTitle>

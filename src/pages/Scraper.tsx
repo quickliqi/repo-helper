@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Scan,
   Search,
@@ -26,6 +27,10 @@ import {
   ExternalLink,
   BrainCircuit,
   AlertTriangle,
+  Lock,
+  ArrowRight,
+  Target,
+  Zap
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -106,6 +111,78 @@ function getAuditBadge(dealIndex: number, audit: AuditReport | null) {
   }
 }
 
+
+const ScraperLanding = ({ onTryFree, hasCredits }: { onTryFree: () => void, hasCredits: boolean }) => (
+  <div className="min-h-[80vh] flex flex-col items-center justify-center py-16 px-4">
+    <div className="max-w-4xl mx-auto text-center space-y-8">
+      <div className="space-y-4">
+        <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors px-4 py-1.5 text-sm">
+          <Sparkles className="w-4 h-4 mr-2" />
+          AI Hunter Engine
+        </Badge>
+        <h1 className="text-4xl md:text-6xl font-display font-bold tracking-tight text-foreground">
+          Finding Off-Market Deals <br />
+          <span className="text-primary bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Just Got Unfair.
+          </span>
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          Stop digging through thousands of listings. Our AI Agent scans MLS, Craigslist, and FSBO sources, runs the numbers, and delivers only the deals with <strong>real equity</strong>.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6 text-left py-8">
+        <Card className="bg-background/60 backdrop-blur border-primary/20 hover:border-primary/50 transition-all">
+          <CardHeader>
+            <Globe className="w-10 h-10 text-primary mb-2" />
+            <CardTitle>Global Scan</CardTitle>
+            <CardDescription>MLS & off-market sources analyzed simultaneously.</CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="bg-background/60 backdrop-blur border-primary/20 hover:border-primary/50 transition-all">
+          <CardHeader>
+            <BrainCircuit className="w-10 h-10 text-primary mb-2" />
+            <CardTitle>AI Validation</CardTitle>
+            <CardDescription>Calculator Agent checks equity, ARV, and ROI automatically.</CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="bg-background/60 backdrop-blur border-primary/20 hover:border-primary/50 transition-all">
+          <CardHeader>
+            <Target className="w-10 h-10 text-primary mb-2" />
+            <CardTitle>Precision Hunting</CardTitle>
+            <CardDescription>Only shows deals matching your exact buy box criteria.</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        {hasCredits ? (
+          <Button size="lg" onClick={onTryFree} className="h-14 px-8 text-lg shadow-lg shadow-primary/25 animate-pulse-hover">
+            <Zap className="w-5 h-5 mr-2" />
+            Try 1 Free Scrape
+          </Button>
+        ) : (
+          <Button size="lg" asChild className="h-14 px-8 text-lg shadow-lg shadow-primary/25">
+            <Link to="/pricing">
+              <Lock className="w-5 h-5 mr-2" />
+              Upgrade to Pro to Access
+            </Link>
+          </Button>
+        )}
+        <Button variant="outline" size="lg" asChild className="h-14 px-8 text-lg">
+          <Link to="/pricing">View Plans</Link>
+        </Button>
+      </div>
+
+      {!hasCredits && (
+        <p className="text-sm text-muted-foreground">
+          You've used your free trial scrape. Upgrade to Investor Pro for unlimited access.
+        </p>
+      )}
+    </div>
+  </div>
+);
+
 export default function Scraper() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
@@ -114,7 +191,29 @@ export default function Scraper() {
   const [sources, setSources] = useState<SourceBreakdown | null>(null);
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
   const [isAuditing, setIsAuditing] = useState(false);
-  const { scrapeCredits, planTier, refreshSubscription } = useSubscription();
+  const { scrapeCredits, planTier, refreshSubscription, isLoading } = useSubscription(); // Assuming isLoading added to hook return
+  const [isLanding, setIsLanding] = useState(true);
+  const navigate = useNavigate();
+
+  // Determine view mode on load
+  useEffect(() => {
+    if (!isLoading) {
+      if (planTier === 'pro') {
+        setIsLanding(false); // Pro users go straight to tool
+      } else {
+        setIsLanding(true); // Non-pro see landing first
+      }
+    }
+  }, [planTier, isLoading]);
+
+  const handleTryFree = () => {
+    if (scrapeCredits > 0) {
+      setIsLanding(false);
+    } else {
+      toast.error("No free credits remaining. Please upgrade to Pro.");
+      navigate('/pricing');
+    }
+  };
 
   // Run audit pipeline when results change
   useEffect(() => {
@@ -169,13 +268,14 @@ export default function Scraper() {
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (planTier !== 'pro') {
-      toast.error('AI Hunter Engine requires a Pro subscription');
-      return;
-    }
+    // Allow free trial users (planTier !== 'pro' but has credits)
+    // if (planTier !== 'pro') { ... } -> Removed blocker
 
+    // Check credits
     if (scrapeCredits <= 0) {
-      toast.error('No scrape credits remaining this month');
+      toast.error(planTier === 'pro'
+        ? 'No scrape credits remaining this month'
+        : 'Free trial used. Please upgrade to Pro.');
       return;
     }
 
@@ -211,6 +311,14 @@ export default function Scraper() {
       setIsScraping(false);
     }
   };
+
+  if (isLanding) {
+    return (
+      <MainLayout>
+        <ScraperLanding onTryFree={handleTryFree} hasCredits={scrapeCredits > 0} />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -308,9 +416,11 @@ export default function Scraper() {
                     </Button>
 
                     {planTier !== 'pro' && (
-                      <p className="text-xs text-center text-destructive mt-2">
-                        Pro subscription required
-                      </p>
+                      <div className="mt-3 p-2 bg-primary/10 rounded text-center">
+                        <p className="text-xs font-medium text-primary">
+                          ✨ Using Free Trial Credit
+                        </p>
+                      </div>
                     )}
                   </form>
                 </CardContent>

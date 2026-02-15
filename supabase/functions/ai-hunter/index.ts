@@ -197,7 +197,7 @@ serve(async (req) => {
         logStep("User authenticated", { userId, email: userEmail });
 
         // Admin bypass
-        const isAdmin = userEmail === ADMIN_EMAIL;
+        let isAdmin = userEmail === ADMIN_EMAIL;
 
         if (!isAdmin) {
             const { data: roleData } = await supabaseAdmin
@@ -207,7 +207,9 @@ serve(async (req) => {
                 .eq("role", "admin")
                 .maybeSingle();
 
-            if (!roleData) {
+            if (roleData) {
+                isAdmin = true;
+            } else {
                 const { data: credits } = await supabaseAdmin
                     .from("scrape_credits")
                     .select("*")
@@ -223,13 +225,45 @@ serve(async (req) => {
         logStep("Access check passed", { isAdmin });
 
         const body = await req.json();
-        const { city, state } = body;
+        const { city, state, admin_mode } = body;
+        const adminMode = admin_mode === true && isAdmin;
 
         if (!city || !state) {
             throw new Error("City and state are required.");
         }
 
-        logStep("Request received", { city, state });
+        logStep("Request received", { city, state, adminMode });
+
+        // ─── Fetch scraper config for max_results ─────────────────
+        let maxResults = 10;
+        try {
+            const { data: configRows } = await supabaseAdmin
+                .from("scraper_config")
+                .select("key, value")
+                .in("key", ["max_results"]);
+            if (configRows) {
+                for (const row of configRows) {
+                    if (row.key === "max_results") maxResults = Number(row.value);
+                }
+            }
+        } catch {
+            logStep("Config fetch failed, using defaults");
+        }
+        if (adminMode) maxResults = 50; // Admin override — no limit
+
+        // ─── Fetch domain blacklist ────────────────────────────────
+        let blacklistedDomains: string[] = [];
+        try {
+            const { data: domainRules } = await supabaseAdmin
+                .from("scraper_domain_rules")
+                .select("domain")
+                .eq("rule_type", "blacklist");
+            if (domainRules) {
+                blacklistedDomains = domainRules.map((r: { domain: string }) => r.domain.toLowerCase());
+            }
+        } catch {
+            logStep("Domain rules fetch failed, skipping");
+        }
 
         // Get user's buy boxes for filtering context
         const { data: buyBoxes } = await supabaseAdmin
@@ -287,7 +321,7 @@ serve(async (req) => {
                             const price = listing.list_price || listing.price;
                             return price !== undefined && price >= minPrice && price <= maxPrice;
                         })
-                        .slice(0, 8)
+                        .slice(0, maxResults)
                         .map((listing) => {
                             const price = listing.list_price || listing.price || 0;
                             const address = listing.location?.address || listing.address || {};
@@ -566,6 +600,43 @@ Return ONLY valid JSON:
             }
         }
 
+        // ─── Filter blacklisted domains ─────────────────────────
+        if (blacklistedDomains.length > 0) {
+            const beforeCount = allDeals.length;
+            allDeals = allDeals.filter(deal => {
+                const link = (deal.link || "").toLowerCase();
+                const source = (deal.source || "").toLowerCase();
+                return !blacklistedDomains.some(d => link.includes(d) || source.includes(d));
+            });
+            const filtered = beforeCount - allDeals.length;
+            if (filtered > 0) logStep("Blacklisted deals filtered", { filtered });
+        }
+
+        // ─── Dedup against existing hashes in DB ──────────────────
+        const dedupHashes = allDeals.map(deal => {
+            const addr = (deal.address || deal.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const c = (deal.city || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const s = (deal.state || "").toLowerCase().replace(/[^a-z]/g, "");
+            return `${addr}|${c}|${s}`;
+        });
+
+        try {
+            const { data: existingHashes } = await supabaseAdmin
+                .from("scraper_dedup_hashes")
+                .select("address_hash")
+                .in("address_hash", dedupHashes);
+
+            if (existingHashes && existingHashes.length > 0) {
+                const existingSet = new Set(existingHashes.map((h: { address_hash: string }) => h.address_hash));
+                const beforeCount = allDeals.length;
+                allDeals = allDeals.filter((_, i) => !existingSet.has(dedupHashes[i]));
+                const deduped = beforeCount - allDeals.length;
+                if (deduped > 0) logStep("Cross-session duplicates removed", { deduped });
+            }
+        } catch {
+            logStep("Dedup check failed, skipping");
+        }
+
         // Run Calculator Agent on all deals
         const validatedDeals = allDeals.map((deal) => {
             const metrics = calculateDealMetrics({
@@ -624,8 +695,29 @@ Return ONLY valid JSON:
 
         logStep("Deals validated & sorted", { count: validatedDeals.length, validated: validatedDeals.filter((d) => d.validated).length });
 
-        // Deduct credit for non-admin users
-        if (!isAdmin) {
+        // Register dedup hashes for future cross-session detection
+        try {
+            const hashRows = validatedDeals.map((deal) => {
+                const addr = (deal.address || deal.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const c = (deal.city || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const s = (deal.state || "").toLowerCase().replace(/[^a-z]/g, "");
+                return {
+                    address_hash: `${addr}|${c}|${s}`,
+                    price: deal.price,
+                    source: deal.source,
+                };
+            });
+            if (hashRows.length > 0) {
+                await supabaseAdmin
+                    .from("scraper_dedup_hashes")
+                    .upsert(hashRows, { onConflict: "address_hash" });
+            }
+        } catch {
+            logStep("Dedup hash registration failed (non-critical)");
+        }
+
+        // Deduct credit for non-admin users (skip in admin_mode)
+        if (!isAdmin && !adminMode) {
             const { data: credits } = await supabaseAdmin
                 .from("scrape_credits")
                 .select("*")
@@ -646,6 +738,7 @@ Return ONLY valid JSON:
 
         return new Response(JSON.stringify({
             deals: validatedDeals,
+            admin_mode: adminMode,
             sources: {
                 mls: mlsDeals.length,
                 fsbo: fsboDeals.length,

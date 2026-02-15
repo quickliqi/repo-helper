@@ -37,6 +37,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <Link to="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Pricing
                 </Link>
+                <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  Learn
+                </Link>
+                <Link to="/demand" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  Demand
+                </Link>
                 <Link to="/auth?mode=signup" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Get Started
                 </Link>
