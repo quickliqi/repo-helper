@@ -6,10 +6,18 @@ const ALLOWED_ORIGINS = [
   "https://quickliqi.com",
   "https://www.quickliqi.com",
   "https://quickliqi.lovable.app",
+  "https://realquickliqi.lovable.app",
 ];
 
+function isAllowedOrigin(origin: string): boolean {
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Allow Lovable preview origins
+  if (origin.endsWith(".lovableproject.com") || origin.endsWith(".lovable.app")) return true;
+  return false;
+}
+
 function getCorsHeaders(origin?: string | null) {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowedOrigin = origin && isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -166,8 +174,10 @@ serve(async (req) => {
 
       // Determine plan tier (from .lovable/plan.md)
       const priceId = subscription.items.data[0]?.price.id;
-      if (priceId === "price_1SjI8j0VL3B5XXLHB1xRD8Bb") {
-        planTier = 'pro'; // Investor Pro subscription
+      if (priceId === "price_1T0w3d0VL3B5XXLHrJ49GcYW") {
+        planTier = 'pro'; // Investor Pro subscription ($99/month)
+      } else if (priceId === "price_1SjI8j0VL3B5XXLHB1xRD8Bb") {
+        planTier = 'basic'; // Investor Basic subscription ($49/month)
       }
 
       logStep("Subscription found", {
