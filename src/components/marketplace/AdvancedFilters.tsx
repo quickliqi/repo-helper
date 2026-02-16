@@ -28,6 +28,7 @@ export interface FilterState {
   minPrice: number | null;
   maxPrice: number | null;
   minEquity: number | null;
+  maxDaysOnMarket: number | null;
   sortBy: SortOption;
 }
 
@@ -49,6 +50,7 @@ export function AdvancedFilters({ filters, onFiltersChange, onSaveSearch, result
     filters.minPrice !== null,
     filters.maxPrice !== null,
     filters.minEquity !== null,
+    filters.maxDaysOnMarket !== null,
   ].filter(Boolean).length;
 
   const clearFilters = () => {
@@ -61,6 +63,7 @@ export function AdvancedFilters({ filters, onFiltersChange, onSaveSearch, result
       minPrice: null,
       maxPrice: null,
       minEquity: null,
+      maxDaysOnMarket: null,
     });
   };
 
@@ -287,7 +290,34 @@ export function AdvancedFilters({ filters, onFiltersChange, onSaveSearch, result
                 />
               </div>
 
-              {/* Save Search Button */}
+              {/* Days on Market */}
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <Label className="text-base font-medium">Days on Market</Label>
+                  <span className="text-sm text-muted-foreground">
+                    {filters.maxDaysOnMarket ? `≤ ${filters.maxDaysOnMarket} days` : 'Any'}
+                  </span>
+                </div>
+                <Select
+                  value={filters.maxDaysOnMarket?.toString() || ''}
+                  onValueChange={(value) => onFiltersChange({
+                    ...filters,
+                    maxDaysOnMarket: value ? parseInt(value) : null,
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                    <SelectItem value="14">Last 14 days</SelectItem>
+                    <SelectItem value="30">Last 30 days</SelectItem>
+                    <SelectItem value="60">Last 60 days</SelectItem>
+                    <SelectItem value="90">Last 90 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {onSaveSearch && (
                 <div className="pt-4 border-t">
                   <Button 
@@ -361,6 +391,15 @@ export function AdvancedFilters({ filters, onFiltersChange, onSaveSearch, result
               <X 
                 className="h-3 w-3 cursor-pointer" 
                 onClick={() => onFiltersChange({ ...filters, minEquity: null })}
+              />
+            </Badge>
+          )}
+          {filters.maxDaysOnMarket && (
+            <Badge variant="secondary" className="gap-1">
+              ≤ {filters.maxDaysOnMarket} days
+              <X 
+                className="h-3 w-3 cursor-pointer" 
+                onClick={() => onFiltersChange({ ...filters, maxDaysOnMarket: null })}
               />
             </Badge>
           )}

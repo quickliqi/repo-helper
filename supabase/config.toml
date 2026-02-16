@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.cross-project-sync]
 verify_jwt = false
+
+[functions.deal-analyzer]
+verify_jwt = false

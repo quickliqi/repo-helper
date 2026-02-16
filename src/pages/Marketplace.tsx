@@ -42,6 +42,7 @@ function MarketplaceContent() {
     minPrice: null,
     maxPrice: null,
     minEquity: null,
+    maxDaysOnMarket: null,
     sortBy: 'newest',
   });
 
@@ -122,8 +123,14 @@ function MarketplaceContent() {
       const matchesEquity = !filters.minEquity ||
         (property.equity_percentage && property.equity_percentage >= filters.minEquity);
 
+      // Days on market
+      const matchesDaysOnMarket = !filters.maxDaysOnMarket || (() => {
+        const daysListed = Math.floor((Date.now() - new Date(property.created_at).getTime()) / (1000 * 60 * 60 * 24));
+        return daysListed <= filters.maxDaysOnMarket!;
+      })();
+
       return matchesSearch && matchesType && matchesDeal && matchesCondition &&
-        matchesState && matchesMinPrice && matchesMaxPrice && matchesEquity;
+        matchesState && matchesMinPrice && matchesMaxPrice && matchesEquity && matchesDaysOnMarket;
     });
 
     // Sort
