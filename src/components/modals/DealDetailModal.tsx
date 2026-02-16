@@ -3,24 +3,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import {
     MapPin,
-    DollarSign,
     TrendingUp,
     AlertTriangle,
     CheckCircle2,
-    Send,
-    Bot,
-    User,
     Building,
     Ruler,
     Bath,
     BedDouble
 } from "lucide-react";
-import { useState } from "react";
+import { DealChat } from "@/components/chat/DealChat";
 
 // Define strict types for the deal prop based on Scraper.tsx
 interface DealMetrics {
@@ -72,25 +66,7 @@ function formatCurrency(value: number): string {
 }
 
 export function DealDetailModal({ deal, open, onOpenChange }: DealDetailModalProps) {
-    const [chatInput, setChatInput] = useState("");
-    const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'assistant', content: string }[]>([
-        { role: 'assistant', content: "I've analyzed this deal. What would you like to know specifically about the ROI or comp analysis?" }
-    ]);
-
     if (!deal) return null;
-
-    const handleSendMessage = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!chatInput.trim()) return;
-
-        setChatHistory(prev => [...prev, { role: 'user', content: chatInput }]);
-        setChatInput("");
-
-        // Simulate generic response for now
-        setTimeout(() => {
-            setChatHistory(prev => [...prev, { role: 'assistant', content: "I'm focusing on the deal analysis. This feature is currently in preview mode." }]);
-        }, 1000);
-    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -228,54 +204,8 @@ export function DealDetailModal({ deal, open, onOpenChange }: DealDetailModalPro
                         </div>
                     </ScrollArea>
 
-                    {/* Column B: Chat Interface */}
-                    <div className="flex flex-col bg-muted/10 h-full">
-                        <div className="p-4 border-b bg-background">
-                            <h3 className="font-semibold text-lg flex items-center gap-2">
-                                <Bot className="w-5 h-5 text-primary" /> Deal Assistant
-                            </h3>
-                            <p className="text-xs text-muted-foreground">Ask questions about zoning, comps, or renovation costs.</p>
-                        </div>
-
-                        <ScrollArea className="flex-1 p-4">
-                            <div className="space-y-4">
-                                {chatHistory.map((msg, i) => (
-                                    <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        {msg.role === 'assistant' && (
-                                            <Avatar className="w-8 h-8 border">
-                                                <AvatarFallback><Bot className="w-4 h-4" /></AvatarFallback>
-                                            </Avatar>
-                                        )}
-                                        <div className={`p-3 rounded-lg max-w-[80%] text-sm ${msg.role === 'user'
-                                                ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                                : 'bg-muted rounded-tl-none'
-                                            }`}>
-                                            {msg.content}
-                                        </div>
-                                        {msg.role === 'user' && (
-                                            <Avatar className="w-8 h-8 border">
-                                                <AvatarFallback><User className="w-4 h-4" /></AvatarFallback>
-                                            </Avatar>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </ScrollArea>
-
-                        <div className="p-4 border-t bg-background mt-auto">
-                            <form onSubmit={handleSendMessage} className="flex gap-2">
-                                <Input
-                                    placeholder="Ask about this deal..."
-                                    value={chatInput}
-                                    onChange={(e) => setChatInput(e.target.value)}
-                                    className="flex-1"
-                                />
-                                <Button type="submit" size="icon">
-                                    <Send className="w-4 h-4" />
-                                </Button>
-                            </form>
-                        </div>
-                    </div>
+                    {/* Column B: AI Chat Interface */}
+                    <DealChat deal={deal} />
                 </div>
             </DialogContent>
         </Dialog>
