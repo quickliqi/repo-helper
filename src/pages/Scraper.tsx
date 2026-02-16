@@ -37,6 +37,8 @@ import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
 import { auditScrapedDeals } from '@/lib/scraper-audit/orchestrator';
 import type { ScrapedDeal, AuditReport } from '@/types/scraper-audit-types';
+import { DealDetailModal, type DealDetail } from '@/components/modals/DealDetailModal';
+import { WarningsModal } from '@/components/modals/WarningsModal';
 
 interface DealMetrics {
   arv: number;
@@ -85,26 +87,26 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function getAuditBadge(dealIndex: number, audit: AuditReport | null) {
+function getAuditBadge(dealIndex: number, audit: AuditReport | null, onClick?: () => void) {
   if (!audit) return null;
   const integrity = audit.integrity.find(r => r.dealIndex === dealIndex);
   if (!integrity) return null;
 
   if (integrity.overallScore >= 80) {
     return (
-      <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200">
+      <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 cursor-pointer hover:bg-emerald-200" onClick={onClick}>
         <ShieldCheck className="h-3 w-3" /> Verified
       </Badge>
     );
   } else if (integrity.overallScore >= 50) {
     return (
-      <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200">
+      <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200 cursor-pointer hover:bg-amber-200" onClick={onClick}>
         <ShieldAlert className="h-3 w-3" /> Caution
       </Badge>
     );
   } else {
     return (
-      <Badge className="gap-1 bg-red-100 text-red-700 border-red-200">
+      <Badge className="gap-1 bg-red-100 text-red-700 border-red-200 cursor-pointer hover:bg-red-200" onClick={onClick}>
         <ShieldX className="h-3 w-3" /> Review
       </Badge>
     );
@@ -193,6 +195,12 @@ export default function Scraper() {
   const [isAuditing, setIsAuditing] = useState(false);
   const { scrapeCredits, planTier, refreshSubscription, isLoading } = useSubscription(); // Assuming isLoading added to hook return
   const [isLanding, setIsLanding] = useState(true);
+
+  // Modal states
+  const [selectedDeal, setSelectedDeal] = useState<DealDetail | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isWarningsModalOpen, setIsWarningsModalOpen] = useState(false);
+
   const navigate = useNavigate();
 
   // Determine view mode on load
@@ -319,6 +327,18 @@ export default function Scraper() {
       </MainLayout>
     );
   }
+
+  const handleOpenDetailCallback = (deal: ScrapeResult) => {
+    // @ts-expect-error - ScrapeResult is compatible enough with DealDetail for now, but strict typing might need a transform
+    // In a real scenario, we'd ensure type parity.
+    // Let's create a compatible object to be safe.
+    const compatibleDeal: DealDetail = {
+      ...deal,
+      image: undefined // Add image if sourced later
+    };
+    setSelectedDeal(compatibleDeal);
+    setIsDetailModalOpen(true);
+  };
 
   return (
     <MainLayout>
@@ -496,6 +516,10 @@ export default function Scraper() {
                             >
                               {auditReport.pass ? 'PASS' : 'REVIEW'}
                             </Badge>
+
+                            <Button variant="ghost" size="sm" className="h-6 text-xs ml-2" onClick={() => setIsWarningsModalOpen(true)}>
+                              Review Full Report
+                            </Button>
                           </div>
                           <div className="flex gap-2 text-xs text-muted-foreground">
                             <span>{auditReport.alerts.filter(a => a.severity === 'critical').length} critical</span>
@@ -542,7 +566,7 @@ export default function Scraper() {
                                   <AlertCircle className="h-3 w-3" /> Unvalidated
                                 </Badge>
                               )}
-                              {getAuditBadge(idx, auditReport)}
+                              {getAuditBadge(idx, auditReport, () => setIsWarningsModalOpen(true))}
                             </div>
                             <CardTitle className="text-lg">{result.title}</CardTitle>
                             <div className="flex items-center text-sm text-muted-foreground gap-1 mt-1">
@@ -618,7 +642,7 @@ export default function Scraper() {
                               </a>
                             </Button>
                           )}
-                          <Button size="sm">
+                          <Button size="sm" onClick={() => handleOpenDetailCallback(result)}>
                             <FileText className="h-4 w-4 mr-2" />
                             Detailed Analysis
                           </Button>
@@ -626,6 +650,18 @@ export default function Scraper() {
                       </div>
                     </Card>
                   ))}
+
+                  <DealDetailModal
+                    deal={selectedDeal}
+                    open={isDetailModalOpen}
+                    onOpenChange={setIsDetailModalOpen}
+                  />
+
+                  <WarningsModal
+                    auditReport={auditReport}
+                    open={isWarningsModalOpen}
+                    onOpenChange={setIsWarningsModalOpen}
+                  />
                 </div>
               )}
             </div>
