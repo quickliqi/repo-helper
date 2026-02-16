@@ -2,29 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
-const ALLOWED_ORIGINS = [
-  "https://quickliqi.com",
-  "https://www.quickliqi.com",
-  "https://quickliqi.lovable.app",
-  "https://realquickliqi.lovable.app",
-];
-
-function isAllowedOrigin(origin: string): boolean {
-  if (ALLOWED_ORIGINS.includes(origin)) return true;
-  // Allow Lovable preview origins
-  if (origin.endsWith(".lovableproject.com") || origin.endsWith(".lovable.app")) return true;
-  return false;
-}
-
-function getCorsHeaders(origin?: string | null) {
-  const allowedOrigin = origin && isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 const logStep = (step: string, details?: unknown) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}`, details ? JSON.stringify(details) : "");
@@ -35,8 +17,6 @@ const RATE_LIMIT_MAX = 30;
 const RATE_LIMIT_WINDOW_MINUTES = 1;
 
 serve(async (req) => {
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

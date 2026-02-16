@@ -2,21 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
-const ALLOWED_ORIGINS = [
-  "https://quickliqi.com",
-  "https://www.quickliqi.com",
-  "https://quickliqi.lovable.app",
-];
-
-function getCorsHeaders(origin?: string | null) {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 const logStep = (step: string, details?: unknown) => {
   console.log(`[BUY-LISTING-CREDITS] ${step}`, details ? JSON.stringify(details) : "");
@@ -30,7 +20,6 @@ const LISTING_CREDIT_PRICE = "price_1SjI9J0VL3B5XXLH4pGYfKkC"; // $10 per credit
 
 serve(async (req) => {
   const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -110,8 +99,8 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       line_items: [{ price: LISTING_CREDIT_PRICE, quantity }],
       mode: "payment",
-      success_url: `${origin || "https://quickliqi.com"}/dashboard?credits=success`,
-      cancel_url: `${origin || "https://quickliqi.com"}/pricing?credits=canceled`,
+      success_url: `${origin || "https://realquickliqi.com"}/dashboard?credits=success`,
+      cancel_url: `${origin || "https://realquickliqi.com"}/pricing?credits=canceled`,
     });
 
     logStep("Checkout session created", { sessionId: session.id });
