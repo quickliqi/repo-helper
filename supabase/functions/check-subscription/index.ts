@@ -19,7 +19,7 @@ const RATE_LIMIT_WINDOW_MINUTES = 1;
 serve(async (req) => {
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: { ...corsHeaders, "Access-Control-Allow-Headers": req.headers.get("Access-Control-Request-Headers") ?? corsHeaders["Access-Control-Allow-Headers"] } });
   }
 
   // Use ANON_KEY for user token validation

@@ -26,7 +26,7 @@ serve(async (req) => {
   const origin = req.headers.get("origin");
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: { ...corsHeaders, "Access-Control-Allow-Headers": req.headers.get("Access-Control-Request-Headers") ?? corsHeaders["Access-Control-Allow-Headers"] } });
   }
 
   // Use ANON_KEY for user token validation
