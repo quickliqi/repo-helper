@@ -42,6 +42,19 @@ interface DealPayload {
     condition?: string;
 }
 
+interface AuditAlert {
+    severity: string;
+    message: string;
+    category: string;
+}
+
+interface AuditPayload {
+    overallScore: number;
+    pass: boolean;
+    alerts: AuditAlert[];
+    integrity: unknown[];
+}
+
 interface LovableAiResponse {
     choices?: Array<{
         message?: {
@@ -50,7 +63,8 @@ interface LovableAiResponse {
     }>;
 }
 
-function buildSystemPrompt(deal: DealPayload): string {
+// ─── Deal System Prompt ────────────────────────────────────────────
+function buildDealSystemPrompt(deal: DealPayload): string {
     const metricsBlock = deal.metrics
         ? `
 KEY METRICS:
@@ -99,6 +113,36 @@ INSTRUCTIONS:
 6. Keep responses concise — 2-4 paragraphs max unless the user asks for a deep dive.`;
 }
 
+// ─── Audit System Prompt ───────────────────────────────────────────
+function buildAuditSystemPrompt(audit: AuditPayload): string {
+    const alertsSummary = audit.alerts
+        .map((a) => `[${a.severity.toUpperCase()}] (${a.category}) ${a.message}`)
+        .join("\n");
+
+    return `You are a senior QA engineer and data integrity auditor for a real estate scraping platform. You have deep expertise in web scraping reliability, data validation, and real estate data standards (MLS, FSBO, public records).
+
+You are reviewing a SPECIFIC scrape audit report. All of your answers must reference the concrete alerts and scores from this report.
+
+AUDIT REPORT:
+- Overall Score: ${audit.overallScore}/100
+- Status: ${audit.pass ? "PASS" : "REVIEW NEEDED"}
+- Total Alerts: ${audit.alerts.length}
+- Critical: ${audit.alerts.filter((a) => a.severity === "critical").length}
+- Warnings: ${audit.alerts.filter((a) => a.severity === "warning").length}
+- Info: ${audit.alerts.filter((a) => a.severity === "info").length}
+
+ALERTS:
+${alertsSummary || "No alerts found."}
+
+INSTRUCTIONS:
+1. Always reference specific alerts by their category and severity when answering.
+2. Explain what each alert means in practical terms — how it affects the scraped data quality.
+3. Prioritize critical issues first and suggest concrete remediation steps.
+4. If the user asks about a specific category, provide deep analysis of related alerts.
+5. Be direct and actionable. Use bullet points for clarity.
+6. Keep responses concise — 2-4 paragraphs max unless the user asks for a deep dive.`;
+}
+
 serve(async (req) => {
     if (req.method === "OPTIONS") {
         return new Response(null, { headers: corsHeaders });
@@ -121,14 +165,30 @@ serve(async (req) => {
         console.log(`[DEAL-ANALYZER] User ${userData.user.id} started chat`);
 
         // Parse request
-        const { message, deal, history } = await req.json() as {
+        const body = await req.json() as {
             message: string;
-            deal: DealPayload;
+            contextType?: "deal" | "audit";
+            deal?: DealPayload;
+            auditReport?: AuditPayload;
             history: ChatMessage[];
         };
 
-        if (!message || !deal) {
-            throw new Error("Missing required fields: message and deal");
+        const { message, contextType, deal, auditReport, history } = body;
+
+        if (!message) {
+            throw new Error("Missing required field: message");
+        }
+
+        // Determine context and build system prompt
+        let systemPrompt: string;
+        const resolvedContext = contextType || (deal ? "deal" : "audit");
+
+        if (resolvedContext === "deal") {
+            if (!deal) throw new Error("Missing required field: deal");
+            systemPrompt = buildDealSystemPrompt(deal);
+        } else {
+            if (!auditReport) throw new Error("Missing required field: auditReport");
+            systemPrompt = buildAuditSystemPrompt(auditReport);
         }
 
         const lovableKey = Deno.env.get("LOVABLE_API_KEY");
@@ -138,13 +198,12 @@ serve(async (req) => {
 
         // Build messages array for the AI
         const messages: ChatMessage[] = [
-            { role: "system", content: buildSystemPrompt(deal) },
-            // Include conversation history (limit to last 10 exchanges to stay within context)
+            { role: "system", content: systemPrompt },
             ...(history || []).slice(-20),
             { role: "user", content: message },
         ];
 
-        console.log(`[DEAL-ANALYZER] Sending ${messages.length} messages to AI`);
+        console.log(`[DEAL-ANALYZER] Context: ${resolvedContext}, sending ${messages.length} messages to AI`);
 
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
@@ -173,9 +232,9 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(`[DEAL-ANALYZER] ERROR: ${message}`);
-        return new Response(JSON.stringify({ error: message }), {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[DEAL-ANALYZER] ERROR: ${errMsg}`);
+        return new Response(JSON.stringify({ error: errMsg }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

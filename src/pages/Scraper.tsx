@@ -37,8 +37,9 @@ import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
 import { auditScrapedDeals } from '@/lib/scraper-audit/orchestrator';
 import type { ScrapedDeal, AuditReport } from '@/types/scraper-audit-types';
-import { DealDetailModal, type DealDetail } from '@/components/modals/DealDetailModal';
-import { WarningsModal } from '@/components/modals/WarningsModal';
+import { DealAnalyzerModal } from '@/components/modals/DealAnalyzerModal';
+import { useDealAnalyzerStore } from '@/stores/useDealAnalyzerStore';
+import type { DealDetail } from '@/types/deal-analyzer-types';
 
 interface DealMetrics {
   arv: number;
@@ -196,10 +197,7 @@ export default function Scraper() {
   const { scrapeCredits, planTier, refreshSubscription, isLoading } = useSubscription(); // Assuming isLoading added to hook return
   const [isLanding, setIsLanding] = useState(true);
 
-  // Modal states
-  const [selectedDeal, setSelectedDeal] = useState<DealDetail | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isWarningsModalOpen, setIsWarningsModalOpen] = useState(false);
+  const { openDealAnalyzer } = useDealAnalyzerStore();
 
   const navigate = useNavigate();
 
@@ -329,15 +327,11 @@ export default function Scraper() {
   }
 
   const handleOpenDetailCallback = (deal: ScrapeResult) => {
-    // @ts-expect-error - ScrapeResult is compatible enough with DealDetail for now, but strict typing might need a transform
-    // In a real scenario, we'd ensure type parity.
-    // Let's create a compatible object to be safe.
     const compatibleDeal: DealDetail = {
       ...deal,
-      image: undefined // Add image if sourced later
+      image: undefined,
     };
-    setSelectedDeal(compatibleDeal);
-    setIsDetailModalOpen(true);
+    openDealAnalyzer('deal', compatibleDeal);
   };
 
   return (
@@ -517,7 +511,7 @@ export default function Scraper() {
                               {auditReport.pass ? 'PASS' : 'REVIEW'}
                             </Badge>
 
-                            <Button variant="ghost" size="sm" className="h-6 text-xs ml-2" onClick={() => setIsWarningsModalOpen(true)}>
+                            <Button variant="ghost" size="sm" className="h-6 text-xs ml-2" onClick={() => auditReport && openDealAnalyzer('audit', auditReport)}>
                               Review Full Report
                             </Button>
                           </div>
@@ -566,7 +560,7 @@ export default function Scraper() {
                                   <AlertCircle className="h-3 w-3" /> Unvalidated
                                 </Badge>
                               )}
-                              {getAuditBadge(idx, auditReport, () => setIsWarningsModalOpen(true))}
+                              {getAuditBadge(idx, auditReport, () => auditReport && openDealAnalyzer('audit', auditReport))}
                             </div>
                             <CardTitle className="text-lg">{result.title}</CardTitle>
                             <div className="flex items-center text-sm text-muted-foreground gap-1 mt-1">
@@ -651,17 +645,7 @@ export default function Scraper() {
                     </Card>
                   ))}
 
-                  <DealDetailModal
-                    deal={selectedDeal}
-                    open={isDetailModalOpen}
-                    onOpenChange={setIsDetailModalOpen}
-                  />
-
-                  <WarningsModal
-                    auditReport={auditReport}
-                    open={isWarningsModalOpen}
-                    onOpenChange={setIsWarningsModalOpen}
-                  />
+                  <DealAnalyzerModal />
                 </div>
               )}
             </div>

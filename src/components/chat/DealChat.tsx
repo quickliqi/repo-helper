@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bot, User, Send, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { DealDetail } from "@/components/modals/DealDetailModal";
+import type { AnalyzerContextType, AnalyzerPayload, DealDetail } from "@/types/deal-analyzer-types";
+import type { AuditReport } from "@/types/scraper-audit-types";
 
 interface ChatMessage {
     role: "user" | "assistant";
@@ -14,19 +15,44 @@ interface ChatMessage {
 }
 
 interface DealChatProps {
-    deal: DealDetail;
+    contextType: AnalyzerContextType;
+    dataPayload: AnalyzerPayload;
 }
 
-export function DealChat({ deal }: DealChatProps) {
+function isDealDetail(payload: AnalyzerPayload): payload is DealDetail {
+    return "price" in payload && "title" in payload;
+}
+
+function buildGreeting(contextType: AnalyzerContextType, payload: AnalyzerPayload): string {
+    if (contextType === "deal" && isDealDetail(payload)) {
+        const deal = payload;
+        const metricsLine = deal.metrics
+            ? ` The asking price is **$${deal.price.toLocaleString()}** against an MAO of **$${deal.metrics.mao.toLocaleString()}** with **${deal.metrics.equityPercentage.toFixed(1)}% equity**.`
+            : "";
+        return `I've loaded the full underwriting data for **${deal.title}** at **${deal.location}**.${metricsLine}\n\nWhat would you like to know? I can analyze comps, renovation costs, exit strategies, or any specific risk factors.`;
+    }
+
+    // Audit context
+    const audit = payload as AuditReport;
+    const alertCount = audit.alerts.length;
+    const criticalCount = audit.alerts.filter((a) => a.severity === "critical").length;
+    return `I've reviewed the scrape audit report. Overall score: **${audit.overallScore}/100** — ${audit.pass ? "**PASS**" : "**REVIEW NEEDED**"}. There are **${alertCount} alerts** (${criticalCount} critical).\n\nAsk me about specific warnings, data integrity concerns, or how to resolve the flagged issues.`;
+}
+
+export function DealChat({ contextType, dataPayload }: DealChatProps) {
     const [chatInput, setChatInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
-        {
-            role: "assistant",
-            content: `I've loaded the full underwriting data for **${deal.title}** at **${deal.location}**.${deal.metrics ? ` The asking price is **$${deal.price.toLocaleString()}** against an MAO of **$${deal.metrics.mao.toLocaleString()}** with **${deal.metrics.equityPercentage.toFixed(1)}% equity**.` : ""}\n\nWhat would you like to know? I can analyze comps, renovation costs, exit strategies, or any specific risk factors.`,
-        },
+        { role: "assistant", content: buildGreeting(contextType, dataPayload) },
     ]);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Reset chat when context changes
+    useEffect(() => {
+        setChatHistory([
+            { role: "assistant", content: buildGreeting(contextType, dataPayload) },
+        ]);
+    }, [contextType, dataPayload]);
 
     // Auto-scroll to bottom on new messages
     useEffect(() => {
@@ -49,7 +75,9 @@ export function DealChat({ deal }: DealChatProps) {
             const { data, error } = await supabase.functions.invoke("deal-analyzer", {
                 body: {
                     message: trimmed,
-                    deal,
+                    contextType,
+                    deal: isDealDetail(dataPayload) ? dataPayload : undefined,
+                    auditReport: !isDealDetail(dataPayload) ? dataPayload : undefined,
                     history: chatHistory,
                 },
             });
@@ -75,10 +103,13 @@ export function DealChat({ deal }: DealChatProps) {
             {/* Header */}
             <div className="p-4 border-b bg-background">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <Bot className="w-5 h-5 text-primary" /> Deal Analyst
+                    <Bot className="w-5 h-5 text-primary" />
+                    {contextType === "deal" ? "Deal Analyst" : "Audit Analyst"}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                    Ask about comps, zoning, renovation costs, or exit strategies.
+                    {contextType === "deal"
+                        ? "Ask about comps, zoning, renovation costs, or exit strategies."
+                        : "Ask about flagged issues, data integrity, or how to resolve alerts."}
                 </p>
             </div>
 
@@ -135,7 +166,7 @@ export function DealChat({ deal }: DealChatProps) {
             <div className="p-4 border-t bg-background mt-auto">
                 <form onSubmit={handleSend} className="flex gap-2">
                     <Input
-                        placeholder="Ask about this deal..."
+                        placeholder={contextType === "deal" ? "Ask about this deal..." : "Ask about these audit findings..."}
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         disabled={isLoading}
