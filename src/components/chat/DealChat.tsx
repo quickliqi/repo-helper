@@ -29,7 +29,15 @@ function buildGreeting(contextType: AnalyzerContextType, payload: AnalyzerPayloa
         const metricsLine = deal.metrics
             ? ` The asking price is **$${deal.price.toLocaleString()}** against an MAO of **$${deal.metrics.mao.toLocaleString()}** with **${deal.metrics.equityPercentage.toFixed(1)}% equity**.`
             : "";
-        return `I've loaded the full underwriting data for **${deal.title}** at **${deal.location}**.${metricsLine}\n\nWhat would you like to know? I can analyze comps, renovation costs, exit strategies, or any specific risk factors.`;
+
+        const details = [
+            deal.address ? `Address: ${deal.address}` : null,
+            deal.bedrooms ? `${deal.bedrooms} Beds` : null,
+            deal.bathrooms ? `${deal.bathrooms} Baths` : null,
+            deal.sqft ? `${deal.sqft.toLocaleString()} SqFt` : null
+        ].filter(Boolean).join(" • ");
+
+        return `I've loaded the full underwriting data for **${deal.title}** at **${deal.location}**.\n${details}\n${metricsLine}\n\nWhat would you like to know? I can analyze comps, renovation costs, exit strategies, or any specific risk factors.`;
     }
 
     // Audit context
