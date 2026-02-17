@@ -20,7 +20,8 @@ import {
   MessageSquare,
   BookOpen,
   Info,
-  Target
+  Target,
+  FileText
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -74,6 +75,13 @@ export function Navbar() {
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Marketplace
+                </Link>
+                <Link
+                  to="/contracts"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Contracts
                 </Link>
                 {(role === 'investor' || role === 'admin') && (
                   <>
@@ -285,6 +293,14 @@ export function Navbar() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Marketplace
+                  </Link>
+                  <Link
+                    to="/contracts"
+                    className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Contracts
                   </Link>
                   {(role === 'investor' || role === 'admin') && (
                     <>

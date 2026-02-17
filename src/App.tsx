@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Marketplace from "./pages/Marketplace";
+import ContractBuilder from "./pages/ContractBuilder";
 import BuyBox from "./pages/BuyBox";
 import PostDeal from "./pages/PostDeal";
 import Notifications from "./pages/Notifications";
@@ -93,6 +94,14 @@ function AppRoutes() {
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
       <Route path="/marketplace" element={<Marketplace />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route
+        path="/contracts"
+        element={
+          <ProtectedRoute>
+            <ContractBuilder />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={
