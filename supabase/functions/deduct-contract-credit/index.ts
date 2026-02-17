@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, sentry-trace, baggage",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -33,7 +33,7 @@ serve(async (req) => {
             });
         }
 
-        // Use Service Role to access and modify credits (users only have SELECT access)
+        // Use Service Role to access and modify credits (users only have SELECT access via RLS)
         const supabaseAdmin = createClient(
             Deno.env.get("SUPABASE_URL") ?? "",
             Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -54,15 +54,11 @@ serve(async (req) => {
             });
         }
 
-        // Handle missing credit row (should be created by trigger, but fail-safe)
-        let currentCredits = credits;
-        if (!currentCredits) {
-            // Optional: try to create it if it doesn't exist? 
-            // For now, treat as 0 credits or error.
-            // The requirement implies 5 free on signup.
-            // Let's return error if not found to be safe.
+        // Handle missing credit row
+        // (Should be created by trigger, but fail-safe)
+        if (!credits) {
             return new Response(JSON.stringify({ error: "Credit record not found" }), {
-                status: 404,
+                status: 404, // Or 402 if we consider no record as no credits? Warning: strict logic implies free 5.
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
@@ -70,24 +66,28 @@ serve(async (req) => {
         let updated = false;
 
         // Credit deduction logic
-        if (currentCredits.monthly_free_credits > 0) {
+        // 1. Check free credits
+        if (credits.monthly_free_credits > 0) {
             const { error: updateError } = await supabaseAdmin
                 .from("user_contract_credits")
-                .update({ monthly_free_credits: currentCredits.monthly_free_credits - 1 })
+                .update({ monthly_free_credits: credits.monthly_free_credits - 1 })
                 .eq("user_id", user.id);
 
             if (updateError) throw updateError;
             updated = true;
-        } else if (currentCredits.purchased_credits > 0) {
+        }
+        // 2. Check purchased credits
+        else if (credits.purchased_credits > 0) {
             const { error: updateError } = await supabaseAdmin
                 .from("user_contract_credits")
-                .update({ purchased_credits: currentCredits.purchased_credits - 1 })
+                .update({ purchased_credits: credits.purchased_credits - 1 })
                 .eq("user_id", user.id);
 
             if (updateError) throw updateError;
             updated = true;
         }
 
+        // 3. Fallback: No credits
         if (!updated) {
             return new Response(JSON.stringify({ error: "Insufficient credits", code: "PAYMENT_REQUIRED" }), {
                 status: 402,
