@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, sentry-trace, baggage",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -26,7 +26,7 @@ serve(async (req) => {
   const origin = req.headers.get("origin");
 
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: { ...corsHeaders, "Access-Control-Allow-Headers": req.headers.get("Access-Control-Request-Headers") ?? corsHeaders["Access-Control-Allow-Headers"] } });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   // Use ANON_KEY for user token validation
