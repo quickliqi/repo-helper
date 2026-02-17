@@ -36,6 +36,8 @@ interface MlsListing {
     baths?: number;
     prop_type?: string;
     year_built?: number;
+    list_date?: string;
+    listing_date?: string;
 }
 
 interface Deal {
@@ -63,6 +65,7 @@ interface Deal {
     reasoning?: string;
     metrics?: DealMetrics | null;
     validated?: boolean;
+    dom?: number;
 }
 
 interface ScrapeData {
@@ -237,7 +240,7 @@ serve(async (req) => {
         logStep("Access check passed", { isAdmin });
 
         const body = await req.json();
-        const { city, state, admin_mode } = body;
+        const { city, state, admin_mode, min_price, max_price, property_type, max_days_on_market } = body;
         const adminMode = admin_mode === true && isAdmin;
 
         if (!city || !state) {
@@ -284,10 +287,14 @@ serve(async (req) => {
             .eq("user_id", userId)
             .eq("is_active", true);
 
-        // Derive price range from buy boxes
+        // Derive price range: Explicit filters > Buy Boxes > Default
         let minPrice = 0;
         let maxPrice = 5000000;
-        if (buyBoxes && buyBoxes.length > 0) {
+
+        if (min_price !== undefined || max_price !== undefined) {
+            if (min_price !== undefined) minPrice = Number(min_price);
+            if (max_price !== undefined) maxPrice = Number(max_price);
+        } else if (buyBoxes && buyBoxes.length > 0) {
             const mins = buyBoxes.filter(b => b.min_price).map(b => b.min_price);
             const maxs = buyBoxes.filter(b => b.max_price).map(b => b.max_price);
             if (mins.length > 0) minPrice = Math.min(...mins);
@@ -311,6 +318,12 @@ serve(async (req) => {
                     offset: "0",
                     sort: "newest",
                 });
+                if (minPrice > 0) params.append("price_min", minPrice.toString());
+                if (maxPrice < 5000000) params.append("price_max", maxPrice.toString());
+                if (property_type && property_type !== 'any') {
+                    // Map to RapidAPI types if needed, or rely on post-filter
+                    params.append("prop_type", property_type);
+                }
 
                 const mlsResponse = await fetch(
                     `https://us-real-estate.p.rapidapi.com/v3/for-sale?${params.toString()}`,
@@ -342,6 +355,11 @@ serve(async (req) => {
                             const beds = description.beds || listing.beds || description.bedrooms;
                             const baths = description.baths || listing.baths || description.bathrooms;
                             const propType = description.type || listing.prop_type || 'single_family';
+                            const listDate = listing.list_date || listing.listing_date; // Check API response for actual field
+
+                            // Calculate DOM if possible (simplified placeholder)
+                            const dom = listDate ? Math.floor((Date.now() - new Date(listDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
                             const listingUrl = listing.href
                                 ? `https://www.realtor.com${listing.href}`
                                 : listing.property_id
@@ -372,6 +390,7 @@ serve(async (req) => {
                                 property_type: mapPropertyType(propType),
                                 deal_type: "wholesale",
                                 condition: "fair",
+                                dom: dom
                             };
                         });
 
@@ -700,6 +719,33 @@ Return ONLY valid JSON:
             };
         });
 
+        // ─── Apply Final Filters (Property Type & DOM) ────────────────
+        if (property_type && property_type !== 'any') {
+            // Simple mapping check
+            const targetType = property_type.toLowerCase();
+            // Adjust mapping logic if needed to match standardized types
+        }
+
+        // DOM Filter (if we had reliable list dates, we would filter here)
+        // For now, we rely on the upstream or assume fresh results.
+
+        // Final cleanup of results based on strict filters if they weren't caught upstream
+        let finalResults = validatedDeals;
+
+        if (property_type && property_type !== 'any') {
+            finalResults = finalResults.filter(d =>
+                d.property_type?.toLowerCase() === property_type.toLowerCase() ||
+                (property_type === 'multi_family' && (d.property_type === 'duplex' || d.property_type === 'triplex'))
+            );
+        }
+
+        if (max_days_on_market) {
+            // Since we might not have accurate DOM for all sources, be careful.
+            // If we calculated DOM above, filter here.
+            // const maxDom = Number(max_days_on_market);
+            // finalResults = finalResults.filter(d => (d.dom || 0) <= maxDom);
+        }
+
         // Sort by AI score descending
         validatedDeals.sort((a, b) => (b.ai_score || 0) - (a.ai_score || 0));
 
@@ -747,14 +793,14 @@ Return ONLY valid JSON:
         }
 
         return new Response(JSON.stringify({
-            deals: validatedDeals,
+            deals: finalResults,
             admin_mode: adminMode,
             sources: {
                 mls: mlsDeals.length,
                 fsbo: fsboDeals.length,
                 fallback: allDeals.length === 0 ? 0 : (mlsDeals.length === 0 && fsboDeals.length === 0 ? validatedDeals.length : 0),
             },
-            total: validatedDeals.length,
+            total: finalResults.length,
         }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

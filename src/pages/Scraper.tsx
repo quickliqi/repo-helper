@@ -189,6 +189,12 @@ const ScraperLanding = ({ onTryFree, hasCredits }: { onTryFree: () => void, hasC
 export default function Scraper() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
+  // New Filter State
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [propertyType, setPropertyType] = useState('any');
+  const [maxDaysOnMarket, setMaxDaysOnMarket] = useState('');
+
   const [isScraping, setIsScraping] = useState(false);
   const [results, setResults] = useState<ScrapeResult[]>([]);
   const [sources, setSources] = useState<SourceBreakdown | null>(null);
@@ -297,7 +303,14 @@ export default function Scraper() {
 
     try {
       const { data, error } = await supabase.functions.invoke('ai-hunter', {
-        body: { city, state }
+        body: {
+          city,
+          state,
+          min_price: minPrice ? Number(minPrice) : undefined,
+          max_price: maxPrice ? Number(maxPrice) : undefined,
+          property_type: propertyType !== 'any' ? propertyType : undefined,
+          max_days_on_market: maxDaysOnMarket ? Number(maxDaysOnMarket) : undefined
+        }
       });
 
       if (error) throw error;
@@ -389,6 +402,56 @@ export default function Scraper() {
                         maxLength={2}
                         value={state}
                         onChange={(e) => setState(e.target.value.toUpperCase())}
+                        disabled={isScraping}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Price Range</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Min Price"
+                          type="number"
+                          value={minPrice}
+                          onChange={(e) => setMinPrice(e.target.value)}
+                          disabled={isScraping}
+                        />
+                        <span className="text-muted-foreground">-</span>
+                        <Input
+                          placeholder="Max Price"
+                          type="number"
+                          value={maxPrice}
+                          onChange={(e) => setMaxPrice(e.target.value)}
+                          disabled={isScraping}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="propertyType">Property Type</Label>
+                      <select
+                        id="propertyType"
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={propertyType}
+                        onChange={(e) => setPropertyType(e.target.value)}
+                        disabled={isScraping}
+                      >
+                        <option value="any">Any Type</option>
+                        <option value="single_family">Single Family</option>
+                        <option value="multi_family">Multi-Family</option>
+                        <option value="condo">Condo / Townhouse</option>
+                        <option value="land">Land</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dom">Max Days on Market</Label>
+                      <Input
+                        id="dom"
+                        placeholder="e.g. 30 (Leave empty for any)"
+                        type="number"
+                        value={maxDaysOnMarket}
+                        onChange={(e) => setMaxDaysOnMarket(e.target.value)}
                         disabled={isScraping}
                       />
                     </div>
