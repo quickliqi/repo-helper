@@ -67,37 +67,50 @@ export function runCrossCheck(
             };
         }
 
-        // Compare ai_score (AI-reported quality) vs calculated deal score
-        if (deal.ai_score !== undefined) {
-            const deviation = percentDeviation(deal.ai_score, metrics.score);
-            if (deviation > DEVIATION_THRESHOLD) {
+        // --- DEAL AUTOPSY LOG ---
+        console.log('--- DEAL AUTOPSY ---', {
+            title: deal.title,
+            rawPrice: deal.price,
+            rawARV: deal.arv,
+            rawRepairs: deal.repair_estimate,
+            reportedEquity: deal.equity_percentage,
+            frontendCalculatedEquity: metrics.equityPercentage,
+            reportedScore: deal.ai_score,
+            frontendCalculatedScore: metrics.score
+        });
+
+        // Cross-check reported equity against calculated equity
+        if (deal.equity_percentage !== undefined) {
+            const dev = percentDeviation(deal.equity_percentage, metrics.equityPercentage);
+            if (dev > DEVIATION_THRESHOLD) {
                 mismatches.push({
-                    field: 'deal_score',
-                    reportedValue: deal.ai_score,
-                    calculatedValue: metrics.score,
-                    deviationPercent: Math.round(deviation * 10) / 10,
+                    field: 'equity_percentage',
+                    reportedValue: deal.equity_percentage,
+                    calculatedValue: metrics.equityPercentage,
+                    deviationPercent: Math.round(dev),
                 });
             }
         }
 
-        // Compare equity percentage if reported
-        if (deal.equity_percentage !== undefined) {
-            const deviation = percentDeviation(deal.equity_percentage, metrics.equityPercentage);
-            if (deviation > DEVIATION_THRESHOLD) {
+        // Cross-check reported score against calculated score
+        if (deal.ai_score !== undefined) {
+            const dev = percentDeviation(deal.ai_score, metrics.score);
+            if (dev > DEVIATION_THRESHOLD) {
                 mismatches.push({
-                    field: 'equity_percentage',
-                    reportedValue: deal.equity_percentage,
-                    calculatedValue: Math.round(metrics.equityPercentage * 10) / 10,
-                    deviationPercent: Math.round(deviation * 10) / 10,
+                    field: 'ai_score',
+                    reportedValue: deal.ai_score,
+                    calculatedValue: metrics.score,
+                    deviationPercent: Math.round(dev),
                 });
             }
         }
 
         // Check MAO plausibility
-        if (deal.asking_price && metrics.mao > 0) {
-            if (deal.asking_price > metrics.mao * 1.3) {
+        if ((deal.asking_price || deal.price) && metrics.mao > 0) {
+            const price = deal.asking_price || deal.price || 0;
+            if (price > metrics.mao * 1.3) {
                 driftFlags.push(
-                    `Asking price ($${deal.asking_price.toLocaleString()}) is ${Math.round(((deal.asking_price / metrics.mao) - 1) * 100)}% above MAO ($${Math.round(metrics.mao).toLocaleString()}) — may not be a viable deal`
+                    `Asking price ($${price.toLocaleString()}) is ${Math.round(((price / metrics.mao) - 1) * 100)}% above MAO ($${Math.round(metrics.mao).toLocaleString()}) — may not be a viable deal`
                 );
             }
         }
