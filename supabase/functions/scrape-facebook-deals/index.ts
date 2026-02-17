@@ -59,7 +59,8 @@ interface LovableAiResponse {
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, sentry-trace, baggage",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const logStep = (step: string, details?: unknown) => {
@@ -69,7 +70,7 @@ const logStep = (step: string, details?: unknown) => {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   const supabaseAdmin = createClient(
@@ -332,7 +333,8 @@ Only return deals with match_score > 60.`;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, sentry-trace, baggage",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const logStep = (step: string, details?: unknown) => {
@@ -346,7 +348,7 @@ const RATE_LIMIT_WINDOW_MINUTES = 1;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   const supabaseAdmin = createClient(
