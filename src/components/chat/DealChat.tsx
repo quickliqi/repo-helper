@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bot, User, Send, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +45,7 @@ export function DealChat({ contextType, dataPayload }: DealChatProps) {
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
         { role: "assistant", content: buildGreeting(contextType, dataPayload) },
     ]);
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Reset chat when context changes
     useEffect(() => {
@@ -56,10 +56,8 @@ export function DealChat({ contextType, dataPayload }: DealChatProps) {
 
     // Auto-scroll to bottom on new messages
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [chatHistory]);
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatHistory, isLoading]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -114,53 +112,52 @@ export function DealChat({ contextType, dataPayload }: DealChatProps) {
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1" ref={scrollRef}>
-                <div className="p-4 space-y-4">
-                    {chatHistory.map((msg, i) => (
-                        <div
-                            key={i}
-                            className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                        >
-                            {msg.role === "assistant" && (
-                                <Avatar className="w-8 h-8 border shrink-0">
-                                    <AvatarFallback>
-                                        <Bot className="w-4 h-4" />
-                                    </AvatarFallback>
-                                </Avatar>
-                            )}
-                            <div
-                                className={`p-3 rounded-lg max-w-[85%] text-sm whitespace-pre-wrap ${msg.role === "user"
-                                        ? "bg-primary text-primary-foreground rounded-tr-none"
-                                        : "bg-muted rounded-tl-none"
-                                    }`}
-                            >
-                                {msg.content}
-                            </div>
-                            {msg.role === "user" && (
-                                <Avatar className="w-8 h-8 border shrink-0">
-                                    <AvatarFallback>
-                                        <User className="w-4 h-4" />
-                                    </AvatarFallback>
-                                </Avatar>
-                            )}
-                        </div>
-                    ))}
-
-                    {isLoading && (
-                        <div className="flex gap-3 justify-start">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {chatHistory.map((msg, i) => (
+                    <div
+                        key={i}
+                        className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                        {msg.role === "assistant" && (
                             <Avatar className="w-8 h-8 border shrink-0">
                                 <AvatarFallback>
                                     <Bot className="w-4 h-4" />
                                 </AvatarFallback>
                             </Avatar>
-                            <div className="p-3 rounded-lg bg-muted rounded-tl-none flex items-center gap-2 text-sm text-muted-foreground">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Analyzing...
-                            </div>
+                        )}
+                        <div
+                            className={`p-3 rounded-lg max-w-[85%] text-sm whitespace-pre-wrap ${msg.role === "user"
+                                ? "bg-primary text-primary-foreground rounded-tr-none"
+                                : "bg-muted rounded-tl-none"
+                                }`}
+                        >
+                            {msg.content}
                         </div>
-                    )}
-                </div>
-            </ScrollArea>
+                        {msg.role === "user" && (
+                            <Avatar className="w-8 h-8 border shrink-0">
+                                <AvatarFallback>
+                                    <User className="w-4 h-4" />
+                                </AvatarFallback>
+                            </Avatar>
+                        )}
+                    </div>
+                ))}
+
+                {isLoading && (
+                    <div className="flex gap-3 justify-start">
+                        <Avatar className="w-8 h-8 border shrink-0">
+                            <AvatarFallback>
+                                <Bot className="w-4 h-4" />
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="p-3 rounded-lg bg-muted rounded-tl-none flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Analyzing...
+                        </div>
+                    </div>
+                )}
+                <div ref={messagesEndRef} />
+            </div>
 
             {/* Input */}
             <div className="p-4 border-t bg-background mt-auto">
