@@ -97,68 +97,9 @@ const logStep = (step: string, details?: unknown) => {
 // Admin email for bypass
 const ADMIN_EMAIL = "thomasdamienak@gmail.com";
 
-// ─── Calculator Agent (inline for Deno edge function) ──────────────
-const DEFAULT_CLOSING_COSTS_PERCENT = 0.03;
-const DEFAULT_HOLDING_COSTS_PERCENT = 0.02;
-// Standard 70% rule
-const DEFAULT_MAO_DISCOUNT_RATE = 0.70;
+// ─── Calculator Logic REMOVED (Frontend is Single Source of Truth) ───────────
+// Math logic has been moved to src/lib/calculations.ts on the frontend.
 
-interface DealMetrics {
-    grossEquity: number;
-    equityPercentage: number;
-    mao: number;
-    projectedProfit: number;
-    roi: number;
-    score: number;
-    riskFactors: string[];
-}
-
-function calculateDealMetrics(deal: {
-    asking_price: number;
-    arv?: number;
-    repair_estimate?: number;
-    assignment_fee?: number;
-    condition?: string;
-}): DealMetrics | null {
-    if (!deal.asking_price) return null;
-
-    const arv = deal.arv || deal.asking_price;
-    const repairs = deal.repair_estimate || 0;
-    const assignment = deal.assignment_fee || 0;
-
-    // 1. Equity Calculations
-    const totalCostBasis = deal.asking_price + repairs + assignment;
-    const grossEquity = arv - totalCostBasis;
-    const equityPercentage = arv > 0 ? (grossEquity / arv) * 100 : 0;
-
-    // 2. MAO (Maximum Allowable Offer) Calculation
-    // Standard Formula: (ARV * Factor) - Repairs - Assignment
-    const standardMao = (arv * DEFAULT_MAO_DISCOUNT_RATE) - repairs - assignment;
-
-    // 3. ROI Calculation (Flip Scenario)
-    // Profit = ARV - (Purchase + Repairs + Assignment + Closing/Holding)
-    // ROI = Profit / Total Invested
-    const closingCosts = arv * DEFAULT_CLOSING_COSTS_PERCENT;
-    const holdingCosts = arv * DEFAULT_HOLDING_COSTS_PERCENT;
-    const totalInvested = deal.asking_price + repairs + assignment + closingCosts + holdingCosts;
-    const projectedProfit = arv - totalInvested;
-    const roi = totalInvested > 0 ? (projectedProfit / totalInvested) * 100 : 0;
-
-    let score = 50;
-    if (equityPercentage > 20) score += 20;
-    if (equityPercentage > 30) score += 10;
-    if (roi > 15) score += 10;
-    if (roi > 30) score += 10;
-    if (deal.condition === 'distressed' || deal.condition === 'poor') score -= 10;
-    score = Math.max(0, Math.min(100, score));
-
-    const riskFactors: string[] = [];
-    if (!deal.arv) riskFactors.push("ARV is missing; using Asking Price as proxy.");
-    if (equityPercentage < 10) riskFactors.push("Low equity margin (<10%).");
-    if (repairs === 0 && deal.condition !== 'excellent') riskFactors.push("No repair estimate provided.");
-
-    return { grossEquity, equityPercentage, mao: standardMao, projectedProfit, roi, score, riskFactors };
-}
 
 // ─── Property Type Mapping ─────────────────────────────────────────
 function mapPropertyType(apiType: string): string {
@@ -669,21 +610,8 @@ Return ONLY valid JSON:
         }
 
         // Run Calculator Agent on all deals
+        // REFACTOR: Backend no longer calculates metrics. Frontend will handle it.
         const validatedDeals = allDeals.map((deal) => {
-            const metrics = calculateDealMetrics({
-                asking_price: deal.asking_price || deal.price,
-                arv: deal.arv,
-                repair_estimate: deal.repair_estimate,
-                condition: deal.condition,
-            });
-
-            // Calculate AI score from metrics
-            // STRICT MATH: Use the exact score from calculateDealMetrics, do not boost.
-            let aiScore = 50;
-            if (metrics) {
-                aiScore = metrics.score;
-            }
-
             return {
                 title: deal.title,
                 price: deal.asking_price || deal.price,
@@ -691,21 +619,10 @@ Return ONLY valid JSON:
                 source: deal.source || "Aggregated MLS",
                 description: deal.description || "",
                 link: deal.link || "",
-                ai_score: aiScore,
-                reasoning: metrics
-                    ? `Strict Math Analysis: ${metrics.equityPercentage.toFixed(1)}% equity. MAO limit: $${Math.round(metrics.mao).toLocaleString()}. ROI: ${metrics.roi.toFixed(1)}%. Score: ${metrics.score}/100.`
-                    : "Insufficient data for full analysis.",
-                metrics: metrics ? {
-                    arv: deal.arv || deal.asking_price || deal.price,
-                    mao: Math.round(metrics.mao),
-                    roi: Math.round(metrics.roi * 10) / 10,
-                    equityPercentage: Math.round(metrics.equityPercentage * 10) / 10,
-                    score: metrics.score,
-                    riskFactors: metrics.riskFactors,
-                    grossEquity: Math.round(metrics.grossEquity),
-                    projectedProfit: Math.round(metrics.projectedProfit),
-                } : null,
-                validated: metrics !== null,
+                ai_score: 0, // Calculated on frontend
+                reasoning: "Raw data extracted.", // Logic moved to frontend
+                metrics: null, // Logic moved to frontend
+                validated: false, // Will be validated on frontend
                 // Preserve structured fields for audit pipeline
                 address: deal.address,
                 city: deal.city,
@@ -716,40 +633,55 @@ Return ONLY valid JSON:
                 sqft: deal.sqft,
                 property_type: deal.property_type,
                 condition: deal.condition,
+                asking_price: deal.asking_price || deal.price,
+                dom: deal.dom,
             };
         });
 
-        // ─── Apply Final Filters (Property Type & DOM) ────────────────
-        if (property_type && property_type !== 'any') {
-            // Simple mapping check
-            const targetType = property_type.toLowerCase();
-            // Adjust mapping logic if needed to match standardized types
-        }
+        // ─── STRICT FILTER ENFORCEMENT ────────────────────────────────
+        // External APIs are often loose with filters, so we strictly enforce them here.
 
-        // DOM Filter (if we had reliable list dates, we would filter here)
-        // For now, we rely on the upstream or assume fresh results.
+        let finalResults = validatedDeals.filter(deal => {
+            const price = deal.asking_price || deal.price || 0;
 
-        // Final cleanup of results based on strict filters if they weren't caught upstream
-        let finalResults = validatedDeals;
+            // 1. Price Filter
+            if (minPrice > 0 && price < minPrice) return false;
+            if (maxPrice < 5000000 && price > maxPrice) return false;
 
-        if (property_type && property_type !== 'any') {
-            finalResults = finalResults.filter(d =>
-                d.property_type?.toLowerCase() === property_type.toLowerCase() ||
-                (property_type === 'multi_family' && (d.property_type === 'duplex' || d.property_type === 'triplex'))
-            );
-        }
+            // 2. Property Type Filter
+            if (property_type && property_type !== 'any') {
+                const pType = (deal.property_type || '').toLowerCase();
+                const target = property_type.toLowerCase();
 
-        if (max_days_on_market) {
-            // Since we might not have accurate DOM for all sources, be careful.
-            // If we calculated DOM above, filter here.
-            // const maxDom = Number(max_days_on_market);
-            // finalResults = finalResults.filter(d => (d.dom || 0) <= maxDom);
-        }
+                if (target === 'multi_family') {
+                    // Match variations of multi-family
+                    if (!['multi_family', 'duplex', 'triplex', 'quadruplex', 'apartment'].includes(pType)) {
+                        return false;
+                    }
+                } else {
+                    // Exact match for other types
+                    if (pType !== target) return false;
+                }
+            }
+
+            // 3. Days on Market Filter
+            if (max_days_on_market) {
+                const maxDom = Number(max_days_on_market);
+                // Only filter if DOM is actually present. If unknown (0 or undefined), we let it pass 
+                // to avoid hiding fresh but un-flagged listings, unless strict mode is desired.
+                // Here we treat 0 as "unknown" or "brand new".
+                if (deal.dom && deal.dom > maxDom) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
 
         // Sort by AI score descending
-        validatedDeals.sort((a, b) => (b.ai_score || 0) - (a.ai_score || 0));
+        finalResults.sort((a, b) => (b.ai_score || 0) - (a.ai_score || 0));
 
-        logStep("Deals validated & sorted", { count: validatedDeals.length, validated: validatedDeals.filter((d) => d.validated).length });
+        logStep("Deals validated & sorted", { count: finalResults.length, validated: finalResults.filter((d) => d.validated).length });
 
         // Register dedup hashes for future cross-session detection
         try {
