@@ -56,7 +56,9 @@ export function DealChat({ contextType, dataPayload }: DealChatProps) {
 
     // Auto-scroll to bottom on new messages
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
     }, [chatHistory, isLoading]);
 
     const handleSend = async (e: React.FormEvent) => {
@@ -97,7 +99,7 @@ export function DealChat({ contextType, dataPayload }: DealChatProps) {
     };
 
     return (
-        <div className="flex flex-col bg-muted/10 h-full">
+        <div className="flex flex-col bg-muted/10 h-full min-h-0 overflow-hidden">
             {/* Header */}
             <div className="p-4 border-b bg-background">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -112,7 +114,7 @@ export function DealChat({ contextType, dataPayload }: DealChatProps) {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 pb-6 space-y-4 min-h-0">
                 {chatHistory.map((msg, i) => (
                     <div
                         key={i}
