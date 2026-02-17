@@ -57,279 +57,68 @@ interface LovableAiResponse {
   }>;
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, sentry-trace, baggage",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
-const logStep = (step: string, details?: unknown) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[SCRAPE-FACEBOOK] ${step}${detailsStr}`);
-};
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+// ─── Calculator Logic (Strict TypeScript Source of Truth) ───────────
+const DEFAULT_CLOSING_COSTS_PERCENT = 0.03;
+const DEFAULT_HOLDING_COSTS_PERCENT = 0.02;
+const DEFAULT_MAO_DISCOUNT_RATE = 0.70;
 
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
-
-  try {
-    logStep("Function started");
-
-    // Authenticate user
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header");
-
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) throw new Error("User not authenticated");
-
-    logStep("User authenticated", { userId: user.id });
-
-    // Check for investor role (or admin)
-    const { data: roles } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id);
-
-    const isInvestor = roles?.some(r => r.role === 'investor' || r.role === 'admin');
-    if (!isInvestor) {
-      throw new Error("Investor access required");
-    }
-
-    // Check rate limit (simpler version for now)
-    // In production, use a dedicated rate limit table
-    const { count } = await supabaseAdmin
-      .from("scrape_sessions")
-      .select("*", { count: 'exact', head: true })
-      .eq("user_id", user.id)
-      .gte("created_at", new Date(Date.now() - 60000).toISOString()); // Last minute
-
-    if (count && count > 5) {
-      throw new Error("Rate limit exceeded (5 scrapes/minute)");
-    }
-
-    // Check credits
-    const { data: credits } = await supabaseAdmin
-      .from("scrape_credits")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!credits || credits.credits_remaining < 1) {
-      throw new Error("Insufficient scrape credits");
-    }
-
-    const body = await req.json();
-    const { url, buyBoxId } = body;
-
-    if (!url) throw new Error("URL is required");
-
-    // Fetch Buy Box Criteria if provided, or use all active
-    let buyBoxes: BuyBox[] = [];
-    if (buyBoxId) {
-      const { data } = await supabaseAdmin
-        .from("buy_boxes")
-        .select("*")
-        .eq("id", buyBoxId)
-        .single();
-      if (data) buyBoxes = [data];
-    } else {
-      const { data } = await supabaseAdmin
-        .from("buy_boxes")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("is_active", true);
-      if (data) buyBoxes = data;
-    }
-
-    logStep("Target configuration", { url, buyBoxCount: buyBoxes.length });
-
-    // 1. Scrape with Firecrawl
-    const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
-    if (!firecrawlKey) throw new Error("Firecrawl API key not configured");
-
-    const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${firecrawlKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url,
-        formats: ["markdown"],
-        onlyMainContent: true,
-        waitFor: 3000,
-      }),
-    });
-
-    if (!scrapeResponse.ok) {
-      logStep("Firecrawl error", { status: scrapeResponse.status });
-      throw new Error(`Scraping failed: ${scrapeResponse.statusText}`);
-    }
-
-    const scrapeData: FirecrawlScrapeResponse = await scrapeResponse.json();
-    const markdown = scrapeData.data?.markdown || scrapeData.markdown || "";
-
-    if (markdown.length < 100) {
-      throw new Error("Scraped content too short or empty");
-    }
-
-    logStep("Scraping successful", { length: markdown.length });
-
-    // 2. Analyze with Lovable AI (Gemini)
-    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableKey) throw new Error("Lovable API key not configured");
-
-    const analysisPrompt = `You are a real estate investment analyst. Analyze the following Facebook/Marketplace content and extract property listings.
-
-Evaluate each listing against these Buy Box criteria:
-${JSON.stringify(buyBoxes)}
-
-CONTENT:
-${markdown.substring(0, 15000)}
-
-Respond with a JSON array of deals in this exact format:
-{
-  "deals": [
-    {
-      "address": "string",
-      "price": number,
-      "description": "string",
-      "url": "original post url",
-      "bedrooms": number,
-      "bathrooms": number,
-      "sqft": number,
-      "property_type": "string",
-      "condition": "poor|fair|good|excellent",
-      "arv_estimate": number (estimate based on location/condition),
-      "repair_estimate": number (estimate based on condition),
-      "match_score": number (0-100 based on buy box),
-      "confidence_score": number (0-100 based on data quality),
-      "matched_buy_box_id": "uuid of best matching buy box or null",
-      "analysis_notes": "string explaining match and confidence reasoning"
-    }
-  ]
+interface DealMetrics {
+  grossEquity: number;
+  equityPercentage: number;
+  mao: number;
+  projectedProfit: number;
+  roi: number;
+  score: number;
+  riskFactors: string[];
 }
 
-Only return deals with match_score > 60.`;
+function calculateDealMetrics(deal: {
+  asking_price: number;
+  arv?: number;
+  repair_estimate?: number;
+  assignment_fee?: number;
+  condition?: string;
+}): DealMetrics | null {
+  if (!deal.asking_price) return null;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${lovableKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "You are a real estate analyst. Return valid JSON only. No markdown." },
-          { role: "user", content: analysisPrompt }
-        ],
-      }),
-    });
+  const arv = deal.arv || deal.asking_price;
+  const repairs = deal.repair_estimate || 0;
+  const assignment = deal.assignment_fee || 0;
 
-    if (!aiResponse.ok) {
-      throw new Error("AI analysis failed");
-    }
+  // 1. Equity Calculations
+  const totalCostBasis = deal.asking_price + repairs + assignment;
+  const grossEquity = arv - totalCostBasis;
+  const equityPercentage = arv > 0 ? (grossEquity / arv) * 100 : 0;
 
-    const aiData: LovableAiResponse = await aiResponse.json();
-    const content = aiData.choices?.[0]?.message?.content || "{}";
-    const cleaned = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  // 2. MAO (Maximum Allowable Offer) Calculation
+  const standardMao = (arv * DEFAULT_MAO_DISCOUNT_RATE) - repairs - assignment;
 
-    let deals: ScrapedDeal[] = [];
-    try {
-      const parsed = JSON.parse(cleaned);
-      deals = parsed.deals || [];
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      logStep("JSON parse error", { error: message });
-    }
+  // 3. ROI Calculation
+  const closingCosts = arv * DEFAULT_CLOSING_COSTS_PERCENT;
+  const holdingCosts = arv * DEFAULT_HOLDING_COSTS_PERCENT;
+  const totalInvested = deal.asking_price + repairs + assignment + closingCosts + holdingCosts;
+  const projectedProfit = arv - totalInvested;
+  const roi = totalInvested > 0 ? (projectedProfit / totalInvested) * 100 : 0;
 
-    logStep("Analysis complete", { dealsFound: deals.length });
+  let score = 50;
+  if (equityPercentage > 20) score += 20;
+  if (equityPercentage > 30) score += 10;
+  if (roi > 15) score += 10;
+  if (roi > 30) score += 10;
+  if (deal.condition === 'distressed' || deal.condition === 'poor') score -= 10;
+  score = Math.max(0, Math.min(100, score));
 
-    // Filter high confidence deals
-    const validDeals = deals.filter(d => (d.confidence_score || 0) >= 70);
+  const riskFactors: string[] = [];
+  if (!deal.arv) riskFactors.push("ARV is missing; using Asking Price as proxy.");
+  if (equityPercentage < 10) riskFactors.push("Low equity margin (<10%).");
+  if (repairs === 0 && deal.condition !== 'excellent') riskFactors.push("No repair estimate provided.");
 
-    // 3. Save Results
-    if (validDeals.length > 0) {
-      // Create session
-      const { data: session, error: sessError } = await supabaseAdmin
-        .from("scrape_sessions")
-        .insert({
-          user_id: user.id,
-          source_url: url,
-          status: "completed",
-          deals_found: validDeals.length
-        })
-        .select()
-        .single();
+  return { grossEquity, equityPercentage, mao: standardMao, projectedProfit, roi, score, riskFactors };
+}
 
-      if (!sessError && session) {
-        // Save deals
-        const dealsToInsert = validDeals.map(d => ({
-          session_id: session.id,
-          user_id: user.id,
-          address: d.address || "Unknown Address",
-          price: typeof d.price === 'number' ? d.price : parseInt(String(d.price).replace(/[^0-9]/g, '')) || 0,
-          description: d.description,
-          url: d.url || url,
-          meta_data: {
-            bedrooms: d.bedrooms,
-            bathrooms: d.bathrooms,
-            sqft: d.sqft,
-            condition: d.condition,
-            analysis: d.analysis_notes
-          },
-          ai_score: d.match_score,
-          buy_box_id: d.matched_buy_box_id
-        }));
 
-        await supabaseAdmin.from("scrape_results").insert(dealsToInsert);
-      }
-    }
-
-    // Deduct credit
-    await supabaseAdmin
-      .from("scrape_credits")
-      .update({
-        credits_remaining: credits.credits_remaining - 1,
-        credits_used: credits.credits_used + 1
-      })
-      .eq("user_id", user.id);
-
-    return new Response(JSON.stringify({
-      success: true,
-      deals: validDeals,
-      count: validDeals.length
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
-
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: message });
-    return new Response(JSON.stringify({
-      success: false,
-      error: message
-    }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
-  }
-});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -600,17 +389,49 @@ If no valid deals are found, return: {"deals": []}`;
     logStep("High confidence deals", { count: highConfidenceDeals.length });
 
     // Store results in database
-    const resultsToInsert = highConfidenceDeals.map((deal) => ({
-      user_id: userId,
-      scrape_session_id: session.id,
-      source_url: formattedUrl,
-      post_content: scrapeData.data?.markdown?.substring(0, 5000) || null,
-      extracted_data: deal,
-      match_score: deal.match_score,
-      confidence_score: deal.confidence_score,
-      matched_buy_box_id: deal.matched_buy_box_id || null,
-      analysis_notes: deal.analysis_notes,
-    }));
+    const resultsToInsert = highConfidenceDeals.map((deal) => {
+      // STRICT MATH OVERRIDE
+      // We do NOT trust the LLM's match_score or equity calculation.
+      // We recalculate using the strict TypeScript logic.
+
+      let strictScore = 0;
+      let strictEquity = 0; // Not stored in DB but good for logs/notes
+      let strictNotes = deal.analysis_notes || "";
+
+      const dealPrice = typeof deal.price === 'number' ? deal.price : parseInt(String(deal.price).replace(/[^0-9]/g, '')) || 0;
+
+      const metrics = calculateDealMetrics({
+        asking_price: dealPrice,
+        arv: deal.arv_estimate,
+        repair_estimate: deal.repair_estimate,
+        condition: deal.condition
+      });
+
+      if (metrics) {
+        strictScore = metrics.score;
+        strictEquity = metrics.equityPercentage;
+        // Append strict math to notes
+        strictNotes += `\n[System Audit]: Strict Math Overridden. Equity: ${metrics.equityPercentage.toFixed(1)}%. ROI: ${metrics.roi.toFixed(1)}%. Score: ${metrics.score}/100.`;
+      } else {
+        strictNotes += `\n[System Audit]: Calculation failed (missing price). Score set to 0.`;
+      }
+
+      return {
+        user_id: userId,
+        scrape_session_id: session.id,
+        source_url: formattedUrl,
+        post_content: scrapeData.data?.markdown?.substring(0, 5000) || null,
+        extracted_data: {
+          ...deal,
+          // Inject strict metrics into the JSON blob if needed, or rely on top-level columns
+          strict_metrics: metrics
+        },
+        match_score: strictScore, // OVERRIDDEN
+        confidence_score: deal.confidence_score,
+        matched_buy_box_id: deal.matched_buy_box_id || null,
+        analysis_notes: strictNotes,
+      };
+    });
 
     let insertedResults: { id: string }[] = [];
     if (resultsToInsert.length > 0) {

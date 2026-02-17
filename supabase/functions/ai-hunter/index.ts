@@ -659,12 +659,10 @@ Return ONLY valid JSON:
             });
 
             // Calculate AI score from metrics
+            // STRICT MATH: Use the exact score from calculateDealMetrics, do not boost.
             let aiScore = 50;
             if (metrics) {
                 aiScore = metrics.score;
-                // Boost score for high-equity deals
-                if (metrics.equityPercentage > 25) aiScore = Math.min(98, aiScore + 10);
-                if (metrics.roi > 20) aiScore = Math.min(98, aiScore + 5);
             }
 
             return {
@@ -676,7 +674,7 @@ Return ONLY valid JSON:
                 link: deal.link || "",
                 ai_score: aiScore,
                 reasoning: metrics
-                    ? `${metrics.equityPercentage > 0 ? `${metrics.equityPercentage.toFixed(0)}% equity` : 'Negative equity'}. MAO: $${Math.round(metrics.mao).toLocaleString()}. ROI: ${metrics.roi.toFixed(1)}%. ${metrics.riskFactors.join(' ')}`
+                    ? `Strict Math Analysis: ${metrics.equityPercentage.toFixed(1)}% equity. MAO limit: $${Math.round(metrics.mao).toLocaleString()}. ROI: ${metrics.roi.toFixed(1)}%. Score: ${metrics.score}/100.`
                     : "Insufficient data for full analysis.",
                 metrics: metrics ? {
                     arv: deal.arv || deal.asking_price || deal.price,
