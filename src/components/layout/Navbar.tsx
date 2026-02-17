@@ -116,7 +116,7 @@ export function Navbar() {
                   Demand
                 </Link>
                 <Link
-                  to="/blog"
+                  to="/learn"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
@@ -145,7 +145,7 @@ export function Navbar() {
                   Demand
                 </Link>
                 <Link
-                  to="/blog"
+                  to="/learn"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
@@ -332,7 +332,7 @@ export function Navbar() {
                     Demand
                   </Link>
                   <Link
-                    to="/blog"
+                    to="/learn"
                     className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -357,7 +357,7 @@ export function Navbar() {
                     Pricing
                   </Link>
                   <Link
-                    to="/blog"
+                    to="/learn"
                     className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
                     onClick={() => setMobileMenuOpen(false)}
                   >

@@ -37,6 +37,8 @@ const Blog = lazy(() => import("./pages/Blog"));
 const BlogArticle = lazy(() => import("./pages/BlogArticle"));
 const BuyerDemandPublic = lazy(() => import("./pages/BuyerDemandPublic"));
 import About from "./pages/About";
+import Learn from "./pages/Learn";
+
 
 const queryClient = new QueryClient();
 
@@ -216,6 +218,7 @@ function AppRoutes() {
       <Route path="/blog" element={<Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}><Blog /></Suspense>} />
       <Route path="/blog/:slug" element={<Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}><BlogArticle /></Suspense>} />
       <Route path="/demand" element={<Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground">Loading...</div></div>}><BuyerDemandPublic /></Suspense>} />
+      <Route path="/learn" element={<Learn />} />
       <Route path="/about" element={<About />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
