@@ -97,6 +97,8 @@ const ADMIN_EMAIL = "thomasdamienak@gmail.com";
 // ─── Calculator Agent (inline for Deno edge function) ──────────────
 const DEFAULT_CLOSING_COSTS_PERCENT = 0.03;
 const DEFAULT_HOLDING_COSTS_PERCENT = 0.02;
+// Standard 70% rule
+const DEFAULT_MAO_DISCOUNT_RATE = 0.70;
 
 interface DealMetrics {
     grossEquity: number;
@@ -112,21 +114,30 @@ function calculateDealMetrics(deal: {
     asking_price: number;
     arv?: number;
     repair_estimate?: number;
+    assignment_fee?: number;
     condition?: string;
 }): DealMetrics | null {
     if (!deal.asking_price) return null;
 
     const arv = deal.arv || deal.asking_price;
     const repairs = deal.repair_estimate || 0;
+    const assignment = deal.assignment_fee || 0;
 
-    const totalCostBasis = deal.asking_price + repairs;
+    // 1. Equity Calculations
+    const totalCostBasis = deal.asking_price + repairs + assignment;
     const grossEquity = arv - totalCostBasis;
     const equityPercentage = arv > 0 ? (grossEquity / arv) * 100 : 0;
-    const standardMao = (arv * 0.70) - repairs;
 
+    // 2. MAO (Maximum Allowable Offer) Calculation
+    // Standard Formula: (ARV * Factor) - Repairs - Assignment
+    const standardMao = (arv * DEFAULT_MAO_DISCOUNT_RATE) - repairs - assignment;
+
+    // 3. ROI Calculation (Flip Scenario)
+    // Profit = ARV - (Purchase + Repairs + Assignment + Closing/Holding)
+    // ROI = Profit / Total Invested
     const closingCosts = arv * DEFAULT_CLOSING_COSTS_PERCENT;
     const holdingCosts = arv * DEFAULT_HOLDING_COSTS_PERCENT;
-    const totalInvested = deal.asking_price + repairs + closingCosts + holdingCosts;
+    const totalInvested = deal.asking_price + repairs + assignment + closingCosts + holdingCosts;
     const projectedProfit = arv - totalInvested;
     const roi = totalInvested > 0 ? (projectedProfit / totalInvested) * 100 : 0;
 
@@ -347,7 +358,7 @@ serve(async (req) => {
                                 price: price,
                                 asking_price: price,
                                 location: `${cityName}, ${stateCode}`,
-                                source: "MLS",
+                                source: "Aggregated MLS",
                                 description: `${beds || '?'} bed ${baths || '?'} bath, ${sqft ? sqft.toLocaleString() + ' sqft' : 'sqft N/A'}. ${description.text || ''}`.trim().substring(0, 300),
                                 link: listingUrl,
                                 address: streetAddr,
@@ -660,7 +671,7 @@ Return ONLY valid JSON:
                 title: deal.title,
                 price: deal.asking_price || deal.price,
                 location: deal.location,
-                source: deal.source || "MLS",
+                source: deal.source || "Aggregated MLS",
                 description: deal.description || "",
                 link: deal.link || "",
                 ai_score: aiScore,

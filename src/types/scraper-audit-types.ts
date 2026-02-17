@@ -6,7 +6,7 @@ export const ScrapedDealSchema = z.object({
     title: z.string().min(1, "Title is required"),
     price: z.number().positive("Price must be positive"),
     location: z.string().min(1),
-    source: z.enum(["MLS", "Craigslist FSBO", "Probate Records", "Facebook Marketplace", "Other"]),
+    source: z.enum(["MLS", "Craigslist FSBO", "Probate Records", "Facebook Marketplace", "AI Market Analysis", "Zillow", "Aggregated MLS", "Other"]),
     link: z.string().url("Must be a valid URL").optional(),
     description: z.string().optional(),
     ai_score: z.number().min(0).max(100).optional(),
