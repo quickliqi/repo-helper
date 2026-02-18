@@ -303,30 +303,64 @@ serve(async (req) => {
                             // Calculate DOM if possible (simplified placeholder)
                             const dom = listDate ? Math.floor((Date.now() - new Date(listDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-                            // Deterministic URL Construction
-                            // We prefer specific fields over generic search
-                            let listingUrl = `https://www.realtor.com/realestateandhomes-search/${city}_${state}`; // default fallback
+                            // Deterministic URL Extraction with Strict Regex
+                            // Requirement: Find specific /realestateandhomes-detail/ URL, reject /realestateandhomes-search/
+                            let listingUrl = "";
+                            const detailRegex = /\/realestateandhomes-detail\//;
+                            const searchRegex = /\/realestateandhomes-search\//;
 
-                            if (listing.permalink) {
-                                listingUrl = `https://www.realtor.com/realestateandhomes-detail/${listing.permalink}`;
-                                // Sometimes permalink is just the path, sometimes it's full? 
-                                // Usually Realtor.com API "permalink" is the last distinct part or a relative path.
-                                // If it starts with 'http', use it. If it starts with '/', prepend.
-                                // If it's just a slug, prepend detail path?
-                                // User reference: "const propertyUrl = rawItem.permalink ? `https://www.realtor.com${rawItem.permalink}`"
-                                // This implies permalink is relative path like "/realestateandhomes-detail/..."
-                                if (!listing.permalink.startsWith('http')) {
-                                    // Ensure we don't double slash if permalink has one
-                                    const path = listing.permalink.startsWith('/') ? listing.permalink : `/${listing.permalink}`;
-                                    listingUrl = `https://www.realtor.com${path}`;
-                                } else {
-                                    listingUrl = listing.permalink;
+                            // Helper to validate and normalize URL/path
+                            const normalizeUrl = (val: string): string | null => {
+                                if (searchRegex.test(val)) return null; // Reject search pages
+                                if (detailRegex.test(val)) {
+                                    if (val.startsWith('http')) return val;
+                                    const cleanPath = val.startsWith('/') ? val : `/${val}`;
+                                    return `https://www.realtor.com\${cleanPath}`;
                                 }
-                            } else if (listing.href) {
-                                const path = listing.href.startsWith('/') ? listing.href : `/${listing.href}`;
-                                listingUrl = `https://www.realtor.com${path}`;
-                            } else if (listing.property_id) {
-                                listingUrl = `https://www.realtor.com/realestateandhomes-detail/${listing.property_id}`;
+                                return null;
+                            };
+
+                            // 1. Priority: Check known fields
+                            if (listing.href) listingUrl = normalizeUrl(listing.href) || "";
+                            if (!listingUrl && listing.permalink) {
+                                // If permalink contains the full path
+                                listingUrl = normalizeUrl(listing.permalink) || "";
+
+                                // If permalink is just a slug (no paths, seems like a valid ID string)
+                                if (!listingUrl && !listing.permalink.includes('/') && listing.permalink.length > 5) {
+                                    listingUrl = `https://www.realtor.com/realestateandhomes-detail/\${listing.permalink}`;
+                                }
+                            }
+
+                            // 2. Search deeper in the object if not found
+                            if (!listingUrl) {
+                                const searchValues = (obj: any, depth = 0) => {
+                                    if (depth > 2 || !obj) return;
+                                    for (const key in obj) {
+                                        const val = obj[key];
+                                        if (typeof val === 'string') {
+                                            const normalized = normalizeUrl(val);
+                                            if (normalized) {
+                                                listingUrl = normalized;
+                                                return;
+                                            }
+                                        } else if (typeof val === 'object' && val !== null) {
+                                            searchValues(val, depth + 1);
+                                            if (listingUrl) return;
+                                        }
+                                    }
+                                };
+                                searchValues(listing);
+                            }
+
+                            // 3. Fallback: Construct from property_id
+                            if (!listingUrl && listing.property_id) {
+                                listingUrl = `https://www.realtor.com/realestateandhomes-detail/\${listing.property_id}`;
+                            }
+
+                            // 4. Last Resort: Search fallback (flagged as non-specific)
+                            if (!listingUrl) {
+                                listingUrl = `https://www.realtor.com/realestateandhomes-search/\${city}_\${state}`;
                             }
 
                             const streetAddr = address.line || address.street || "Address Available on Source";
@@ -335,12 +369,12 @@ serve(async (req) => {
                             const zipCode = address.postal_code || address.zip || "";
 
                             return {
-                                title: `${beds || '?'}BR/${baths || '?'}BA - ${streetAddr}`,
+                                title: `\${beds || '?'}BR/\${baths || '?'}BA - \${streetAddr}`,
                                 price: price,
                                 asking_price: price,
-                                location: `${cityName}, ${stateCode}`,
+                                location: `\${cityName}, \${stateCode}`,
                                 source: "Aggregated MLS",
-                                description: `${beds || '?'} bed ${baths || '?'} bath, ${sqft ? sqft.toLocaleString() + ' sqft' : 'sqft N/A'}. ${description.text || ''}`.trim().substring(0, 300),
+                                description: `\${beds || '?'} bed \${baths || '?'} bath, \${sqft ? sqft.toLocaleString() + ' sqft' : 'sqft N/A'}. \${description.text || ''}`.trim().substring(0, 300),
                                 link: listingUrl,
                                 listing_url: listingUrl,
                                 address: streetAddr,
@@ -384,12 +418,12 @@ serve(async (req) => {
 
                 const citySlug = city.toLowerCase().replace(/\s+/g, '');
                 // Craigslist FSBO search for the metro area
-                const craigslistUrl = `https://${citySlug}.craigslist.org/search/rea?purveyor=owner&min_price=${minPrice}&max_price=${maxPrice}`;
+                const craigslistUrl = `https://\${citySlug}.craigslist.org/search/rea?purveyor=owner&min_price=\${minPrice}&max_price=\${maxPrice}`;
 
                 const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
                     method: "POST",
                     headers: {
-                        "Authorization": `Bearer ${firecrawlKey}`,
+                        "Authorization": `Bearer \${firecrawlKey}`,
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
@@ -410,7 +444,7 @@ serve(async (req) => {
                         const extractionPrompt = `You are a real estate data extraction AI. Extract property listings from this Craigslist FSBO page content.
 
 SCRAPED CONTENT:
-${markdown.substring(0, 8000)}
+\${markdown.substring(0, 8000)}
 
 TASK: Extract up to 5 property listings. For each, extract all available data.
 
@@ -421,8 +455,8 @@ Return ONLY valid JSON:
       "title": "Brief property description",
       "price": 165000,
       "address": "Street address if available",
-      "city": "${city}",
-      "state": "${state}",
+      "city": "\${city}",
+      "state": "\${state}",
       "bedrooms": 3,
       "bs": 2,
       "sqft": 1450,
@@ -445,7 +479,7 @@ Rules:
                         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
                             method: "POST",
                             headers: {
-                                "Authorization": `Bearer ${lovableKey}`,
+                                "Authorization": `Bearer \${lovableKey}`,
                                 "Content-Type": "application/json",
                             },
                             body: JSON.stringify({
@@ -479,7 +513,7 @@ Rules:
                                             title: d.title || "FSBO Deal",
                                             price: typeof d.price === 'number' ? d.price : 0,
                                             asking_price: typeof d.price === 'string' ? parseInt((d.price as string).replace(/[$,]/g, '')) : (d.price || 0),
-                                            location: `${d.city || city}, ${d.state || state}`,
+                                            location: `\${d.city || city}, \${d.state || state}`,
                                             city: d.city || city,
                                             state: d.state || state,
                                             property_type: d.property_type || 'single_family',
@@ -525,11 +559,11 @@ Rules:
         if (allDeals.length === 0 && lovableKey) {
             logStep("No real data sources available, using AI market analysis fallback");
 
-            const fallbackPrompt = `You are a real estate investment AI analyzing the ${city}, ${state} market.
+            const fallbackPrompt = `You are a real estate investment AI analyzing the \${city}, \${state} market.
 
-Investor Buy Box: ${JSON.stringify(buyBoxes || [])}
+Investor Buy Box: \${JSON.stringify(buyBoxes || [])}
 
-Generate 3-5 realistic property listings that would currently exist in ${city}, ${state}.
+Generate 3-5 realistic property listings that would currently exist in \${city}, \${state}.
 Base them on real market conditions. Include realistic addresses (use real street names).
 
 Return ONLY valid JSON:
@@ -539,8 +573,8 @@ Return ONLY valid JSON:
       "title": "Property description",
       "price": 165000,
       "address": "123 Real Street Name",
-      "city": "${city}",
-      "state": "${state}",
+      "city": "\${city}",
+      "state": "\${state}",
       "zip_code": "30301",
       "bedrooms": 3,
       "bathrooms": 2,
@@ -548,7 +582,7 @@ Return ONLY valid JSON:
       "arv": 255000,
       "repair_estimate": 25000,
       "description": "Brief property description",
-      "link": "https://www.realtor.com/realestateandhomes-search/${city}_${state}",
+      "link": "https://www.realtor.com/realestateandhomes-search/\${city}_\${state}",
       "source": "MLS",
       "condition": "fair",
       "property_type": "single_family"
@@ -560,7 +594,7 @@ Return ONLY valid JSON:
                 const fallbackResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
                     method: "POST",
                     headers: {
-                        "Authorization": `Bearer ${lovableKey}`,
+                        "Authorization": `Bearer \${lovableKey}`,
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
@@ -584,7 +618,7 @@ Return ONLY valid JSON:
                             title: d.title || "Market Analysis Deal",
                             price: d.price || 0,
                             asking_price: d.price || 0,
-                            location: `${d.city || city}, ${d.state || state}`,
+                            location: `\${d.city || city}, \${d.state || state}`,
                             deal_type: d.deal_type || "wholesale",
                             source: "AI Market Analysis",
                             description: d.description || "",
@@ -625,7 +659,7 @@ Return ONLY valid JSON:
             const addr = (deal.address || deal.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
             const c = (deal.city || "").toLowerCase().replace(/[^a-z0-9]/g, "");
             const s = (deal.state || "").toLowerCase().replace(/[^a-z]/g, "");
-            return `${addr}|${c}|${s}`;
+            return `\${addr}|\${c}|\${s}`;
         });
 
         try {
@@ -742,7 +776,7 @@ Return ONLY valid JSON:
                 const c = (deal.city || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                 const s = (deal.state || "").toLowerCase().replace(/[^a-z]/g, "");
                 return {
-                    address_hash: `${addr}|${c}|${s}`,
+                    address_hash: `\${addr}|\${c}|\${s}`,
                     price: deal.price,
                     source: deal.source,
                 };
