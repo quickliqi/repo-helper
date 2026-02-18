@@ -95,11 +95,19 @@ export function DealChat({ contextType, dataPayload }: DealChatProps) {
             const reply = data?.reply || "I wasn't able to generate a response.";
             setChatHistory((prev) => [...prev, { role: "assistant", content: reply }]);
         } catch (err) {
-            console.error("[DealChat] Error:", err);
-            toast.error("Failed to get AI response. Please try again.");
+            const errorDetails = err as any;
+            console.error("[DealChat] Error details:", {
+                message: errorDetails.message,
+                status: errorDetails.status,
+                code: errorDetails.code,
+                fullError: err
+            });
+
+            toast.error(errorDetails.message || "Failed to get AI response. Please try again.");
+
             setChatHistory((prev) => [
                 ...prev,
-                { role: "assistant", content: "Sorry, I encountered an error. Please try again." },
+                { role: "assistant", content: "Sorry, I encountered an error. Please check the console for details." },
             ]);
         } finally {
             setIsLoading(false);
