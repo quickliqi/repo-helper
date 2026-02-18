@@ -8,7 +8,8 @@
  * 3. Dedup Engine (Cross-session & fuzzy matching)
  * 4. Relevance Check (Buy box matching, domain rules)
  * 5. Cross-Check (Calculator validation, drift detection)
- * 6. Monitoring (Logging & Alerting)
+ * 6. Assessor Validation (NEW - Public records cross-ref)
+ * 7. Monitoring (Logging & Alerting)
  */
 
 import { ScrapedDeal, AuditReport, BuyBoxForAudit } from "./types.ts";
@@ -17,7 +18,9 @@ import { runStructuralValidation } from "./agents/structural-agent.ts";
 import { runDedup, registerDedupHashes } from "./agents/dedup-engine.ts";
 import { runRelevanceCheck } from "./agents/relevance-agent.ts";
 import { runCrossCheck } from "./agents/crosscheck-agent.ts";
+import { runAssessorValidation } from "./agents/assessor-agent.ts";
 import { generateAlerts, logAuditReport } from "./agents/monitoring-agent.ts";
+import { fetchEnrichmentData, AssessorData } from "../enrichment-service.ts";
 
 export async function auditScrapedDeals(
     deals: ScrapedDeal[],
@@ -28,8 +31,20 @@ export async function auditScrapedDeals(
 ): Promise<AuditReport> {
     console.log(`[AUDIT] Starting pipeline for ${deals.length} deals...`);
 
-    // 0. Fetch Config (Optimistic / Parallel with other non-dependent fetches later?)
-    // For now, we fetch inside agents where needed (relevance, dedup)
+    // 0. Fetch Config & Enriched Data in Parallel
+    console.log(`[AUDIT] Fetching enrichment data for ${deals.length} deals...`);
+    const enrichedDataPromises = deals.map(deal =>
+        fetchEnrichmentData(deal.address || "", deal.city || "", deal.state || "", deal.zip_code)
+    );
+    const enrichedData = await Promise.all(enrichedDataPromises);
+    console.log(`[AUDIT] Enrichment data fetched.`);
+
+    // Attach enrichment data to deals for persistence
+    deals.forEach((deal, i) => {
+        if (enrichedData[i]) {
+            deal.assessor_data = enrichedData[i];
+        }
+    });
 
     // 1. Integrity Agent
     const integrityReport = runIntegrityCheck(deals);
@@ -46,27 +61,32 @@ export async function auditScrapedDeals(
     // 5. Cross-Check Agent
     const crossCheckReport = runCrossCheck(deals);
 
-    // 6. Monitoring & Alerts
+    // 6. Assessor Validation Agent (NEW)
+    const assessorReport = runAssessorValidation(deals, enrichedData);
+
+    // 7. Monitoring & Alerts
     const alerts = generateAlerts(
         integrityReport,
         structuralReport,
         relevanceReport,
-        crossCheckReport
+        crossCheckReport,
+        assessorReport
     );
 
-    // Calculate Overall Score
-    // Weighted average: Integrity (30%), Structural (10%), Relevance (45%), CrossCheck (15%)
-    // Dedup is folded into Integrity/Relevance implicitly by filtering, but let's explicit penalize in integrity
+    // Calculate Scores for weighting
     const integrityAvg = integrityReport.reduce((s, r) => s + r.overallScore, 0) / Math.max(1, deals.length);
     const structuralScore = structuralReport.complianceScore;
-    const relevanceScore = relevanceReport.relevantCount / Math.max(1, deals.length) * 100;
-    const crossCheckScore = (crossCheckReport.totalDeals - crossCheckReport.mismatchCount) / Math.max(1, crossCheckReport.totalDeals) * 100;
+    const relevanceScore = (relevanceReport.relevantCount / Math.max(1, deals.length)) * 100;
+    const crossCheckScore = ((crossCheckReport.totalDeals - crossCheckReport.mismatchCount) / Math.max(1, crossCheckReport.totalDeals)) * 100;
+    const assessorScore = assessorReport.reduce((s, r) => s + r.score, 0) / Math.max(1, assessorReport.length);
 
+    // Weighted average: Integrity (25%), Structural (10%), Relevance (35%), CrossCheck (15%), Assessor (15%)
     const weightedScore = Math.round(
-        (integrityAvg * 0.30) +
+        (integrityAvg * 0.25) +
         (structuralScore * 0.10) +
-        (relevanceScore * 0.45) +
-        (crossCheckScore * 0.15)
+        (relevanceScore * 0.35) +
+        (crossCheckScore * 0.15) +
+        (assessorScore * 0.15)
     );
 
     // Fetch pass threshold from config
@@ -90,18 +110,16 @@ export async function auditScrapedDeals(
         structural: structuralReport,
         relevance: relevanceReport,
         crossCheck: crossCheckReport,
+        assessor: assessorReport,
         alerts,
     };
 
-    // 7. Side Effects (Logging, Registration)
+    // 8. Side Effects (Logging, Registration)
     // Register new unique hashes for future dedup
     await registerDedupHashes(deals, dedupReport, supabaseClient);
 
-    // Log rejected items (Optional - if we want to log failures specifically different from the audit log)
-    // For now, the generic audit log captures the full report
-
     // Log final report
-    await logAuditReport(report, userId, sessionIdentity, supabaseClient);
+    await logAuditReport(report, userId, sessionId, supabaseClient);
 
     return report;
 }

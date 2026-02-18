@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { auditScrapedDeals } from "./audit/orchestrator.ts";
+import { AuditReport } from "./audit/types.ts";
 
 // ─── Interfaces ─────────────────────────────────────────────────────────────
 
@@ -351,16 +353,6 @@ serve(async (req) => {
                                     }
                                 };
                                 searchValues(listing);
-                            }
-
-                            // 3. Fallback: Construct from property_id
-                            if (!listingUrl && listing.property_id) {
-                                listingUrl = `https://www.realtor.com/realestateandhomes-detail/\${listing.property_id}`;
-                            }
-
-                            // 4. Last Resort: Search fallback (flagged as non-specific)
-                            if (!listingUrl) {
-                                listingUrl = `https://www.realtor.com/realestateandhomes-search/\${city}_\${state}`;
                             }
 
                             const streetAddr = address.line || address.street || "Address Available on Source";
@@ -767,6 +759,31 @@ Return ONLY valid JSON:
         // Sort by AI score descending
         finalResults.sort((a, b) => (b.ai_score || 0) - (a.ai_score || 0));
 
+        logStep("Running audit pipeline...", { count: finalResults.length });
+
+        // ─── Run Audit Pipeline (including Assessor Enrichment) ───
+        let auditReport: AuditReport | null = null;
+        try {
+            // Generate a session ID if not provided (or use one if it exists in body)
+            const sessionId = body.session_id || crypto.randomUUID();
+
+            auditReport = await auditScrapedDeals(
+                finalResults as any,
+                buyBoxes as any,
+                userId,
+                sessionId,
+                supabaseAdmin
+            );
+
+            logStep("Audit pipeline complete", {
+                score: auditReport.overallScore,
+                pass: auditReport.pass,
+                enrichment: auditReport.assessor?.filter(a => a.hasAssessorData).length
+            });
+        } catch (auditErr) {
+            logStep("Audit pipeline failed (non-critical)", { error: String(auditErr) });
+        }
+
         logStep("Deals validated & sorted", { count: finalResults.length, validated: finalResults.filter((d) => d.validated).length });
 
         // Register dedup hashes for future cross-session detection
@@ -812,6 +829,7 @@ Return ONLY valid JSON:
 
         return new Response(JSON.stringify({
             deals: finalResults,
+            auditReport, // NEW: Include the full audit & assessor report
             admin_mode: adminMode,
             sources: {
                 mls: mlsDeals.length,

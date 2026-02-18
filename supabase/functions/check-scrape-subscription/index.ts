@@ -20,6 +20,9 @@ const RATE_LIMIT_WINDOW_MINUTES = 1;
 // Investor Scraping Pro product ID
 const SCRAPE_PRODUCT_ID = "prod_Ti4uCt003AN32Y";
 
+// Admin email for bypass
+const ADMIN_EMAIL = "thomasdamienak@gmail.com";
+
 serve(async (req) => {
 
   if (req.method === "OPTIONS") {
@@ -51,6 +54,31 @@ serve(async (req) => {
 
     const user = userData.user;
     logStep("User authenticated", { email: user.email });
+
+    // Check for admin role
+    let isAdmin = user.email === ADMIN_EMAIL;
+    if (!isAdmin) {
+      const { data: roleData } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (roleData) isAdmin = true;
+    }
+
+    if (isAdmin) {
+      logStep("Admin user detected, returning unlimited credits", { email: user.email });
+      return new Response(JSON.stringify({
+        subscribed: true,
+        credits_remaining: 999999,
+        credits_used: 0,
+        period_end: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+        is_admin: true
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Check rate limit
     const { data: rateLimitOk, error: rlError } = await supabaseAdmin.rpc("check_rate_limit", {

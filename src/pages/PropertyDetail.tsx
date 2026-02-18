@@ -76,7 +76,7 @@ export default function PropertyDetail() {
   const [match, setMatch] = useState<MatchResult | null>(null);
   const { data: governanceSettings } = useGovernanceSettings();
 
-  
+
 
   // Run Governance Agent when property loads
   useEffect(() => {
@@ -409,6 +409,122 @@ export default function PropertyDetail() {
                     ))}
                   </ul>
                 </div>
+              )}
+
+              {/* County Assessor Validation (New) */}
+              {property.assessor_data && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-primary" />
+                      County Assessor Validation
+                    </CardTitle>
+                    <CardDescription>
+                      Official public records comparison for data integrity.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-2 font-medium text-muted-foreground">Metric</th>
+                            <th className="text-left py-2 font-medium text-muted-foreground">Listing Data</th>
+                            <th className="text-left py-2 font-medium text-muted-foreground">Official Record</th>
+                            <th className="text-center py-2 font-medium text-muted-foreground">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          <tr className="border-b">
+                            <td className="py-3 font-medium">Sq Ft</td>
+                            <td className="py-3">{property.sqft?.toLocaleString() || '-'}</td>
+                            <td className="py-3">{property.assessor_data.sqft?.toLocaleString() || '-'}</td>
+                            <td className="py-3 text-center">
+                              {property.sqft && property.assessor_data.sqft ? (
+                                Math.abs(property.sqft - property.assessor_data.sqft) / property.assessor_data.sqft > 0.05 ? (
+                                  <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
+                                    Mismatch
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                                    Verified
+                                  </Badge>
+                                )
+                              ) : (
+                                <span className="text-muted-foreground">N/A</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="py-3 font-medium">Bedrooms</td>
+                            <td className="py-3">{property.bedrooms || '-'}</td>
+                            <td className="py-3">{property.assessor_data.bedrooms || '-'}</td>
+                            <td className="py-3 text-center">
+                              {property.bedrooms !== undefined && property.assessor_data.bedrooms !== undefined ? (
+                                property.bedrooms !== property.assessor_data.bedrooms ? (
+                                  <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
+                                    Mismatch
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                                    Verified
+                                  </Badge>
+                                )
+                              ) : (
+                                <span className="text-muted-foreground">N/A</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="py-3 font-medium">Bathrooms</td>
+                            <td className="py-3">{property.bathrooms || '-'}</td>
+                            <td className="py-3">{property.assessor_data.bathrooms || '-'}</td>
+                            <td className="py-3 text-center">
+                              {property.bathrooms !== undefined && property.assessor_data.bathrooms !== undefined ? (
+                                Math.abs(property.bathrooms - property.assessor_data.bathrooms) >= 0.5 ? (
+                                  <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
+                                    Mismatch
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                                    Verified
+                                  </Badge>
+                                )
+                              ) : (
+                                <span className="text-muted-foreground">N/A</span>
+                              )}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-primary/10">
+                      <div>
+                        <p className="text-xs text-muted-foreground">APN</p>
+                        <p className="text-sm font-mono">{property.assessor_data.apn || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Assessed Value</p>
+                        <p className="text-sm font-medium">
+                          {property.assessor_data.assessed_value ? `$${property.assessor_data.assessed_value.toLocaleString()}` : 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Annual Taxes</p>
+                        <p className="text-sm font-medium">
+                          {property.assessor_data.annual_taxes ? `$${property.assessor_data.annual_taxes.toLocaleString()}` : 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Last Sale</p>
+                        <p className="text-sm font-medium">
+                          {property.assessor_data.last_sale_price ? `$${property.assessor_data.last_sale_price.toLocaleString()}` : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
               {/* Price & Key Metrics */}

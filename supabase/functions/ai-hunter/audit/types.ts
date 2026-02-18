@@ -48,6 +48,7 @@ export const ScrapedDealSchema = z.object({
     condition: z.enum(['excellent', 'good', 'fair', 'poor', 'distressed']).optional(),
     repair_estimate: z.number().nonnegative().optional(),
     equity_percentage: z.number().optional(),
+    assessor_data: z.any().optional(), // NEW: JSONB enrichment
 });
 
 export type ScrapedDeal = z.infer<typeof ScrapedDealSchema>;
@@ -147,6 +148,21 @@ export interface AuditAlert {
     suggestedFix?: string;
 }
 
+export interface AssessorMismatch {
+    field: string;
+    listingValue: unknown;
+    assessorValue: unknown;
+    message: string;
+}
+
+export interface AssessorReport {
+    dealIndex: number;
+    title: string;
+    hasAssessorData: boolean;
+    mismatches: AssessorMismatch[];
+    score: number; // 0-100 based on validation
+}
+
 export interface AuditReport {
     timestamp: string;
     sessionId?: string;
@@ -157,6 +173,7 @@ export interface AuditReport {
     structural: StructuralReport;
     relevance: RelevanceReport;
     crossCheck: CrossCheckReport;
+    assessor?: AssessorReport[]; // NEW
     alerts: AuditAlert[];
 }
 

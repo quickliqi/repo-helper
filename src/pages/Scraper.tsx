@@ -35,6 +35,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAuth } from '@/hooks/useAuth';
 import { auditScrapedDeals } from '@/lib/scraper-audit/orchestrator';
 import type { ScrapedDeal, AuditReport } from '@/types/scraper-audit-types';
 import { DealAnalyzerModal } from '@/components/modals/DealAnalyzerModal';
@@ -203,6 +204,7 @@ export default function Scraper() {
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
   const [isAuditing, setIsAuditing] = useState(false);
   const { scrapeCredits, planTier, refreshSubscription, isLoading } = useSubscription(); // Assuming isLoading added to hook return
+  const { role } = useAuth();
   const [isLanding, setIsLanding] = useState(true);
 
   const { openDealAnalyzer } = useDealAnalyzerStore();
@@ -402,8 +404,17 @@ export default function Scraper() {
               <CardContent className="py-4 px-6">
                 <div className="flex flex-col items-center">
                   <span className="text-sm font-medium text-primary">Scrape Credits</span>
-                  <span className="text-3xl font-bold">{scrapeCredits}</span>
-                  <span className="text-xs text-muted-foreground mt-1">Remaining this month</span>
+                  {role === 'admin' ? (
+                    <div className="flex flex-col items-center">
+                      <span className="text-xl font-bold text-primary">Unlimited</span>
+                      <Badge variant="secondary" className="mt-1 text-xs">Admin</Badge>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-3xl font-bold">{scrapeCredits}</span>
+                      <span className="text-xs text-muted-foreground mt-1">Remaining this month</span>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

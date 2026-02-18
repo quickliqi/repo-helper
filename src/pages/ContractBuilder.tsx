@@ -43,10 +43,28 @@ export default function ContractBuilder() {
                     .eq('user_id', user!.id)
                     .single();
 
-                if (error) {
-                    if (error.code !== 'PGRST116') {
-                        console.error('Error fetching credits:', error);
+                if (error || !data || (data.monthly_free_credits + data.purchased_credits) === 0) {
+                    console.log("User has missing or 0 credits, applying fallback upsert...");
+                    try {
+                        const { data: newData, error: upsertError } = await supabase
+                            .from('user_contract_credits' as any)
+                            .upsert({
+                                user_id: user!.id,
+                                monthly_free_credits: 5,
+                                purchased_credits: 0,
+                                updated_at: new Date().toISOString()
+                            }, { onConflict: 'user_id' })
+                            .select()
+                            .single();
+
+                        if (!upsertError && newData) {
+                            setCredits({ free: newData.monthly_free_credits, purchased: newData.purchased_credits });
+                            return;
+                        }
+                    } catch (err) {
+                        console.error("Failed to apply credit fallback:", err);
                     }
+                    // If upsert failed, show 0 (safe fallback)
                     setCredits({ free: 0, purchased: 0 });
                 } else {
                     setCredits({ free: data.monthly_free_credits, purchased: data.purchased_credits });

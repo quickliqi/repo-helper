@@ -6,13 +6,14 @@
  * logs results to the scraper_audit_logs table.
  */
 
-import { AuditReport, AuditAlert, IntegrityReport, StructuralReport, RelevanceReport, CrossCheckReport } from "../types.ts";
+import { AuditReport, AuditAlert, IntegrityReport, StructuralReport, RelevanceReport, CrossCheckReport, AssessorReport } from "../types.ts";
 
 export function generateAlerts(
     integrityReports: IntegrityReport[],
     structural: StructuralReport,
     relevance: RelevanceReport,
-    crossCheck: CrossCheckReport
+    crossCheck: CrossCheckReport,
+    assessor: AssessorReport[]
 ): AuditAlert[] {
     const alerts: AuditAlert[] = [];
 
@@ -120,6 +121,21 @@ export function generateAlerts(
                 dealIndex: perDeal.dealIndex,
                 dealTitle: perDeal.title,
                 message: flag,
+            });
+        }
+    }
+
+    // Assessor alerts
+    for (const report of assessor) {
+        if (!report.hasAssessorData) continue;
+        for (const mismatch of report.mismatches) {
+            alerts.push({
+                severity: 'warning',
+                agentName: 'Assessor',
+                dealIndex: report.dealIndex,
+                dealTitle: report.title,
+                message: `Assessor Mismatch: ${mismatch.message}`,
+                suggestedFix: 'Verify listing details against county records; check for unpermitted additions.',
             });
         }
     }

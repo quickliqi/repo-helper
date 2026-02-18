@@ -93,6 +93,19 @@ export interface Property {
   image_urls: string[];
   status: PropertyStatus;
   views_count: number;
+  assessor_data?: {
+    apn?: string;
+    assessed_value?: number;
+    annual_taxes?: number;
+    last_sale_date?: string;
+    last_sale_price?: number;
+    sqft?: number;
+    bedrooms?: number;
+    bathrooms?: number;
+    year_built?: number;
+    land_use?: string;
+    official_address?: string;
+  };
   created_at: string;
   updated_at: string;
 }
