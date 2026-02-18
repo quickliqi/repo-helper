@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import { FileText, Loader2, AlertCircle, FileCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import { saveAs } from 'file-saver';
 
 const BASE_TEMPLATES = [
     { id: 'assignment', name: 'Standard Assignment Contract', content: 'ASSIGNMENT OF CONTRACT\n\nThis Assignment of Contract (the "Assignment") is made and entered into by and between...' },
@@ -139,7 +141,7 @@ export default function ContractBuilder() {
             }
 
             // Success! Generate the document
-            generateDocument();
+            await generateDocument();
             // Refresh credits
             refreshCredits();
             toast.success('Contract generated successfully!');
@@ -152,33 +154,71 @@ export default function ContractBuilder() {
         }
     };
 
-    const generateDocument = () => {
+    const generateDocument = async () => {
         const template = BASE_TEMPLATES.find(t => t.id === selectedTemplate);
         if (!template) return;
 
-        let content = template.content;
+        const children = [];
 
-        // Append add-ons
+        // Title
+        children.push(new Paragraph({
+            text: template.name,
+            heading: HeadingLevel.TITLE,
+            spacing: { after: 400 },
+        }));
+
+        // Base Content - split by double newline for paragraphs
+        const paragraphs = template.content.split('\n\n');
+        paragraphs.forEach(p => {
+            children.push(new Paragraph({
+                children: [
+                    new TextRun({
+                        text: p,
+                        size: 24, // 12pt font size
+                    }),
+                ],
+                spacing: { after: 200 }
+            }));
+        });
+
+        // Add-ons
         if (selectedAddOns.length > 0) {
-            content += '\n\n--- ADDENDUM ---\n\n';
+            children.push(new Paragraph({
+                text: "ADDITIONAL TERMS",
+                heading: HeadingLevel.HEADING_2,
+                spacing: { before: 400, after: 200 }
+            }));
+
             selectedAddOns.forEach(id => {
                 const addOn = ADD_ONS.find(a => a.id === id);
                 if (addOn) {
-                    content += `${addOn.name.toUpperCase()}\n${addOn.content}\n\n`;
+                    children.push(new Paragraph({
+                        text: addOn.name.toUpperCase(),
+                        heading: HeadingLevel.HEADING_3,
+                        spacing: { before: 200, after: 100 }
+                    }));
+                    children.push(new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: addOn.content,
+                                size: 24,
+                            }),
+                        ],
+                        spacing: { after: 200 }
+                    }));
                 }
             });
         }
 
-        // Create Blob
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${template.name.replace(/\s+/g, '_')}_QuickLiqi.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: children,
+            }],
+        });
+
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, `${template.name.replace(/\s+/g, '_')}_QuickLiqi.docx`);
     };
 
     if (loading) {
