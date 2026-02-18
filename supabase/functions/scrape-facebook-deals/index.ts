@@ -19,6 +19,7 @@ interface ScrapedDeal {
   price?: number | string;
   description?: string;
   url?: string;
+  listing_url?: string;
   image_url?: string;
   posted_date?: string;
   seller_name?: string;
@@ -246,7 +247,7 @@ ${JSON.stringify(buyBoxCriteria, null, 2)}
 
 TASK:
 1. Identify ALL property listings/deals mentioned in the content
-2. For each property, extract: address, city, state, zip, asking_price, arv (after repair value), bedrooms, bathrooms, sqft, condition, property_type, deal_type, repair_estimate, equity_percentage, description
+2. For each property, extract: address, city, state, zip, asking_price, arv (after repair value), bedrooms, bathrooms, sqft, condition, property_type, deal_type, repair_estimate, equity_percentage, description, listing_url
 3. Match each property against the investor's buy box criteria
 4. Calculate a match_score (0-100) based on how well it fits the criteria
 5. Calculate a confidence_score (0-100) based on how confident you are in the extracted data accuracy
@@ -261,6 +262,7 @@ Respond with a JSON array of deals in this exact format:
       "city": "string", 
       "state": "string",
       "zip_code": "string",
+      "listing_url": "string (specific url for this item)",
       "asking_price": number,
       "arv": number,
       "bedrooms": number,
@@ -283,8 +285,9 @@ If no valid deals are found, return: {"deals": []}
 CRITICAL RULES:
 1. You must strictly bind the data to its specific property container. Do not hallucinate data or mix beds/baths from neighboring listings.
 2. You must extract the exact address, price, beds, baths, and sqft for each specific property node.
-3. If a property address is missing or ambiguous, DO NOT include it in the results. Drop it entirely.
-4. Confidence score must reflect the certainty of the address and price data.`;
+3. EXTRACT THE SPECIFIC LISTING URL. Look for the anchor tag href. If it's relative, just return it as is.
+4. If a property address is missing or ambiguous, DO NOT include it in the results. Drop it entirely.
+5. Confidence score must reflect the certainty of the address and price data.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -343,6 +346,17 @@ CRITICAL RULES:
       let strictNotes = deal.analysis_notes || "";
       strictNotes += `\n[System Info]: Math calculated on frontend.`;
 
+      // Handle relative URLs for listing_url
+      let lUrl = deal.listing_url || deal.url || "";
+      if (lUrl.startsWith('/') && formattedUrl) {
+        try {
+          const baseUrl = new URL(formattedUrl).origin;
+          lUrl = baseUrl + lUrl;
+        } catch (e) {
+          // ignore invalid base
+        }
+      }
+
       return {
         user_id: userId,
         scrape_session_id: session.id,
@@ -350,6 +364,7 @@ CRITICAL RULES:
         post_content: scrapeData.data?.markdown?.substring(0, 5000) || null,
         extracted_data: {
           ...deal,
+          listing_url: lUrl
         },
         match_score: 0, // Calculated on frontend
         confidence_score: deal.confidence_score,

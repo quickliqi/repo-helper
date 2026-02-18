@@ -161,10 +161,17 @@ export function PropertyCard({ property, showActions = true, onSave, isSaved = f
 
       <CardFooter className="border-t bg-muted/30 gap-2">
         <Button variant="default" className="flex-1" asChild>
-          <Link to={`/property/${property.id}`}>
-            View Details
-            <ExternalLink className="ml-2 h-4 w-4" />
-          </Link>
+          {property.listing_url ? (
+            <a href={property.listing_url} target="_blank" rel="noopener noreferrer">
+              View Listing
+              <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          ) : (
+            <Link to={`/property/${property.id}`}>
+              View Details
+              <ExternalLink className="ml-2 h-4 w-4" />
+            </Link>
+          )}
         </Button>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Eye className="h-3.5 w-3.5" />

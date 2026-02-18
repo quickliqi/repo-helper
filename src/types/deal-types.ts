@@ -49,6 +49,7 @@ export const DealSchema = AddressSchema
         user_id: z.string().uuid().optional(),
         title: z.string().min(5, "Title is too short"),
         description: z.string().optional(),
+        listing_url: z.string().url().optional(),
         image_urls: z.array(z.string().url()).optional(),
         status: StatusEnum.default('active'),
     });

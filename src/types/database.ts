@@ -71,6 +71,7 @@ export interface Property {
   user_id: string;
   title: string;
   address: string;
+  listing_url?: string;
   city: string;
   state: string;
   zip_code: string;

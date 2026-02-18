@@ -48,6 +48,7 @@ interface Deal {
     source: string;
     description: string;
     link: string;
+    listing_url?: string;
     address?: string;
     city?: string;
     state?: string;
@@ -320,6 +321,7 @@ serve(async (req) => {
                                 source: "Aggregated MLS",
                                 description: `${beds || '?'} bed ${baths || '?'} bath, ${sqft ? sqft.toLocaleString() + ' sqft' : 'sqft N/A'}. ${description.text || ''}`.trim().substring(0, 300),
                                 link: listingUrl,
+                                listing_url: listingUrl,
                                 address: streetAddr,
                                 city: cityName,
                                 state: stateCode,
@@ -401,10 +403,11 @@ Return ONLY valid JSON:
       "city": "${city}",
       "state": "${state}",
       "bedrooms": 3,
-      "bathrooms": 2,
+      "bs": 2,
       "sqft": 1450,
       "description": "Full listing description",
       "link": "https://craigslist.org/actual/post/url",
+      "listing_url": "https://craigslist.org/actual/post/url",
       "condition": "fair"
     }
   ]
@@ -415,7 +418,8 @@ Rules:
 - Only include listings with a clear asking price
 - YOU MUST EXTRACT THE EXACT ADDRESS. If the address is missing, omit the deal entirely.
 - Do NOT hallucinate data. Do NOT mix beds/baths from neighboring listings. Bind data strictly to its specific property container.
-- link should be the actual posting URL if found in content`;
+- link should be the actual posting URL if found in content
+- listing_url should be the specific href from the anchor tag surrounding the property title or image. If it's relative (starts with /), keep it that way, we will fix it.`;
 
                         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
                             method: "POST",
@@ -441,26 +445,36 @@ Rules:
                                 const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
                                 if (jsonMatch) {
                                     const parsed = JSON.parse(jsonMatch[0]);
-                                    fsboDeals = (parsed.deals || []).map((d: Partial<Deal>) => ({
-                                        ...d,
-                                        title: d.title || "FSBO Deal",
-                                        price: typeof d.price === 'number' ? d.price : 0,
-                                        asking_price: typeof d.price === 'string' ? parseInt((d.price as string).replace(/[$,]/g, '')) : (d.price || 0),
-                                        location: `${d.city || city}, ${d.state || state}`,
-                                        city: d.city || city,
-                                        state: d.state || state,
-                                        property_type: d.property_type || 'single_family',
-                                        deal_type: "wholesale",
-                                        link: d.link || craigslistUrl,
-                                        source: "Craigslist FSBO",
-                                        description: d.description || "",
-                                        address: d.address || "",
-                                        zip_code: d.zip_code,
-                                        bedrooms: d.bedrooms,
-                                        bathrooms: d.bathrooms,
-                                        sqft: d.sqft,
-                                        condition: d.condition,
-                                    }));
+                                    fsboDeals = (parsed.deals || []).map((d: Partial<Deal>) => {
+                                        // Fix relative URLs
+                                        let lUrl = d.listing_url || d.link || craigslistUrl;
+                                        if (lUrl.startsWith('/')) {
+                                            const baseUrl = new URL(craigslistUrl).origin;
+                                            lUrl = baseUrl + lUrl;
+                                        }
+
+                                        return {
+                                            ...d,
+                                            title: d.title || "FSBO Deal",
+                                            price: typeof d.price === 'number' ? d.price : 0,
+                                            asking_price: typeof d.price === 'string' ? parseInt((d.price as string).replace(/[$,]/g, '')) : (d.price || 0),
+                                            location: `${d.city || city}, ${d.state || state}`,
+                                            city: d.city || city,
+                                            state: d.state || state,
+                                            property_type: d.property_type || 'single_family',
+                                            deal_type: "wholesale",
+                                            link: lUrl,
+                                            listing_url: lUrl,
+                                            source: "Craigslist FSBO",
+                                            description: d.description || "",
+                                            address: d.address || "",
+                                            zip_code: d.zip_code,
+                                            bedrooms: d.bedrooms,
+                                            bathrooms: d.bathrooms,
+                                            sqft: d.sqft,
+                                            condition: d.condition,
+                                        };
+                                    });
                                     logStep("FSBO deals extracted", { count: fsboDeals.length });
                                 }
                             } catch (parseErr: unknown) {
@@ -619,7 +633,8 @@ Return ONLY valid JSON:
                 location: deal.location,
                 source: deal.source || "Aggregated MLS",
                 description: deal.description || "",
-                link: deal.link || "",
+                link: deal.listing_url || deal.link || "",
+                listing_url: deal.listing_url || deal.link || "",
                 ai_score: 0, // Calculated on frontend
                 reasoning: "Raw data extracted.", // Logic moved to frontend
                 metrics: null, // Logic moved to frontend
