@@ -17,6 +17,7 @@ interface MlsListing {
     list_price?: number;
     price?: number;
     property_id?: string;
+    permalink?: string;
     href?: string;
     location?: { address?: PropertyAddress };
     address?: PropertyAddress;
@@ -302,11 +303,31 @@ serve(async (req) => {
                             // Calculate DOM if possible (simplified placeholder)
                             const dom = listDate ? Math.floor((Date.now() - new Date(listDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-                            const listingUrl = listing.href
-                                ? `https://www.realtor.com${listing.href}`
-                                : listing.property_id
-                                    ? `https://www.realtor.com/realestateandhomes-detail/${listing.property_id}`
-                                    : `https://www.realtor.com/realestateandhomes-search/${city}_${state}`;
+                            // Deterministic URL Construction
+                            // We prefer specific fields over generic search
+                            let listingUrl = `https://www.realtor.com/realestateandhomes-search/${city}_${state}`; // default fallback
+
+                            if (listing.permalink) {
+                                listingUrl = `https://www.realtor.com/realestateandhomes-detail/${listing.permalink}`;
+                                // Sometimes permalink is just the path, sometimes it's full? 
+                                // Usually Realtor.com API "permalink" is the last distinct part or a relative path.
+                                // If it starts with 'http', use it. If it starts with '/', prepend.
+                                // If it's just a slug, prepend detail path?
+                                // User reference: "const propertyUrl = rawItem.permalink ? `https://www.realtor.com${rawItem.permalink}`"
+                                // This implies permalink is relative path like "/realestateandhomes-detail/..."
+                                if (!listing.permalink.startsWith('http')) {
+                                    // Ensure we don't double slash if permalink has one
+                                    const path = listing.permalink.startsWith('/') ? listing.permalink : `/${listing.permalink}`;
+                                    listingUrl = `https://www.realtor.com${path}`;
+                                } else {
+                                    listingUrl = listing.permalink;
+                                }
+                            } else if (listing.href) {
+                                const path = listing.href.startsWith('/') ? listing.href : `/${listing.href}`;
+                                listingUrl = `https://www.realtor.com${path}`;
+                            } else if (listing.property_id) {
+                                listingUrl = `https://www.realtor.com/realestateandhomes-detail/${listing.property_id}`;
+                            }
 
                             const streetAddr = address.line || address.street || "Address Available on Source";
                             const cityName = address.city || city;
