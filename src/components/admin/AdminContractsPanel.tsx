@@ -38,7 +38,9 @@ export function AdminContractsPanel() {
             });
 
             if (error) throw error;
-            setUsers(data || []);
+            // The edge function returns { data: [...] }, so we need to access the inner data property
+            const result = data as { data: UserCreditData[] };
+            setUsers(result.data || []);
         } catch (error: unknown) {
             console.error('Error fetching credits:', error);
             const errorMessage = error instanceof Error ? error.message : "Failed to fetch credit data";
@@ -73,9 +75,11 @@ export function AdminContractsPanel() {
             const { error } = await supabase.functions.invoke('admin-manage-credits', {
                 body: {
                     action: 'update',
-                    target_user_id: userId,
-                    monthly_free_credits: editValues.monthly_free_credits,
-                    purchased_credits: editValues.purchased_credits
+                    payload: {
+                        target_user_id: userId,
+                        monthly_free_credits: editValues.monthly_free_credits,
+                        purchased_credits: editValues.purchased_credits
+                    }
                 }
             });
 
