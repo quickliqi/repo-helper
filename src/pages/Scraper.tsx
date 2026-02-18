@@ -40,6 +40,8 @@ import type { ScrapedDeal, AuditReport } from '@/types/scraper-audit-types';
 import { DealAnalyzerModal } from '@/components/modals/DealAnalyzerModal';
 import { useDealAnalyzerStore } from '@/stores/useDealAnalyzerStore';
 import type { DealDetail } from '@/types/deal-analyzer-types';
+import { calculateDealMetrics } from '@/lib/calculations';
+import type { DealInput } from '@/types/deal-types';
 
 interface DealMetrics {
   arv: number;
@@ -316,9 +318,42 @@ export default function Scraper() {
       if (error) throw error;
 
       if (data?.deals) {
-        setResults(data.deals);
+        // Enforce Single Source of Truth: Calculate metrics on frontend
+        const enrichedDeals = data.deals.map((deal: any) => {
+          // Map to DealInput for calculation
+          const input: DealInput = {
+            title: deal.title || 'Untitled',
+            address: deal.address || 'Unknown',
+            city: deal.city || '',
+            state: deal.state || '',
+            zip_code: deal.zip_code || '',
+            property_type: deal.property_type || 'single_family',
+            deal_type: 'wholesale',
+            condition: deal.condition || 'fair',
+            asking_price: deal.price || 0,
+            arv: deal.metrics?.arv || deal.arv, // Use existing if available (e.g. from listing), else undefined
+            repair_estimate: deal.metrics?.repair_estimate || deal.repair_estimate,
+            assignment_fee: 0,
+            bedrooms: deal.bedrooms,
+            bathrooms: deal.bathrooms,
+            sqft: deal.sqft
+          };
+
+          const metrics = calculateDealMetrics(input);
+
+          return {
+            ...deal,
+            ai_score: metrics ? metrics.score : 0,
+            metrics: metrics,
+            reasoning: metrics
+              ? `Math Verified: ${metrics.equityPercentage.toFixed(1)}% equity. MAO: $${Math.round(metrics.mao).toLocaleString()}. ROI: ${metrics.roi.toFixed(1)}%.`
+              : deal.reasoning || "Insufficient data for calculation."
+          };
+        });
+
+        setResults(enrichedDeals);
         setSources(data.sources || null);
-        toast.success(`Found ${data.deals.length} potential deals!`);
+        toast.success(`Found ${enrichedDeals.length} potential deals!`);
         await refreshSubscription();
       } else {
         toast.info('No deals found in this location currently.');

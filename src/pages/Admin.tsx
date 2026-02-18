@@ -31,6 +31,8 @@ import { FeatureFlagManager } from '@/components/admin/FeatureFlagManager';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { ScraperCommandCenter } from '@/components/admin/ScraperCommandCenter';
 import { AdminStripeControls } from '@/components/admin/AdminStripeControls';
+import { AdminContractsPanel } from '@/components/admin/AdminContractsPanel';
+import { FileText } from 'lucide-react';
 
 interface PlatformStats {
   totalUsers: number;
@@ -248,6 +250,10 @@ export default function Admin() {
                 <Zap className="h-4 w-4" />
                 <span className="hidden sm:inline">Stripe</span>
               </TabsTrigger>
+              <TabsTrigger value="contracts" className="gap-2">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Contracts</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="analytics">
@@ -288,6 +294,10 @@ export default function Admin() {
 
             <TabsContent value="stripe">
               <AdminStripeControls />
+            </TabsContent>
+
+            <TabsContent value="contracts">
+              <AdminContractsPanel />
             </TabsContent>
           </Tabs>
         </div>
