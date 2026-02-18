@@ -101,6 +101,9 @@ const logStep = (step: string, details?: unknown) => {
 // Admin email for bypass
 const ADMIN_EMAIL = "thomasdamienak@gmail.com";
 
+// ─── Shared Math Utility ──────────────────────────────────────────────
+import { calculateMetrics, cleanNumber } from "../_shared/dealMath.ts";
+
 // ─── Calculator Logic REMOVED (Frontend is Single Source of Truth) ───────────
 // Math logic has been moved to src/lib/calculations.ts on the frontend.
 
@@ -334,6 +337,11 @@ serve(async (req) => {
                                 }
                             }
 
+                            const streetAddr = address.line || address.street || "Address Available on Source";
+                            const cityName = address.city || city;
+                            const stateCode = address.state_code || address.state || state;
+                            const zipCode = address.postal_code || address.zip || "";
+
                             // 2. Search deeper in the object if not found
                             if (!listingUrl) {
                                 const searchValues = (obj: any, depth = 0) => {
@@ -355,18 +363,19 @@ serve(async (req) => {
                                 searchValues(listing);
                             }
 
-                            const streetAddr = address.line || address.street || "Address Available on Source";
-                            const cityName = address.city || city;
-                            const stateCode = address.state_code || address.state || state;
-                            const zipCode = address.postal_code || address.zip || "";
+                            // 3. Google Search Fallback (Link Fallback)
+                            if (!listingUrl) {
+                                const query = `${streetAddr} ${cityName} ${stateCode} real estate`;
+                                listingUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+                            }
 
                             return {
-                                title: `\${beds || '?'}BR/\${baths || '?'}BA - \${streetAddr}`,
+                                title: `${beds || '?'}BR/${baths || '?'}BA - ${streetAddr}`,
                                 price: price,
                                 asking_price: price,
-                                location: `\${cityName}, \${stateCode}`,
+                                location: `${cityName}, ${stateCode}`,
                                 source: "Aggregated MLS",
-                                description: `\${beds || '?'} bed \${baths || '?'} bath, \${sqft ? sqft.toLocaleString() + ' sqft' : 'sqft N/A'}. \${description.text || ''}`.trim().substring(0, 300),
+                                description: `${beds || '?'} bed ${baths || '?'} bath, ${sqft ? sqft.toLocaleString() + ' sqft' : 'sqft N/A'}. ${description.text || ''}`.trim().substring(0, 300),
                                 link: listingUrl,
                                 listing_url: listingUrl,
                                 address: streetAddr,
@@ -671,21 +680,25 @@ Return ONLY valid JSON:
             logStep("Dedup check failed, skipping");
         }
 
-        // Run Calculator Agent on all deals
-        // REFACTOR: Backend no longer calculates metrics. Frontend will handle it.
+        // Run Shared Math Utility on all deals
         const validatedDeals = allDeals.map((deal) => {
+            const price = cleanNumber(deal.asking_price || deal.price);
+            const arv = cleanNumber(deal.arv);
+            const repairs = cleanNumber(deal.repair_estimate);
+            const metrics = calculateMetrics(arv, price, repairs, 0, deal.condition);
+
             return {
                 title: deal.title,
-                price: deal.asking_price || deal.price,
+                price: price,
                 location: deal.location,
                 source: deal.source || "Aggregated MLS",
                 description: deal.description || "",
                 link: deal.listing_url || deal.link || "",
                 listing_url: deal.listing_url || deal.link || "",
-                ai_score: 0, // Calculated on frontend
-                reasoning: "Raw data extracted.", // Logic moved to frontend
-                metrics: null, // Logic moved to frontend
-                validated: false, // Will be validated on frontend
+                ai_score: metrics.score,
+                reasoning: "Metrics calculated via shared utility.",
+                metrics: metrics,
+                validated: true, // Mark as validated since we ran the math
                 // Preserve structured fields for audit pipeline
                 address: deal.address,
                 city: deal.city,
@@ -696,7 +709,7 @@ Return ONLY valid JSON:
                 sqft: deal.sqft,
                 property_type: deal.property_type,
                 condition: deal.condition,
-                asking_price: deal.asking_price || deal.price,
+                asking_price: price,
                 dom: deal.dom,
             };
         });

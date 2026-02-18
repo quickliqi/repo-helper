@@ -1,5 +1,13 @@
 
 import { DealMetrics } from "./types.ts";
+import {
+    sanitizeNumber,
+    calculateEquityPercentage,
+    calculateMAO,
+    calculateROI,
+    calculateDealScore,
+    calculateGrossEquity
+} from "../../_shared/dealMath.ts";
 
 // Constants for default assumptions
 export const DEFAULT_GOVERNANCE = {
@@ -37,11 +45,12 @@ export function calculateDealMetrics(
     deal: DealInput,
     settings: GovernanceSettings = {}
 ): DealMetrics | null {
-    if (!deal.asking_price) return null;
+    const askPrice = sanitizeNumber(deal.asking_price);
+    if (askPrice <= 0) return null;
 
-    const arv = deal.arv || deal.asking_price; // Fallback to asking if ARV not set
-    const repairs = deal.repair_estimate || 0;
-    const assignment = deal.assignment_fee || 0;
+    const arv = sanitizeNumber(deal.arv || askPrice); // Fallback to asking if ARV not set
+    const repairs = sanitizeNumber(deal.repair_estimate);
+    const assignment = sanitizeNumber(deal.assignment_fee);
 
     // Apply Governance Settings or Defaults
     const closingCostsPercent = settings.default_closing_costs ?? DEFAULT_GOVERNANCE.CLOSING_COSTS_PERCENT;
@@ -49,36 +58,30 @@ export function calculateDealMetrics(
     const maoFactor = settings.max_allowable_offer_factor ?? DEFAULT_GOVERNANCE.MAO_DISCOUNT_RATE;
 
     // 1. Equity Calculations
-    const totalCostBasis = deal.asking_price + repairs + assignment;
-    const grossEquity = arv - totalCostBasis;
-    const equityPercentage = arv > 0 ? (grossEquity / arv) * 100 : 0;
-
-    // 2. MAO (Maximum Allowable Offer) Calculation
-    const standardMao = (arv * maoFactor) - repairs - assignment;
-
-    // 3. ROI Calculation
+    const totalCostBasis = askPrice + repairs + assignment;
     const closingCosts = arv * closingCostsPercent;
     const holdingCosts = arv * holdingCostsPercent;
-    const totalInvested = deal.asking_price + repairs + assignment + closingCosts + holdingCosts;
+    const totalInvested = askPrice + repairs + assignment + closingCosts + holdingCosts;
+
+    const grossEquity = calculateGrossEquity(arv, totalCostBasis);
+    const equityPercentage = calculateEquityPercentage(arv, askPrice);
+
+    // 2. MAO (Maximum Allowable Offer) Calculation
+    const standardMao = calculateMAO(arv, repairs, assignment, maoFactor);
+
+    // 3. ROI Calculation
     const projectedProfit = arv - totalInvested;
-    const roi = totalInvested > 0 ? (projectedProfit / totalInvested) * 100 : 0;
+    const roi = calculateROI(arv, totalInvested);
 
     // 4. Deal Score (Simple Heuristic)
-    let score = 50; // Base
-    if (equityPercentage > 20) score += 20;
-    if (equityPercentage > 30) score += 10;
-    if (roi > 15) score += 10;
-    if (roi > 30) score += 10;
-    if (deal.condition === 'distressed' || deal.condition === 'poor') score -= 10;
-
-    score = Math.max(0, Math.min(100, score));
+    let score = calculateDealScore(equityPercentage, roi, deal.condition);
 
     // Risk Factors
     const riskFactors: string[] = [];
     if (!deal.arv) riskFactors.push("ARV is missing; using Asking Price as proxy.");
 
     const lowEquityThresh = settings.low_equity_threshold ?? DEFAULT_GOVERNANCE.LOW_EQUITY_THRESHOLD;
-    if (equityPercentage < lowEquityThresh) riskFactors.push(`Low equity margin (<${lowEquityThresh}%).`);
+    if (equityPercentage < lowEquityThresh) riskFactors.push(`Low equity margin (<${lowEquityThresh.toFixed(1)}%).`);
 
     if (repairs === 0 && deal.condition !== 'excellent') riskFactors.push("No repair estimate provided.");
 

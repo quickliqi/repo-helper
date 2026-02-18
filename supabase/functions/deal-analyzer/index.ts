@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
+import { calculateMetrics, cleanNumber } from "../_shared/dealMath.ts";
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -14,22 +16,22 @@ interface ChatMessage {
 
 interface DealPayload {
     title: string;
-    price: number;
+    price: number | string; // Allow string input for sanitization
     location: string;
     source: string;
     description: string;
     link: string;
-    ai_score: number;
+    ai_score: number | string;
     reasoning: string;
     metrics: {
-        arv: number;
-        mao: number;
-        roi: number;
-        equityPercentage: number;
-        score: number;
+        arv: number | string;
+        mao: number | string;
+        roi: number | string;
+        equityPercentage: number | string;
+        score: number | string;
         riskFactors: string[];
-        grossEquity: number;
-        projectedProfit: number;
+        grossEquity: number | string;
+        projectedProfit: number | string;
     } | null;
     validated: boolean;
     address?: string;
@@ -56,27 +58,33 @@ interface AuditPayload {
     integrity: unknown[];
 }
 
-interface LovableAiResponse {
-    choices?: Array<{
-        message?: {
-            content?: string;
-        };
-    }>;
-}
-
 // ─── Deal System Prompt ────────────────────────────────────────────
 function buildDealSystemPrompt(deal: DealPayload): string {
-    const metricsBlock = deal.metrics
-        ? `
+    // Sanitize inputs for the prompt
+    const safePrice = cleanNumber(deal.price);
+    const safeScore = cleanNumber(deal.ai_score);
+
+    let metricsBlock = "\nMETRICS: Insufficient data for full underwriting.";
+
+    if (deal.metrics) {
+        const arv = cleanNumber(deal.metrics.arv);
+        const mao = cleanNumber(deal.metrics.mao);
+        const grossEquity = cleanNumber(deal.metrics.grossEquity);
+        const equityPercent = cleanNumber(deal.metrics.equityPercentage);
+        const profit = cleanNumber(deal.metrics.projectedProfit);
+        const roi = cleanNumber(deal.metrics.roi);
+        const score = cleanNumber(deal.metrics.score);
+
+        metricsBlock = `
 KEY METRICS:
-- ARV (After Repair Value): $${deal.metrics.arv.toLocaleString()}
-- MAO (Maximum Allowable Offer): $${deal.metrics.mao.toLocaleString()}
-- Gross Equity: $${deal.metrics.grossEquity.toLocaleString()} (${deal.metrics.equityPercentage.toFixed(1)}%)
-- Projected Profit: $${deal.metrics.projectedProfit.toLocaleString()}
-- ROI: ${deal.metrics.roi.toFixed(1)}%
-- Deal Score: ${deal.metrics.score}/100
-- Risk Factors: ${deal.metrics.riskFactors.length > 0 ? deal.metrics.riskFactors.join("; ") : "None identified"}`
-        : "\nMETRICS: Insufficient data for full underwriting.";
+- ARV (After Repair Value): $${arv.toLocaleString()}
+- MAO (Maximum Allowable Offer): $${mao.toLocaleString()}
+- Gross Equity: $${grossEquity.toLocaleString()} (${equityPercent.toFixed(1)}%)
+- Projected Profit: $${profit.toLocaleString()}
+- ROI: ${roi.toFixed(1)}%
+- Deal Score: ${score}/100
+- Risk Factors: ${deal.metrics.riskFactors.length > 0 ? deal.metrics.riskFactors.join("; ") : "None identified"}`;
+    }
 
     return `You are a senior real estate underwriter and investment analyst with 20+ years of experience in residential acquisitions, fix-and-flip, wholesale, and buy-and-hold strategies.
 
@@ -84,11 +92,11 @@ You are analyzing a SPECIFIC deal. All of your answers must reference the concre
 
 PROPERTY UNDER ANALYSIS:
 - Title: ${deal.title}
-- Asking Price: $${deal.price.toLocaleString()}
+- Asking Price: $${safePrice.toLocaleString()}
 - Location: ${deal.location}
 - Source: ${deal.source}
 - Validated: ${deal.validated ? "Yes" : "No"}
-- AI Score: ${deal.ai_score}/100
+- AI Score: ${safeScore}/100
 ${metricsBlock}
 
 PROPERTY DETAILS:
@@ -186,46 +194,71 @@ serve(async (req) => {
 
         if (resolvedContext === "deal") {
             if (!deal) throw new Error("Missing required field: deal");
+
+            // Enforce Shared Math Logic (Sync with Frontend)
+            const price = cleanNumber(deal.price);
+            const arv = cleanNumber(deal.metrics?.arv || deal.price); // Fallback to price if ARV missing
+            const metrics = calculateMetrics(
+                arv,
+                price,
+                0, // Repairs not typically passed in basic deal object, but if we have it:
+                0, // Assignment
+                deal.condition || 'fair'
+            );
+
+            // Override metrics with strict calculation
+            deal.metrics = {
+                ...metrics,
+                // Preserve original ARV if it existed, otherwise use what we calculated/cleaned
+                arv: deal.metrics?.arv || arv,
+                // Merge other props if needed
+                riskFactors: metrics.riskFactors
+            };
+
             systemPrompt = buildDealSystemPrompt(deal);
         } else {
             if (!auditReport) throw new Error("Missing required field: auditReport");
             systemPrompt = buildAuditSystemPrompt(auditReport);
         }
 
-        const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-        if (!lovableKey) {
-            throw new Error("AI service not configured");
+        const googleApiKey = Deno.env.get("GOOGLE_GENERATIVE_AI_API_KEY");
+        if (!googleApiKey) {
+            console.error("[DEAL-ANALYZER] Missing GOOGLE_GENERATIVE_AI_API_KEY");
+            throw new Error("AI service not configured (Missing GOOGLE_GENERATIVE_AI_API_KEY)");
         }
 
-        // Build messages array for the AI
-        const messages: ChatMessage[] = [
-            { role: "system", content: systemPrompt },
-            ...(history || []).slice(-20),
-            { role: "user", content: message },
-        ];
+        // Initialize Google Generative AI
+        const genAI = new GoogleGenerativeAI(googleApiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        console.log(`[DEAL-ANALYZER] Context: ${resolvedContext}, sending ${messages.length} messages to AI`);
+        // Build chat history for Gemini
+        // Filter out system messages as they are not supported in history array for Gemini
+        // System prompt is handled separately if needed, or prepended to the first message context
+        // For simplicity with this SDK version, we'll prepend the system prompt context to the current interaction
+        // if history is empty, or treat it as context. 
+        // Better yet: Gemini supports systemInstruction in newer models/SDKs, but let's stick to the reliable context injection method.
 
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${lovableKey}`,
-                "Content-Type": "application/json",
+        // Transform history to Gemini format
+        const chatHistory = (history || []).filter(msg => msg.role !== 'system').map(msg => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.content }]
+        }));
+
+        console.log(`[DEAL-ANALYZER] Context: ${resolvedContext}, sending ${chatHistory.length} history messages to Gemini`);
+
+        const chat = model.startChat({
+            history: chatHistory,
+            generationConfig: {
+                maxOutputTokens: 1000,
             },
-            body: JSON.stringify({
-                model: "google/gemini-2.5-flash",
-                messages,
-            }),
         });
 
-        if (!aiResponse.ok) {
-            const errorText = await aiResponse.text();
-            console.error(`[DEAL-ANALYZER] AI API error: ${aiResponse.status} - ${errorText}`);
-            throw new Error("AI service temporarily unavailable");
-        }
+        // Prepend system prompt to the user message for context
+        // This is a robust way to ensure the model follows instructions without needing specific systemInstruction support in all environments
+        const fullMessage = `${systemPrompt}\n\nUSER QUESTION: ${message}`;
 
-        const aiData: LovableAiResponse = await aiResponse.json();
-        const reply = aiData.choices?.[0]?.message?.content || "I wasn't able to generate a response. Please try rephrasing your question.";
+        const result = await chat.sendMessage(fullMessage);
+        const reply = result.response.text();
 
         console.log(`[DEAL-ANALYZER] Response generated (${reply.length} chars)`);
 
@@ -234,9 +267,15 @@ serve(async (req) => {
         });
     } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[DEAL-ANALYZER] ERROR: ${errMsg}`);
-        return new Response(JSON.stringify({ error: errMsg }), {
-            status: 400,
+        console.error(`[DEAL-ANALYZER] CRITICAL ERROR: ${errMsg}`);
+
+        // Return 200 with error property so frontend can display it gracefully
+        // instead of crashing with a "non-2xx" status code
+        return new Response(JSON.stringify({
+            reply: `I encountered an error: ${errMsg}`,
+            error: errMsg
+        }), {
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     }

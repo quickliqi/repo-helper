@@ -90,6 +90,8 @@ export function runCrossCheck(
                     deviationPercent: Math.round(dev),
                 });
             }
+            // Overwrite with strict calculated value to ensure data integrity
+            deal.equity_percentage = metrics.equityPercentage;
         }
 
         // Cross-check reported score against calculated score
@@ -103,6 +105,8 @@ export function runCrossCheck(
                     deviationPercent: Math.round(dev),
                 });
             }
+            // Overwrite with strict calculated value
+            deal.ai_score = metrics.score;
         }
 
         // Check MAO plausibility

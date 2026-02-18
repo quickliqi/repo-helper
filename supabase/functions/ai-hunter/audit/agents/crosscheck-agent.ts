@@ -61,6 +61,8 @@ export function runCrossCheck(
                     deviationPercent: Math.round(deviation * 10) / 10,
                 });
             }
+            // OVERWRITE: Unify the score to be the calculated one
+            deal.ai_score = metrics.score;
         }
 
         // Compare equity percentage if reported
@@ -74,6 +76,8 @@ export function runCrossCheck(
                     deviationPercent: Math.round(deviation * 10) / 10,
                 });
             }
+            // OVERWRITE: Unify equity percentage
+            deal.equity_percentage = Math.round(metrics.equityPercentage * 10) / 10;
         }
 
         // Check MAO plausibility
