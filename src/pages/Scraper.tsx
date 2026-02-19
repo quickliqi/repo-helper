@@ -331,27 +331,27 @@ export default function Scraper() {
         })
       ]);
 
-      if (aiHunterResponse.error) throw aiHunterResponse.error;
+      if (aiHunterResponse.error) console.error("AI Hunter Error:", aiHunterResponse.error);
+      if (liveMarketResponse.error) console.error("Live Deals Error:", liveMarketResponse.error);
 
       let rawDeals = aiHunterResponse.data?.deals || [];
-
-      // 2. Map and merge Live Market deals from Edge Function
       const liveDeals = liveMarketResponse.data || [];
       if (liveDeals && liveDeals.length > 0) {
-        const mappedStealth = liveDeals.map((d: any) => ({
+        const mappedLive = liveDeals.map((d: any) => ({
           title: d.address,
           address: d.address,
           city: city,
           state: state,
-          price: parseInt(String(d.list_price).replace(/[^0-9]/g, '')) || 0,
-          source: "Live Market",
+          price: parseInt(d.list_price?.toString().replace(/[^0-9]/g, '')) || 0,
+          source: "Live API",
           link: d.url,
           description: `Days on Market: ${d.dom}`,
           property_type: propertyType !== 'any' ? propertyType : 'single_family',
           condition: 'fair',
+          integrity: d.data_integrity,
         }));
 
-        rawDeals = [...mappedStealth, ...rawDeals];
+        rawDeals = [...mappedLive, ...rawDeals];
       }
 
       // 3. Underwrite everything through the Single Source of Truth math engine
@@ -381,8 +381,7 @@ export default function Scraper() {
             ...deal,
             ai_score: metrics ? metrics.score : 0,
             metrics: metrics,
-            data_integrity: deal.data_integrity,
-            integrity: deal.data_integrity,
+            integrity: deal.integrity,
             reasoning: metrics
               ? `Math Verified: ${metrics.equityPercentage.toFixed(1)}% equity. MAO: $${Math.round(metrics.mao).toLocaleString()}. ROI: ${metrics.roi.toFixed(1)}%.`
               : deal.reasoning || "Insufficient data for calculation."
