@@ -117,7 +117,7 @@ INSTRUCTIONS:
 1. Always reference the specific numbers (price, MAO, ARV, equity %) when answering.
 2. If the user asks about comps, provide analysis based on the location and price point.
 3. If asked about renovation costs, factor in the condition and square footage.
-4. Be direct and actionable. Use bullet points for clarity.
+4. CRITICAL: Output responses in plain text only. Do NOT use markdown formatting (no asterisks, no hashes, no special characters for lists). Separate all paragraphs and list items with double line breaks for readability.
 5. If data is missing (e.g., no ARV), flag it as a risk and explain what the user should verify.
 6. Keep responses concise — 2-4 paragraphs max unless the user asks for a deep dive.`;
 }
@@ -148,7 +148,7 @@ INSTRUCTIONS:
 2. Explain what each alert means in practical terms — how it affects the scraped data quality.
 3. Prioritize critical issues first and suggest concrete remediation steps.
 4. If the user asks about a specific category, provide deep analysis of related alerts.
-5. Be direct and actionable. Use bullet points for clarity.
+5. CRITICAL: Output responses in plain text only. Do NOT use markdown formatting (no asterisks, no hashes, no special characters for lists). Separate all paragraphs and list items with double line breaks for readability.
 6. Keep responses concise — 2-4 paragraphs max unless the user asks for a deep dive.`;
 }
 

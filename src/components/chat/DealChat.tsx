@@ -27,16 +27,16 @@ function buildGreeting(contextType: AnalyzerContextType, payload: AnalyzerPayloa
     if (contextType === "deal" && isDealDetail(payload)) {
         const deal = payload;
         const metricsLine = deal.metrics
-            ? ` The asking price is **$${deal.price.toLocaleString()}** against an MAO of **$${deal.metrics.mao.toLocaleString()}** with **${deal.metrics.equityPercentage.toFixed(1)}% equity**.`
+            ? ` The asking price is $${deal.price.toLocaleString()} against an MAO of $${deal.metrics.mao.toLocaleString()} with ${deal.metrics.equityPercentage.toFixed(1)}% equity.`
             : "";
-        return `I've loaded the full underwriting data for **${deal.title}** at **${deal.location}**.${metricsLine}\n\nWhat would you like to know? I can analyze comps, renovation costs, exit strategies, or any specific risk factors.`;
+        return `I've loaded the full underwriting data for ${deal.title} at ${deal.location}.${metricsLine}\n\nWhat would you like to know? I can analyze comps, renovation costs, exit strategies, or any specific risk factors.`;
     }
 
     // Audit context
     const audit = payload as AuditReport;
     const alertCount = audit.alerts.length;
     const criticalCount = audit.alerts.filter((a) => a.severity === "critical").length;
-    return `I've reviewed the scrape audit report. Overall score: **${audit.overallScore}/100** — ${audit.pass ? "**PASS**" : "**REVIEW NEEDED**"}. There are **${alertCount} alerts** (${criticalCount} critical).\n\nAsk me about specific warnings, data integrity concerns, or how to resolve the flagged issues.`;
+    return `I've reviewed the scrape audit report. Overall score: ${audit.overallScore}/100 — ${audit.pass ? "PASS" : "REVIEW NEEDED"}. There are ${alertCount} alerts (${criticalCount} critical).\n\nAsk me about specific warnings, data integrity concerns, or how to resolve the flagged issues.`;
 }
 
 export function DealChat({ contextType, dataPayload }: DealChatProps) {

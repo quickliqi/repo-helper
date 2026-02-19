@@ -83,6 +83,13 @@ interface SourceBreakdown {
   fallback: number;
 }
 
+interface ScrapeParams {
+  location: string;
+  max_price?: number;
+  min_beds?: number;
+  max_dom?: number;
+}
+
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -231,6 +238,38 @@ export default function Scraper() {
     }
   };
 
+  const fetchStealthDeals = async (params: ScrapeParams) => {
+    try {
+      const response = await fetch("http://localhost:8000/scrape", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          location: params.location,
+          max_price: params.max_price,
+          min_beds: params.min_beds,
+          max_dom: params.max_dom,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Scraper service error: ${response.statusText}`);
+      }
+
+      const deals = await response.json();
+      console.log("Stealth Scraper Results:", deals);
+
+      // TODO: Save these precise URLs to your Supabase database
+      // or map them directly into your UI state to render the property cards
+      return deals;
+
+    } catch (error) {
+      console.error("Failed to fetch deals from local scraper:", error);
+      toast.error("Failed to reach local scraper service.");
+    }
+  };
+
   // Run audit pipeline when results change
   useEffect(() => {
     const runAudit = async () => {
@@ -306,23 +345,51 @@ export default function Scraper() {
     setSources(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('ai-hunter', {
-        body: {
-          city,
-          state,
-          min_price: minPrice ? Number(minPrice) : undefined,
+      // 1. Kick off BOTH the AI Hunter (Supabase) and Stealth Scraper (Python) simultaneously
+      const [aiHunterResponse, stealthDeals] = await Promise.all([
+        supabase.functions.invoke('ai-hunter', {
+          body: {
+            city,
+            state,
+            min_price: minPrice ? Number(minPrice) : undefined,
+            max_price: maxPrice ? Number(maxPrice) : undefined,
+            property_type: propertyType !== 'any' ? propertyType : undefined,
+            max_days_on_market: maxDaysOnMarket ? Number(maxDaysOnMarket) : undefined
+          }
+        }),
+        fetchStealthDeals({
+          location: `${city}, ${state}`,
           max_price: maxPrice ? Number(maxPrice) : undefined,
-          property_type: propertyType !== 'any' ? propertyType : undefined,
-          max_days_on_market: maxDaysOnMarket ? Number(maxDaysOnMarket) : undefined
-        }
-      });
+          min_beds: undefined,
+          max_dom: maxDaysOnMarket ? Number(maxDaysOnMarket) : undefined,
+        })
+      ]);
 
-      if (error) throw error;
+      if (aiHunterResponse.error) throw aiHunterResponse.error;
 
-      if (data?.deals) {
-        // Enforce Single Source of Truth: Calculate metrics on frontend
-        const enrichedDeals = data.deals.map((deal: any) => {
-          // Map to DealInput for calculation
+      let rawDeals = aiHunterResponse.data?.deals || [];
+
+      // 2. Map and merge the Stealth deals
+      if (stealthDeals && stealthDeals.length > 0) {
+        const mappedStealth = stealthDeals.map((d: any) => ({
+          title: d.address,
+          address: d.address,
+          city: city,
+          state: state,
+          price: parseInt(d.list_price.replace(/[^0-9]/g, '')) || 0,
+          source: "Stealth Scraper",
+          link: d.url,
+          description: `Days on Market: ${d.dom}`,
+          property_type: propertyType !== 'any' ? propertyType : 'single_family',
+          condition: 'fair',
+        }));
+
+        rawDeals = [...mappedStealth, ...rawDeals];
+      }
+
+      // 3. Underwrite everything through the Single Source of Truth math engine
+      if (rawDeals.length > 0) {
+        const enrichedDeals = rawDeals.map((deal: any) => {
           const input: DealInput = {
             title: deal.title || 'Untitled',
             address: deal.address || 'Unknown',
@@ -333,7 +400,7 @@ export default function Scraper() {
             deal_type: 'wholesale',
             condition: deal.condition || 'fair',
             asking_price: deal.price || 0,
-            arv: deal.metrics?.arv || deal.arv, // Use existing if available (e.g. from listing), else undefined
+            arv: deal.metrics?.arv || deal.arv,
             repair_estimate: deal.metrics?.repair_estimate || deal.repair_estimate,
             assignment_fee: 0,
             bedrooms: deal.bedrooms,
@@ -354,7 +421,7 @@ export default function Scraper() {
         });
 
         setResults(enrichedDeals);
-        setSources(data.sources || null);
+        setSources(aiHunterResponse.data?.sources || null);
         toast.success(`Found ${enrichedDeals.length} potential deals!`);
         await refreshSubscription();
       } else {
