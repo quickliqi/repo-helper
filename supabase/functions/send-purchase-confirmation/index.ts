@@ -166,9 +166,9 @@ serve(async (req) => {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: unknown) {
-    logStep("ERROR", { message: error.message });
+    logStep("ERROR", { message: (error as Error).message });
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

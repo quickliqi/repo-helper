@@ -243,11 +243,11 @@ serve(async (req) => {
         });
 
         // Update profile if provided
-        if (syncData?.profile) {
+        if ((syncData as any)?.profile) {
           await supabaseAdmin
             .from("profiles")
             .update({
-              ...syncData.profile,
+              ...(syncData as any).profile,
               updated_at: new Date().toISOString(),
             })
             .eq("user_id", user_id);
