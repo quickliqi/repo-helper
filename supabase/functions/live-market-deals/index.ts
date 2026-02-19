@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+    // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
     }
@@ -15,29 +16,44 @@ serve(async (req) => {
     try {
         const { location, max_price, min_beds, max_dom } = await req.json();
 
+        // Stage 1.1: Graceful key check — never crash, return [] with a clear signal
         const RAPIDAPI_KEY = Deno.env.get("RAPIDAPI_KEY");
         if (!RAPIDAPI_KEY) {
-            console.warn("[live-market-deals] RAPIDAPI_KEY not set — returning empty array.");
-            return new Response(JSON.stringify([]), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            console.warn("[live-market-deals] RAPIDAPI_KEY not set.");
+            return new Response(
+                JSON.stringify({ error: "RAPIDAPI_KEY missing", deals: [] }),
+                { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
         }
 
         const encodedLocation = encodeURIComponent(location || "");
         const apiUrl = `https://zillow-com1.p.rapidapi.com/propertyExtendedSearch?location=${encodedLocation}&status_type=ForSale`;
 
-        const apiRes = await fetch(apiUrl, {
-            headers: {
-                "x-rapidapi-key": RAPIDAPI_KEY,
-                "x-rapidapi-host": "zillow-com1.p.rapidapi.com",
-            },
-        });
-
-        if (!apiRes.ok) {
-            console.error("[live-market-deals] RapidAPI error:", apiRes.status, await apiRes.text());
-            return new Response(JSON.stringify([]), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
+        let apiRes: Response;
+        try {
+            apiRes = await fetch(apiUrl, {
+                headers: {
+                    "x-rapidapi-key": RAPIDAPI_KEY,
+                    "x-rapidapi-host": "zillow-com1.p.rapidapi.com",
+                },
             });
+        } catch (fetchErr) {
+            const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+            console.error("[live-market-deals] Network error calling RapidAPI:", msg);
+            return new Response(
+                JSON.stringify({ error: "Network error calling RapidAPI", details: msg, deals: [] }),
+                { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        }
+
+        // Stage 1.1: Explicit non-ok response — return structured error so frontend can surface it
+        if (!apiRes.ok) {
+            const errorText = await apiRes.text();
+            console.error("[live-market-deals] RapidAPI returned non-200:", apiRes.status, errorText);
+            return new Response(
+                JSON.stringify({ error: "RapidAPI Error", status: apiRes.status, details: errorText, deals: [] }),
+                { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
         }
 
         const data = await apiRes.json();
@@ -48,7 +64,7 @@ serve(async (req) => {
         if (min_beds) props = props.filter((p) => !p.bedrooms || p.bedrooms >= min_beds);
         if (max_dom) props = props.filter((p) => !p.daysOnZillow || p.daysOnZillow <= max_dom);
 
-        // Fetch public records concurrently for triangulation
+        // Run triangulation concurrently for every property
         const deals = await Promise.all(
             props.map(async (prop: any) => {
                 const baseData = {
@@ -73,9 +89,11 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     } catch (err) {
-        console.error("[live-market-deals] Unexpected error:", err);
-        return new Response(JSON.stringify([]), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[live-market-deals] Unexpected error:", msg);
+        return new Response(
+            JSON.stringify({ error: "Unexpected server error", details: msg, deals: [] }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
     }
 });

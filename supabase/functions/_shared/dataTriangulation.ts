@@ -1,7 +1,7 @@
 /**
- * Data Triangulation Utility — Live Regrid v2 Diff Engine
- * Compares county assessor data (Regrid) against Zillow listing data.
- * Estated removed — migrating to ATTOM. 2-way comparison only.
+ * Data Triangulation Utility — Live Regrid V2 Diff Engine
+ * Compares county assessor data (Regrid V2 schema) against Zillow listing data.
+ * V2 schema fields: area_building, parval, owner, zoning_description
  */
 
 export interface DataIntegrity {
@@ -18,70 +18,88 @@ export async function fetchPublicRecords(address: string, baseData: any): Promis
     let confidence_score = 100;
 
     if (!regridKey) {
-        console.warn("Missing REGRID_API_KEY. Returning default integrity data.");
+        console.warn("[dataTriangulation] Missing REGRID_API_KEY. Returning default integrity data.");
         return {
             confidence_score: 50,
             verified_matches: {},
-            discrepancies: { "API": { source_a: "Missing Key", source_b: "N/A" } },
+            discrepancies: { "API Key": { source_a: "Missing REGRID_API_KEY", source_b: "N/A" } },
         };
     }
 
     try {
-        // Call Regrid v2 Address Endpoint
+        // Stage 2.1: Regrid V2 address endpoint
         const regridUrl = `https://app.regrid.com/api/v2/parcels/address?query=${encodeURIComponent(address)}&token=${regridKey}`;
         const res = await fetch(regridUrl);
 
-        if (res.ok) {
-            const data = await res.json();
-
-            // Extract properties if a parcel was found
-            if (data.parcels?.features?.length > 0) {
-                const countyData = data.parcels.features[0].properties.fields;
-
-                // 1. Compare Square Footage
-                // Regrid uses various sqft fields depending on the county
-                const countySqft = countyData.ll_bldg_area_sq_ft || countyData.sqft || countyData.bldg_sqft;
-                if (countySqft && baseData.sqft) {
-                    // Allow a 5% margin of error for unpermitted additions
-                    const diff = Math.abs(countySqft - baseData.sqft) / baseData.sqft;
-                    if (diff > 0.05) {
-                        discrepancies['Square Footage'] = {
-                            source_a: `${baseData.sqft} (Listing)`,
-                            source_b: `${countySqft} (County)`,
-                        };
-                        confidence_score -= 15;
-                    } else {
-                        verified_matches['Square Footage'] = countySqft;
-                    }
-                }
-
-                // 2. Owner & Zoning (informational — always add to verified)
-                if (countyData.owner) {
-                    verified_matches['County Owner'] = countyData.owner;
-                }
-                if (countyData.zoning || countyData.zoning_description) {
-                    verified_matches['Zoning'] = countyData.zoning || countyData.zoning_description;
-                }
-
-            } else {
-                confidence_score -= 20;
-                discrepancies['Record Match'] = {
-                    source_a: "Listing Found",
-                    source_b: "No County Parcel Found",
-                };
-            }
-        } else {
-            console.error("[dataTriangulation] Regrid API Error:", res.status, await res.text());
+        if (!res.ok) {
+            console.error("[dataTriangulation] Regrid API non-200:", res.status, await res.text());
+            // Degrade gracefully rather than crash
+            return {
+                confidence_score: 50,
+                verified_matches: {},
+                discrepancies: { "Regrid API": { source_a: `HTTP ${res.status}`, source_b: "County data unavailable" } },
+            };
         }
+
+        const data = await res.json();
+
+        if (data.parcels?.features?.length > 0) {
+            const countyData = data.parcels.features[0].properties.fields;
+
+            // ── Square Footage ────────────────────────────────────────────────
+            // Prioritize area_building (habitable area) per V2 schema, fall back to sqft
+            const countySqft = countyData.area_building ?? countyData.sqft ?? countyData.ll_bldg_area_sq_ft;
+            if (countySqft && baseData.sqft) {
+                const diff = Math.abs(countySqft - baseData.sqft) / baseData.sqft;
+                if (diff > 0.05) {
+                    discrepancies['Square Footage'] = {
+                        source_a: `${baseData.sqft.toLocaleString()} sq ft (Listing)`,
+                        source_b: `${countySqft.toLocaleString()} sq ft (County)`,
+                    };
+                    confidence_score -= 15;
+                } else {
+                    verified_matches['Square Footage'] = `${countySqft.toLocaleString()} sq ft`;
+                }
+            }
+
+            // ── County Assessed Value (parval) ────────────────────────────────
+            if (countyData.parval) {
+                verified_matches['County Assessed Value'] = `$${Number(countyData.parval).toLocaleString()}`;
+            }
+
+            // ── Owner of Record ────────────────────────────────────────────────
+            if (countyData.owner) {
+                verified_matches['Owner of Record'] = countyData.owner;
+            }
+
+            // ── Zoning ────────────────────────────────────────────────────────
+            const zoning = countyData.zoning_description || countyData.zoning;
+            if (zoning) {
+                verified_matches['Zoning'] = zoning;
+            }
+
+        } else {
+            // No parcel matched — reduce confidence, flag it
+            confidence_score -= 20;
+            discrepancies['Record Match'] = {
+                source_a: "Listing Found",
+                source_b: "No County Parcel Located",
+            };
+        }
+
     } catch (error) {
-        console.error("[dataTriangulation] Failed to fetch from Regrid:", error);
+        // Never crash the parent function — degrade confidence and log
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error("[dataTriangulation] Regrid fetch failed:", msg);
+        return {
+            confidence_score: 50,
+            verified_matches: {},
+            discrepancies: { "Regrid Error": { source_a: msg, source_b: "County data unavailable" } },
+        };
     }
 
-    // Ensure confidence score doesn't drop below 0
-    confidence_score = Math.max(0, confidence_score);
-
     return {
-        confidence_score,
+        confidence_score: Math.max(0, confidence_score),
         verified_matches,
         discrepancies,
     };

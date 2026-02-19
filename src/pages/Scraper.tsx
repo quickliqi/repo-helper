@@ -331,11 +331,18 @@ export default function Scraper() {
         })
       ]);
 
-      if (aiHunterResponse.error) console.error("AI Hunter Error:", aiHunterResponse.error);
-      if (liveMarketResponse.error) console.error("Live Deals Error:", liveMarketResponse.error);
+      if (aiHunterResponse.error) {
+        toast.error(`AI Hunter Error: ${aiHunterResponse.error.message || 'Check Edge Function logs'}`);
+      }
+      if (liveMarketResponse.error) {
+        toast.error(`Live Zillow API Error: ${liveMarketResponse.error.message || 'Check Edge Function logs'}`);
+      }
 
       let rawDeals = aiHunterResponse.data?.deals || [];
-      const liveDeals = liveMarketResponse.data || [];
+      // Safely handle structured error objects returned by the hardened Edge Function
+      const liveDeals: any[] = Array.isArray(liveMarketResponse.data)
+        ? liveMarketResponse.data
+        : liveMarketResponse.data?.deals ?? [];
       if (liveDeals && liveDeals.length > 0) {
         const mappedLive = liveDeals.map((d: any) => ({
           title: d.address,
@@ -393,7 +400,7 @@ export default function Scraper() {
         toast.success(`Found ${enrichedDeals.length} potential deals!`);
         await refreshSubscription();
       } else {
-        toast.info('No deals found in this location currently.');
+        toast.warning('Both APIs connected successfully, but 0 properties matched your filters. Try widening your search area or price range.');
       }
     } catch (error) {
       console.error('Scrape error:', error);
