@@ -62,20 +62,29 @@ export async function fetchPublicRecords(address: string, baseData: any): Promis
                 }
             }
 
-            // ── County Assessed Value (parval) ────────────────────────────────
+            // ── County Assessed Value (parval) & Improvement Value ────────────
             if (countyData.parval) {
                 verified_matches['County Assessed Value'] = `$${Number(countyData.parval).toLocaleString()}`;
             }
+            if (countyData.improvval) {
+                verified_matches['Improvement Value'] = `$${Number(countyData.improvval).toLocaleString()}`;
+            }
 
-            // ── Owner of Record ────────────────────────────────────────────────
+            // ── Owner of Record & Mailing Address ─────────────────────────────
             if (countyData.owner) {
                 verified_matches['Owner of Record'] = countyData.owner;
             }
+            if (countyData.mailadd) {
+                verified_matches['Mailing Address'] = countyData.mailadd;
+            }
 
-            // ── Zoning ────────────────────────────────────────────────────────
+            // ── Zoning & Year Built ───────────────────────────────────────────
             const zoning = countyData.zoning_description || countyData.zoning;
             if (zoning) {
                 verified_matches['Zoning'] = zoning;
+            }
+            if (countyData.yearbuilt) {
+                verified_matches['Year Built'] = countyData.yearbuilt;
             }
 
         } else {
