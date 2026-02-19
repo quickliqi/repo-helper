@@ -240,7 +240,7 @@ export default function Scraper() {
 
   const fetchStealthDeals = async (params: ScrapeParams) => {
     try {
-      const response = await fetch("http://localhost:8000/scrape", {
+      const response = await fetch("https://odd-readers-follow.loca.lt/scrape", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
