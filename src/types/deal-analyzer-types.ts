@@ -1,5 +1,12 @@
 import type { AuditReport } from "@/types/scraper-audit-types";
 
+// ─── Data Integrity (Triangulation Engine) ────────────────────────
+export interface DataIntegrity {
+    confidence_score: number;
+    verified_matches: Record<string, any>;
+    discrepancies: Record<string, { source_a: any; source_b: any }>;
+}
+
 // ─── Deal Metrics ──────────────────────────────────────────────────
 export interface DealMetrics {
     arv: number;
@@ -34,6 +41,7 @@ export interface DealDetail {
     property_type?: string;
     condition?: string;
     image?: string;
+    integrity?: DataIntegrity;
 }
 
 // ─── Modal Payload Union ───────────────────────────────────────────

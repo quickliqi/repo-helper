@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { fetchPublicRecords } from "../_shared/dataTriangulation.ts";
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -40,20 +41,33 @@ serve(async (req) => {
         }
 
         const data = await apiRes.json();
-        const props: any[] = data.props || [];
+        let props: any[] = data.props || [];
 
         // Apply optional filters
-        let filtered = props;
-        if (max_price) filtered = filtered.filter((p) => !p.price || p.price <= max_price);
-        if (min_beds) filtered = filtered.filter((p) => !p.bedrooms || p.bedrooms >= min_beds);
-        if (max_dom) filtered = filtered.filter((p) => !p.daysOnZillow || p.daysOnZillow <= max_dom);
+        if (max_price) props = props.filter((p) => !p.price || p.price <= max_price);
+        if (min_beds) props = props.filter((p) => !p.bedrooms || p.bedrooms >= min_beds);
+        if (max_dom) props = props.filter((p) => !p.daysOnZillow || p.daysOnZillow <= max_dom);
 
-        const deals = filtered.map((prop: any) => ({
-            address: prop.address || "Address unavailable",
-            url: `https://www.zillow.com/homedetails/${prop.zpid}_zpid/`,
-            list_price: prop.price ? `$${prop.price.toLocaleString()}` : "N/A",
-            dom: prop.daysOnZillow ?? null,
-        }));
+        // Fetch public records concurrently for triangulation
+        const deals = await Promise.all(
+            props.map(async (prop: any) => {
+                const baseData = {
+                    sqft: prop.livingArea,
+                    price: prop.price,
+                    bedrooms: prop.bedrooms,
+                };
+                const address = prop.address || location;
+                const data_integrity = await fetchPublicRecords(address, baseData);
+
+                return {
+                    address: prop.address || "Address unavailable",
+                    url: `https://www.zillow.com/homedetails/${prop.zpid}_zpid/`,
+                    list_price: prop.price ? `$${prop.price.toLocaleString()}` : "N/A",
+                    dom: prop.daysOnZillow ?? null,
+                    data_integrity,
+                };
+            })
+        );
 
         return new Response(JSON.stringify(deals), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },

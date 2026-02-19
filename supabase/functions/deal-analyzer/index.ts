@@ -119,7 +119,8 @@ INSTRUCTIONS:
 3. If asked about renovation costs, factor in the condition and square footage.
 4. CRITICAL: Output responses in plain text only. Do NOT use markdown formatting (no asterisks, no hashes, no special characters for lists). Separate all paragraphs and list items with double line breaks for readability.
 5. If data is missing (e.g., no ARV), flag it as a risk and explain what the user should verify.
-6. Keep responses concise — 2-4 paragraphs max unless the user asks for a deep dive.`;
+6. Keep responses concise — 2-4 paragraphs max unless the user asks for a deep dive.
+7. DATA INTEGRITY PROTOCOL: You have been provided a 'data_integrity' object containing discrepancies between county records and listing data. If discrepancies exist (e.g., differing square footage or assessed values), you MUST explicitly warn the user. You MUST use the most conservative number (e.g., the lower ARV, the smaller square footage) for your baseline MAO and ROI calculations to protect the wholesaler's margins.`;
 }
 
 // ─── Audit System Prompt ───────────────────────────────────────────

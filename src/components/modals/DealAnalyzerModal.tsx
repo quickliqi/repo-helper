@@ -22,6 +22,7 @@ import { useDealAnalyzerStore } from "@/stores/useDealAnalyzerStore";
 import { DealChat } from "@/components/chat/DealChat";
 import type { DealDetail } from "@/types/deal-analyzer-types";
 import type { AuditReport } from "@/types/scraper-audit-types";
+import { DataIntegrityWidget } from "@/components/deals/DataIntegrityWidget";
 
 // ─── Helpers ───────────────────────────────────────────────────────
 function formatCurrency(value: number): string {
@@ -100,6 +101,11 @@ function DealContextPanel({ deal }: { deal: DealDetail }) {
                 </div>
 
                 <Separator />
+
+                {/* Data Integrity Widget */}
+                {deal.integrity && (
+                    <DataIntegrityWidget integrity={deal.integrity} />
+                )}
 
                 {/* AI Analysis */}
                 <div className="space-y-3">

@@ -381,6 +381,8 @@ export default function Scraper() {
             ...deal,
             ai_score: metrics ? metrics.score : 0,
             metrics: metrics,
+            data_integrity: deal.data_integrity,
+            integrity: deal.data_integrity,
             reasoning: metrics
               ? `Math Verified: ${metrics.equityPercentage.toFixed(1)}% equity. MAO: $${Math.round(metrics.mao).toLocaleString()}. ROI: ${metrics.roi.toFixed(1)}%.`
               : deal.reasoning || "Insufficient data for calculation."
