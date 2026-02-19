@@ -83,12 +83,7 @@ interface SourceBreakdown {
   fallback: number;
 }
 
-interface ScrapeParams {
-  location: string;
-  max_price?: number;
-  min_beds?: number;
-  max_dom?: number;
-}
+
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -238,37 +233,6 @@ export default function Scraper() {
     }
   };
 
-  const fetchStealthDeals = async (params: ScrapeParams) => {
-    try {
-      const response = await fetch("https://odd-readers-follow.loca.lt/scrape", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          location: params.location,
-          max_price: params.max_price,
-          min_beds: params.min_beds,
-          max_dom: params.max_dom,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Scraper service error: ${response.statusText}`);
-      }
-
-      const deals = await response.json();
-      console.log("Stealth Scraper Results:", deals);
-
-      // TODO: Save these precise URLs to your Supabase database
-      // or map them directly into your UI state to render the property cards
-      return deals;
-
-    } catch (error) {
-      console.error("Failed to fetch deals from local scraper:", error);
-      toast.error("Failed to reach local scraper service.");
-    }
-  };
 
   // Run audit pipeline when results change
   useEffect(() => {
@@ -345,8 +309,8 @@ export default function Scraper() {
     setSources(null);
 
     try {
-      // 1. Kick off BOTH the AI Hunter (Supabase) and Stealth Scraper (Python) simultaneously
-      const [aiHunterResponse, stealthDeals] = await Promise.all([
+      // 1. Fire both scrapers concurrently
+      const [aiHunterResponse, liveMarketResponse] = await Promise.all([
         supabase.functions.invoke('ai-hunter', {
           body: {
             city,
@@ -357,11 +321,13 @@ export default function Scraper() {
             max_days_on_market: maxDaysOnMarket ? Number(maxDaysOnMarket) : undefined
           }
         }),
-        fetchStealthDeals({
-          location: `${city}, ${state}`,
-          max_price: maxPrice ? Number(maxPrice) : undefined,
-          min_beds: undefined,
-          max_dom: maxDaysOnMarket ? Number(maxDaysOnMarket) : undefined,
+        supabase.functions.invoke('live-market-deals', {
+          body: {
+            location: `${city}, ${state}`,
+            max_price: maxPrice ? Number(maxPrice) : undefined,
+            min_beds: undefined,
+            max_dom: maxDaysOnMarket ? Number(maxDaysOnMarket) : undefined,
+          }
         })
       ]);
 
@@ -369,15 +335,16 @@ export default function Scraper() {
 
       let rawDeals = aiHunterResponse.data?.deals || [];
 
-      // 2. Map and merge the Stealth deals
-      if (stealthDeals && stealthDeals.length > 0) {
-        const mappedStealth = stealthDeals.map((d: any) => ({
+      // 2. Map and merge Live Market deals from Edge Function
+      const liveDeals = liveMarketResponse.data || [];
+      if (liveDeals && liveDeals.length > 0) {
+        const mappedStealth = liveDeals.map((d: any) => ({
           title: d.address,
           address: d.address,
           city: city,
           state: state,
-          price: parseInt(d.list_price.replace(/[^0-9]/g, '')) || 0,
-          source: "Stealth Scraper",
+          price: parseInt(String(d.list_price).replace(/[^0-9]/g, '')) || 0,
+          source: "Live Market",
           link: d.url,
           description: `Days on Market: ${d.dom}`,
           property_type: propertyType !== 'any' ? propertyType : 'single_family',
