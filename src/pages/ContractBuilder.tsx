@@ -45,7 +45,7 @@ export default function ContractBuilder() {
                     .eq('user_id', user!.id)
                     .single();
 
-                if (error || !data || (data.monthly_free_credits + data.purchased_credits) === 0) {
+                if (error || !data || ((data as any).monthly_free_credits + (data as any).purchased_credits) === 0) {
                     console.log("User has missing or 0 credits, applying fallback upsert...");
                     try {
                         const { data: newData, error: upsertError } = await supabase
@@ -60,7 +60,7 @@ export default function ContractBuilder() {
                             .single();
 
                         if (!upsertError && newData) {
-                            setCredits({ free: newData.monthly_free_credits, purchased: newData.purchased_credits });
+                            setCredits({ free: (newData as any).monthly_free_credits, purchased: (newData as any).purchased_credits });
                             return;
                         }
                     } catch (err) {
@@ -69,7 +69,7 @@ export default function ContractBuilder() {
                     // If upsert failed, show 0 (safe fallback)
                     setCredits({ free: 0, purchased: 0 });
                 } else {
-                    setCredits({ free: data.monthly_free_credits, purchased: data.purchased_credits });
+                    setCredits({ free: (data as any).monthly_free_credits, purchased: (data as any).purchased_credits });
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -96,7 +96,7 @@ export default function ContractBuilder() {
                 .single();
 
             if (!error) {
-                setCredits({ free: data.monthly_free_credits, purchased: data.purchased_credits });
+                setCredits({ free: (data as any).monthly_free_credits, purchased: (data as any).purchased_credits });
             }
         } catch (e) {
             console.error(e);

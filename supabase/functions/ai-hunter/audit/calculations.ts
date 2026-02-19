@@ -1,12 +1,9 @@
 
 import { DealMetrics } from "./types.ts";
 import {
-    sanitizeNumber,
+    cleanNumber,
     calculateEquityPercentage,
-    calculateMAO,
-    calculateROI,
     calculateDealScore,
-    calculateGrossEquity
 } from "../../_shared/dealMath.ts";
 
 // Constants for default assumptions
@@ -45,12 +42,12 @@ export function calculateDealMetrics(
     deal: DealInput,
     settings: GovernanceSettings = {}
 ): DealMetrics | null {
-    const askPrice = sanitizeNumber(deal.asking_price);
+    const askPrice = cleanNumber(deal.asking_price);
     if (askPrice <= 0) return null;
 
-    const arv = sanitizeNumber(deal.arv || askPrice); // Fallback to asking if ARV not set
-    const repairs = sanitizeNumber(deal.repair_estimate);
-    const assignment = sanitizeNumber(deal.assignment_fee);
+    const arv = cleanNumber(deal.arv || askPrice);
+    const repairs = cleanNumber(deal.repair_estimate);
+    const assignment = cleanNumber(deal.assignment_fee);
 
     // Apply Governance Settings or Defaults
     const closingCostsPercent = settings.default_closing_costs ?? DEFAULT_GOVERNANCE.CLOSING_COSTS_PERCENT;
@@ -63,15 +60,15 @@ export function calculateDealMetrics(
     const holdingCosts = arv * holdingCostsPercent;
     const totalInvested = askPrice + repairs + assignment + closingCosts + holdingCosts;
 
-    const grossEquity = calculateGrossEquity(arv, totalCostBasis);
-    const equityPercentage = calculateEquityPercentage(arv, askPrice);
+    const grossEquity = arv - totalCostBasis;
+    const equityPercentage = calculateEquityPercentage(arv, askPrice, repairs, assignment);
 
     // 2. MAO (Maximum Allowable Offer) Calculation
-    const standardMao = calculateMAO(arv, repairs, assignment, maoFactor);
+    const standardMao = (arv * maoFactor) - repairs - assignment;
 
     // 3. ROI Calculation
     const projectedProfit = arv - totalInvested;
-    const roi = calculateROI(arv, totalInvested);
+    const roi = totalInvested > 0 ? (projectedProfit / totalInvested) * 100 : 0;
 
     // 4. Deal Score (Simple Heuristic)
     let score = calculateDealScore(equityPercentage, roi, deal.condition);

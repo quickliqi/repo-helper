@@ -131,8 +131,8 @@ serve(async (req) => {
       limit: 10,
     });
 
-    const scrapeSubscription = subscriptions.data.find((sub) =>
-      sub.items.data.some((item) => item.price.product === SCRAPE_PRODUCT_ID)
+    const scrapeSubscription = subscriptions.data.find((sub: any) =>
+      sub.items.data.some((item: any) => item.price.product === SCRAPE_PRODUCT_ID)
     );
 
     if (!scrapeSubscription) {

@@ -132,7 +132,7 @@ serve(async (req) => {
   } catch (error: unknown) {
     console.error("[SEND-WELCOME-EMAIL] Error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
