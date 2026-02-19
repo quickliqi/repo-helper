@@ -472,8 +472,7 @@ Return ONLY valid JSON:
 Rules:
 - price MUST be a number, not a string
 - Only include listings with a clear asking price
-- YOU MUST EXTRACT THE EXACT ADDRESS. If the address is missing, omit the deal entirely.
-- Do NOT hallucinate data. Do NOT mix beds/baths from neighboring listings. Bind data strictly to its specific property container.
+- If data is unavailable, omit the field
 - link should be the actual posting URL if found in content
 - listing_url should be the specific href from the anchor tag surrounding the property title or image. If it's relative (starts with /), keep it that way, we will fix it.`;
 
@@ -719,21 +718,6 @@ Return ONLY valid JSON:
 
         let finalResults = validatedDeals.filter(deal => {
             const price = deal.asking_price || deal.price || 0;
-
-            // 0. Strict Address Filter
-            // Drop deals with no address or "Address Available on Source" if we want strict mode.
-            // For now, we require at least some address string that isn't the placeholder if it's FSBO.
-            // MLS often hides it, so we allow MLS to have the placeholder.
-            const isFsbo = deal.source !== "Aggregated MLS";
-            if (isFsbo && (!deal.address || deal.address.trim() === "" || deal.address.includes("Address Available on Source"))) {
-                return false;
-            }
-            if (!deal.address || deal.address.trim() === "") {
-                // Even for MLS, we prefer to filter out completely empty addresses if possible, 
-                // but "Address Available on Source" is common for MLS.
-                // If it's truly empty, drop it.
-                return false;
-            }
 
             // 1. Price Filter
             if (minPrice > 0 && price < minPrice) return false;

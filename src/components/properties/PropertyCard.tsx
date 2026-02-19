@@ -2,11 +2,11 @@ import { Property, PROPERTY_TYPE_LABELS, DEAL_TYPE_LABELS, CONDITION_LABELS, STA
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  MapPin,
-  Home,
-  DollarSign,
-  TrendingUp,
+import { 
+  MapPin, 
+  Home, 
+  DollarSign, 
+  TrendingUp, 
   Eye,
   Bookmark,
   ExternalLink
@@ -51,8 +51,8 @@ export function PropertyCard({ property, showActions = true, onSave, isSaved = f
       {/* Image */}
       <div className="relative h-48 bg-muted">
         {property.image_urls && property.image_urls.length > 0 ? (
-          <img
-            src={property.image_urls[0]}
+          <img 
+            src={property.image_urls[0]} 
             alt={property.title}
             className="w-full h-full object-cover"
           />
@@ -65,9 +65,9 @@ export function PropertyCard({ property, showActions = true, onSave, isSaved = f
           {STATUS_LABELS[property.status]}
         </Badge>
         {showActions && (
-          <Button
-            variant="ghost"
-            size="icon"
+          <Button 
+            variant="ghost" 
+            size="icon" 
             className="absolute top-3 right-3 bg-card/80 hover:bg-card"
             onClick={onSave}
           >
@@ -80,13 +80,11 @@ export function PropertyCard({ property, showActions = true, onSave, isSaved = f
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg text-foreground truncate">
-              {property.address || property.title}
+              {property.title}
             </h3>
             <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
               <MapPin className="h-3.5 w-3.5" />
-              <span className="truncate">
-                {property.city}, {property.state} {property.zip_code ? property.zip_code : ''}
-              </span>
+              <span className="truncate">{property.city}, {property.state}</span>
             </div>
           </div>
         </div>

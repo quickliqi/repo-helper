@@ -60,9 +60,64 @@ interface LovableAiResponse {
 
 
 
-// ─── Calculator Logic REMOVED (Frontend is Single Source of Truth) ───────────
-// Math logic has been moved to src/lib/calculations.ts on the frontend.
+// ─── Calculator Logic (Strict TypeScript Source of Truth) ───────────
+const DEFAULT_CLOSING_COSTS_PERCENT = 0.03;
+const DEFAULT_HOLDING_COSTS_PERCENT = 0.02;
+const DEFAULT_MAO_DISCOUNT_RATE = 0.70;
 
+interface DealMetrics {
+  grossEquity: number;
+  equityPercentage: number;
+  mao: number;
+  projectedProfit: number;
+  roi: number;
+  score: number;
+  riskFactors: string[];
+}
+
+function calculateDealMetrics(deal: {
+  asking_price: number;
+  arv?: number;
+  repair_estimate?: number;
+  assignment_fee?: number;
+  condition?: string;
+}): DealMetrics | null {
+  if (!deal.asking_price) return null;
+
+  const arv = deal.arv || deal.asking_price;
+  const repairs = deal.repair_estimate || 0;
+  const assignment = deal.assignment_fee || 0;
+
+  // 1. Equity Calculations
+  const totalCostBasis = deal.asking_price + repairs + assignment;
+  const grossEquity = arv - totalCostBasis;
+  const equityPercentage = arv > 0 ? (grossEquity / arv) * 100 : 0;
+
+  // 2. MAO (Maximum Allowable Offer) Calculation
+  const standardMao = (arv * DEFAULT_MAO_DISCOUNT_RATE) - repairs - assignment;
+
+  // 3. ROI Calculation
+  const closingCosts = arv * DEFAULT_CLOSING_COSTS_PERCENT;
+  const holdingCosts = arv * DEFAULT_HOLDING_COSTS_PERCENT;
+  const totalInvested = deal.asking_price + repairs + assignment + closingCosts + holdingCosts;
+  const projectedProfit = arv - totalInvested;
+  const roi = totalInvested > 0 ? (projectedProfit / totalInvested) * 100 : 0;
+
+  let score = 50;
+  if (equityPercentage > 20) score += 20;
+  if (equityPercentage > 30) score += 10;
+  if (roi > 15) score += 10;
+  if (roi > 30) score += 10;
+  if (deal.condition === 'distressed' || deal.condition === 'poor') score -= 10;
+  score = Math.max(0, Math.min(100, score));
+
+  const riskFactors: string[] = [];
+  if (!deal.arv) riskFactors.push("ARV is missing; using Asking Price as proxy.");
+  if (equityPercentage < 10) riskFactors.push("Low equity margin (<10%).");
+  if (repairs === 0 && deal.condition !== 'excellent') riskFactors.push("No repair estimate provided.");
+
+  return { grossEquity, equityPercentage, mao: standardMao, projectedProfit, roi, score, riskFactors };
+}
 
 
 
@@ -272,7 +327,9 @@ Respond with a JSON array of deals in this exact format:
       "property_type": "single_family|multi_family|condo|townhouse|commercial|land|mobile_home|other",
       "deal_type": "fix_and_flip|buy_and_hold|wholesale|subject_to|seller_finance|other",
       "repair_estimate": number,
+      "equity_percentage": number,
       "description": "string",
+      "match_score": number,
       "confidence_score": number,
       "matched_buy_box_id": "uuid of best matching buy box",
       "analysis_notes": "string explaining match and confidence reasoning"
@@ -283,11 +340,7 @@ Respond with a JSON array of deals in this exact format:
 If no valid deals are found, return: {"deals": []}
 
 CRITICAL RULES:
-1. You must strictly bind the data to its specific property container. Do not hallucinate data or mix beds/baths from neighboring listings.
-2. You must extract the exact address, price, beds, baths, and sqft for each specific property node.
-3. EXTRACT THE SPECIFIC LISTING URL. Look for the anchor tag href. If it's relative, just return it as is.
-4. If a property address is missing or ambiguous, DO NOT include it in the results. Drop it entirely.
-5. Confidence score must reflect the certainty of the address and price data.`;
+1. EXTRACT THE SPECIFIC LISTING URL. Look for the anchor tag href. If it's relative, just return it as is.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -342,9 +395,31 @@ CRITICAL RULES:
 
     // Store results in database
     const resultsToInsert = highConfidenceDeals.map((deal) => {
-      // Appending raw confidence note
+      // STRICT MATH OVERRIDE
+      // We do NOT trust the LLM's match_score or equity calculation.
+      // We recalculate using the strict TypeScript logic.
+
+      let strictScore = 0;
+      let strictEquity = 0; // Not stored in DB but good for logs/notes
       let strictNotes = deal.analysis_notes || "";
-      strictNotes += `\n[System Info]: Math calculated on frontend.`;
+
+      const dealPrice = typeof deal.price === 'number' ? deal.price : parseInt(String(deal.price).replace(/[^0-9]/g, '')) || 0;
+
+      const metrics = calculateDealMetrics({
+        asking_price: dealPrice,
+        arv: deal.arv_estimate,
+        repair_estimate: deal.repair_estimate,
+        condition: deal.condition
+      });
+
+      if (metrics) {
+        strictScore = metrics.score;
+        strictEquity = metrics.equityPercentage;
+        // Append strict math to notes
+        strictNotes += `\n[System Audit]: Strict Math Overridden. Equity: ${metrics.equityPercentage.toFixed(1)}%. ROI: ${metrics.roi.toFixed(1)}%. Score: ${metrics.score}/100.`;
+      } else {
+        strictNotes += `\n[System Audit]: Calculation failed (missing price). Score set to 0.`;
+      }
 
       // Handle relative URLs for listing_url
       let lUrl = deal.listing_url || deal.url || "";
@@ -364,9 +439,11 @@ CRITICAL RULES:
         post_content: scrapeData.data?.markdown?.substring(0, 5000) || null,
         extracted_data: {
           ...deal,
-          listing_url: lUrl
+          listing_url: lUrl,
+          // Inject strict metrics into the JSON blob if needed, or rely on top-level columns
+          strict_metrics: metrics
         },
-        match_score: 0, // Calculated on frontend
+        match_score: strictScore, // OVERRIDDEN
         confidence_score: deal.confidence_score,
         matched_buy_box_id: deal.matched_buy_box_id || null,
         analysis_notes: strictNotes,
