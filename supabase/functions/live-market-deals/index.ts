@@ -7,7 +7,7 @@ const corsHeaders = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
@@ -29,34 +29,35 @@ serve(async (req) => {
         const encodedLocation = encodeURIComponent(location || "");
         const apiUrl = `https://zillow-com1.p.rapidapi.com/propertyExtendedSearch?location=${encodedLocation}&status_type=ForSale`;
 
-        let apiRes: Response;
+        let data: any;
         try {
-            apiRes = await fetch(apiUrl, {
+            const apiRes = await fetch(apiUrl, {
                 headers: {
                     "x-rapidapi-key": RAPIDAPI_KEY,
                     "x-rapidapi-host": "zillow-com1.p.rapidapi.com",
                 },
             });
+
+            // Explicit non-ok response
+            if (!apiRes.ok) {
+                const errorText = await apiRes.text();
+                console.error("[live-market-deals] RapidAPI returned non-200:", apiRes.status, errorText);
+                return new Response(
+                    JSON.stringify({ error: "RapidAPI Error", status: apiRes.status, details: errorText, deals: [] }),
+                    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+            }
+
+            data = await apiRes.json();
         } catch (fetchErr) {
             const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-            console.error("[live-market-deals] Network error calling RapidAPI:", msg);
+            console.error("[live-market-deals] Network or parsing error calling RapidAPI:", msg);
             return new Response(
-                JSON.stringify({ error: "Network error calling RapidAPI", details: msg, deals: [] }),
+                JSON.stringify({ error: "Network or parsing error calling RapidAPI", details: msg, deals: [] }),
                 { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
 
-        // Stage 1.1: Explicit non-ok response — return structured error so frontend can surface it
-        if (!apiRes.ok) {
-            const errorText = await apiRes.text();
-            console.error("[live-market-deals] RapidAPI returned non-200:", apiRes.status, errorText);
-            return new Response(
-                JSON.stringify({ error: "RapidAPI Error", status: apiRes.status, details: errorText, deals: [] }),
-                { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-        }
-
-        const data = await apiRes.json();
         let props: any[] = data.props || [];
 
         // Apply optional filters
