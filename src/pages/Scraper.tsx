@@ -75,6 +75,7 @@ interface ScrapeResult {
   sqft?: number;
   property_type?: string;
   condition?: string;
+  owner_info?: string;
 }
 
 interface SourceBreakdown {
