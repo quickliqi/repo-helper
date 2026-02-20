@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { fetchPublicRecords } from "../_shared/dataTriangulation.ts";
+
+// NOTE: Regrid enrichment has been moved to ai-hunter post-filter stage.
+// This function's only job is raw Zillow data ingestion + basic filtering.
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -65,26 +67,18 @@ serve(async (req: Request) => {
         if (min_beds) props = props.filter((p) => !p.bedrooms || p.bedrooms >= min_beds);
         if (max_dom) props = props.filter((p) => !p.daysOnZillow || p.daysOnZillow <= max_dom);
 
-        // Run triangulation concurrently for every property
-        const deals = await Promise.all(
-            props.map(async (prop: any) => {
-                const baseData = {
-                    sqft: prop.livingArea,
-                    price: prop.price,
-                    bedrooms: prop.bedrooms,
-                };
-                const address = prop.address || location;
-                const data_integrity = await fetchPublicRecords(address, baseData);
-
-                return {
-                    address: prop.address || "Address unavailable",
-                    url: `https://www.zillow.com/homedetails/${prop.zpid}_zpid/`,
-                    list_price: prop.price ? `$${prop.price.toLocaleString()}` : "N/A",
-                    dom: prop.daysOnZillow ?? null,
-                    data_integrity,
-                };
-            })
-        );
+        // Return raw property data — NO Regrid enrichment here.
+        // Regrid calls are made post-filter in ai-hunter for top N deals only.
+        const deals = props.map((prop: any) => ({
+            address: prop.address || "Address unavailable",
+            url: `https://www.zillow.com/homedetails/${prop.zpid}_zpid/`,
+            list_price: prop.price ? `$${prop.price.toLocaleString()}` : "N/A",
+            dom: prop.daysOnZillow ?? null,
+            bedrooms: prop.bedrooms,
+            bathrooms: prop.bathrooms,
+            sqft: prop.livingArea,
+            price_raw: prop.price,
+        }));
 
         return new Response(JSON.stringify(deals), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
