@@ -332,16 +332,28 @@ export default function Scraper() {
         })
       ]);
 
+      // ─── PHASE 2: Aggressive Error Telemetry ──────────────────────────
+      // Surface every failure to the UI immediately — no silent swallowing.
+
       if (aiHunterResponse.error) {
-        toast.error(`AI Hunter Error: ${aiHunterResponse.error.message || 'Check Edge Function logs'}`);
+        const errDetail = aiHunterResponse.error.message || aiHunterResponse.error.context?.message || 'Unknown error';
+        console.error('[SCRAPER] AI Hunter invocation error:', aiHunterResponse.error);
+        toast.error(`AI Hunter Error: ${errDetail}`);
+      } else if (aiHunterResponse.data?.error) {
+        // Business logic error returned inside a 2xx response
+        console.error('[SCRAPER] AI Hunter business error:', aiHunterResponse.data.error);
+        toast.error(`AI Hunter Error: ${aiHunterResponse.data.error}`);
       }
+
       if (liveMarketResponse.error) {
-        // This catches network errors and 5xx errors from the function invocation itself
-        toast.error(`Live Market API Error: ${liveMarketResponse.error.message || 'Check Edge Function logs for details.'}`);
-    } else if (liveMarketResponse.data && liveMarketResponse.data.error) {
-        // This catches business logic errors returned with a 2xx/4xx status from inside the function
-        toast.error(`Live Market API Error: ${liveMarketResponse.data.error}`);
-    }
+        const errDetail = liveMarketResponse.error.message || liveMarketResponse.error.context?.message || 'Unknown error';
+        console.error('[SCRAPER] Live Market invocation error:', liveMarketResponse.error);
+        toast.error(`Live Market API Error: ${errDetail}`);
+      } else if (liveMarketResponse.data && liveMarketResponse.data.error) {
+        // Business logic error returned inside a 2xx response (e.g. missing API key)
+        console.error('[SCRAPER] Live Market business error:', liveMarketResponse.data.error, liveMarketResponse.data.details);
+        toast.error(`Live Market API Error: ${liveMarketResponse.data.error}${liveMarketResponse.data.details ? ' — ' + liveMarketResponse.data.details : ''}`);
+      }
 
       let rawDeals = aiHunterResponse.data?.deals || [];
       // Safely handle structured error objects returned by the hardened Edge Function
@@ -354,13 +366,17 @@ export default function Scraper() {
           address: d.address,
           city: city,
           state: state,
-          price: parseInt(d.list_price?.toString().replace(/[^0-9]/g, '')) || 0,
+          price: parseInt(d.list_price?.toString().replace(/[^0-9]/g, '')) || d.price_raw || 0,
           source: "Live API",
           link: d.url,
           description: `Days on Market: ${d.dom}`,
           property_type: propertyType !== 'any' ? propertyType : 'single_family',
           condition: 'fair',
+          bedrooms: d.bedrooms,
+          bathrooms: d.bathrooms,
+          sqft: d.sqft,
           integrity: d.data_integrity,
+          owner_info: d.owner_info,
         }));
 
         rawDeals = [...mappedLive, ...rawDeals];
@@ -394,6 +410,7 @@ export default function Scraper() {
             ai_score: metrics ? metrics.score : 0,
             metrics: metrics,
             integrity: deal.integrity,
+            owner_info: deal.owner_info,
             reasoning: metrics
               ? `Math Verified: ${metrics.equityPercentage.toFixed(1)}% equity. MAO: $${Math.round(metrics.mao).toLocaleString()}. ROI: ${metrics.roi.toFixed(1)}%.`
               : deal.reasoning || "Insufficient data for calculation."
@@ -407,9 +424,10 @@ export default function Scraper() {
       } else if (!aiHunterResponse.error && !liveMarketResponse.error) {
         toast.warning("Both APIs connected successfully, but 0 properties matched your exact filters.");
       }
-    } catch (error) {
-      console.error('Scrape error:', error);
-      toast.error('Failed to hunt for deals. Please try again.');
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error('[SCRAPER] Fatal scrape error:', error);
+      toast.error(`Hunt failed: ${errMsg}`);
     } finally {
       setIsScraping(false);
     }
