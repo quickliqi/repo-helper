@@ -18,17 +18,18 @@ serve(async (req: Request) => {
     try {
         const { location, max_price, min_beds, max_dom } = await req.json();
 
-        // Stage 1.1: Graceful key check — never crash, return [] with a clear signal
+        // Stage 1.1: Harden key check — return a 401 to make the error explicit.
         const RAPIDAPI_KEY = Deno.env.get("RAPIDAPI_KEY");
         if (!RAPIDAPI_KEY) {
-            console.warn("[live-market-deals] RAPIDAPI_KEY not set.");
+            console.error("[live-market-deals] RAPIDAPI_KEY not set in environment variables.");
             return new Response(
-                JSON.stringify({ error: "RAPIDAPI_KEY missing", deals: [] }),
-                { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                JSON.stringify({ error: "API key for live market data is not configured.", deals: [] }),
+                { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
 
         const encodedLocation = encodeURIComponent(location || "");
+        // Construct the API URL. Note: `status_type=ForSale` is a default.
         const apiUrl = `https://zillow-com1.p.rapidapi.com/propertyExtendedSearch?location=${encodedLocation}&status_type=ForSale`;
 
         let data: any;
@@ -40,35 +41,38 @@ serve(async (req: Request) => {
                 },
             });
 
-            // Explicit non-ok response
+            // Explicit non-ok response. This catches 4xx/5xx errors from RapidAPI.
             if (!apiRes.ok) {
                 const errorText = await apiRes.text();
-                console.error("[live-market-deals] RapidAPI returned non-200:", apiRes.status, errorText);
+                console.error(`[live-market-deals] RapidAPI returned a non-200 status: ${apiRes.status}. Response: ${errorText}`);
+                const userFriendlyError = apiRes.status === 401 || apiRes.status === 403
+                    ? "Invalid API key for live market data."
+                    : `Live market API failed with status ${apiRes.status}.`;
+                
                 return new Response(
-                    JSON.stringify({ error: "RapidAPI Error", status: apiRes.status, details: errorText, deals: [] }),
-                    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                    JSON.stringify({ error: userFriendlyError, status: apiRes.status, details: errorText, deals: [] }),
+                    { status: apiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
                 );
             }
 
             data = await apiRes.json();
         } catch (fetchErr) {
             const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-            console.error("[live-market-deals] Network or parsing error calling RapidAPI:", msg);
+            console.error("[live-market-deals] A network error occurred when calling the live market API:", msg);
             return new Response(
-                JSON.stringify({ error: "Network or parsing error calling RapidAPI", details: msg, deals: [] }),
-                { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                JSON.stringify({ error: "Could not connect to the live market data service.", details: msg, deals: [] }),
+                { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } } // 502 Bad Gateway is appropriate here
             );
         }
 
         let props: any[] = data.props || [];
 
-        // Apply optional filters
+        // Apply optional server-side filters
         if (max_price) props = props.filter((p) => !p.price || p.price <= max_price);
         if (min_beds) props = props.filter((p) => !p.bedrooms || p.bedrooms >= min_beds);
         if (max_dom) props = props.filter((p) => !p.daysOnZillow || p.daysOnZillow <= max_dom);
 
-        // Return raw property data — NO Regrid enrichment here.
-        // Regrid calls are made post-filter in ai-hunter for top N deals only.
+        // Map the properties to our standardized "deal" format.
         const deals = props.map((prop: any) => ({
             address: prop.address || "Address unavailable",
             url: `https://www.zillow.com/homedetails/${prop.zpid}_zpid/`,
@@ -77,7 +81,7 @@ serve(async (req: Request) => {
             bedrooms: prop.bedrooms,
             bathrooms: prop.bathrooms,
             sqft: prop.livingArea,
-            price_raw: prop.price,
+            price_raw: prop.price, // Keep the raw price for calculations
         }));
 
         return new Response(JSON.stringify(deals), {
@@ -85,9 +89,9 @@ serve(async (req: Request) => {
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error("[live-market-deals] Unexpected error:", msg);
+        console.error("[live-market-deals] An unexpected error occurred in the function:", msg);
         return new Response(
-            JSON.stringify({ error: "Unexpected server error", details: msg, deals: [] }),
+            JSON.stringify({ error: "An unexpected server error occurred.", details: msg, deals: [] }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }

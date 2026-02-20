@@ -336,8 +336,12 @@ export default function Scraper() {
         toast.error(`AI Hunter Error: ${aiHunterResponse.error.message || 'Check Edge Function logs'}`);
       }
       if (liveMarketResponse.error) {
-        toast.error(`Live Zillow API Error: ${liveMarketResponse.error.message || 'Check Edge Function logs'}`);
-      }
+        // This catches network errors and 5xx errors from the function invocation itself
+        toast.error(`Live Market API Error: ${liveMarketResponse.error.message || 'Check Edge Function logs for details.'}`);
+    } else if (liveMarketResponse.data && liveMarketResponse.data.error) {
+        // This catches business logic errors returned with a 2xx/4xx status from inside the function
+        toast.error(`Live Market API Error: ${liveMarketResponse.data.error}`);
+    }
 
       let rawDeals = aiHunterResponse.data?.deals || [];
       // Safely handle structured error objects returned by the hardened Edge Function
