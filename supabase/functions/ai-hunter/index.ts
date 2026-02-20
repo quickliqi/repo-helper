@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { auditScrapedDeals } from "./audit/orchestrator.ts";
 import { AuditReport } from "./audit/types.ts";
 import { DealMetrics } from "../_shared/dealMath.ts";
+import { fetchPublicRecords } from "../_shared/dataTriangulation.ts";
 
 // ─── Interfaces ─────────────────────────────────────────────────────────────
 
@@ -756,6 +757,58 @@ Return ONLY valid JSON:
 
         // Sort by AI score descending
         finalResults.sort((a, b) => (b.ai_score || 0) - (a.ai_score || 0));
+
+        // ─── POST-FILTER REGRID ENRICHMENT (Top N only) ─────────────
+        // Only enrich the top deals to protect the 2,000/day Regrid free-tier limit.
+        // This guarantees ≤4 API calls regardless of how many properties were parsed.
+        const REGRID_ENRICHMENT_LIMIT = 4;
+        logStep("Starting Regrid enrichment", { limit: REGRID_ENRICHMENT_LIMIT, totalDeals: finalResults.length });
+
+        try {
+            const topDeals = finalResults.slice(0, REGRID_ENRICHMENT_LIMIT);
+            const enrichedTop = await Promise.all(
+                topDeals.map(async (deal) => {
+                    const address = deal.address || deal.title || "";
+                    if (!address || address === "Address unavailable") {
+                        logStep("Skipping Regrid enrichment (no address)", { title: deal.title });
+                        return deal;
+                    }
+
+                    const baseData = { sqft: deal.sqft, price: deal.price, bedrooms: deal.bedrooms };
+                    const data_integrity = await fetchPublicRecords(address, baseData);
+
+                    // Build static owner_info string for chatbot consumption
+                    const ownerParts: string[] = [];
+                    if (data_integrity.verified_matches['Owner of Record'])
+                        ownerParts.push(`Owner: ${data_integrity.verified_matches['Owner of Record']}`);
+                    if (data_integrity.verified_matches['Mailing Address'])
+                        ownerParts.push(`Mailing: ${data_integrity.verified_matches['Mailing Address']}`);
+                    if (data_integrity.verified_matches['County Assessed Value'])
+                        ownerParts.push(`Assessed: ${data_integrity.verified_matches['County Assessed Value']}`);
+                    if (data_integrity.verified_matches['Zoning'])
+                        ownerParts.push(`Zoning: ${data_integrity.verified_matches['Zoning']}`);
+                    if (data_integrity.verified_matches['Year Built'])
+                        ownerParts.push(`Year Built: ${data_integrity.verified_matches['Year Built']}`);
+
+                    return {
+                        ...deal,
+                        data_integrity,
+                        owner_info: ownerParts.length > 0 ? ownerParts.join(" | ") : "No public records found",
+                    };
+                })
+            );
+
+            // Merge enriched top deals back into the full list
+            finalResults = [...enrichedTop, ...finalResults.slice(REGRID_ENRICHMENT_LIMIT)];
+            logStep("Regrid enrichment complete", {
+                enriched: enrichedTop.filter(d => (d as any).data_integrity).length,
+                total: finalResults.length
+            });
+        } catch (enrichErr) {
+            const msg = enrichErr instanceof Error ? enrichErr.message : String(enrichErr);
+            logStep("Regrid enrichment failed (non-critical)", { error: msg });
+            // Continue with un-enriched results — never crash the pipeline
+        }
 
         logStep("Running audit pipeline...", { count: finalResults.length });
 
