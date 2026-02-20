@@ -321,7 +321,7 @@ export default function Scraper() {
             max_days_on_market: maxDaysOnMarket ? Number(maxDaysOnMarket) : undefined
           }
         }),
-        supabase.functions.invoke('live-market-deals', {
+        supabase.functions.invoke('live-market-scan', {
           body: {
             location: `${city}, ${state}`,
             max_price: maxPrice ? Number(maxPrice) : undefined,
