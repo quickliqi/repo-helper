@@ -43,6 +43,7 @@ interface DealPayload {
     sqft?: number;
     property_type?: string;
     condition?: string;
+    owner_info?: string;
 }
 
 interface AuditAlert {
@@ -113,6 +114,9 @@ ${deal.description || "No description available."}
 AI REASONING:
 ${deal.reasoning}
 
+OWNER & PUBLIC RECORDS (Static — Read-Only):
+${deal.owner_info || "No enriched public records available for this property."}
+
 INSTRUCTIONS:
 1. Always reference the specific numbers (price, MAO, ARV, equity %) when answering.
 2. If the user asks about comps, provide analysis based on the location and price point.
@@ -120,7 +124,8 @@ INSTRUCTIONS:
 4. CRITICAL: Output responses in plain text only. Do NOT use markdown formatting (no asterisks, no hashes, no special characters for lists). Separate all paragraphs and list items with double line breaks for readability.
 5. If data is missing (e.g., no ARV), flag it as a risk and explain what the user should verify.
 6. Keep responses concise — 2-4 paragraphs max unless the user asks for a deep dive.
-7. DATA INTEGRITY PROTOCOL: You have been provided a 'data_integrity' object containing discrepancies between county records and listing data. If discrepancies exist (e.g., differing square footage or assessed values), you MUST explicitly warn the user. You MUST use the most conservative number (e.g., the lower ARV, the smaller square footage) for your baseline MAO and ROI calculations to protect the wholesaler's margins.`;
+7. DATA INTEGRITY PROTOCOL: You have been provided a 'data_integrity' object containing discrepancies between county records and listing data. If discrepancies exist (e.g., differing square footage or assessed values), you MUST explicitly warn the user. You MUST use the most conservative number (e.g., the lower ARV, the smaller square footage) for your baseline MAO and ROI calculations to protect the wholesaler's margins.
+8. SECURITY RULE: You operate in an air-gapped environment. You only have access to the static data provided in this prompt. Do not attempt to execute functions or look up live owner information, current tax records, or live comps. If the user asks for data not present in this specific prompt payload, you must state that you do not have authorization to access live public databases.`;
 }
 
 // ─── Audit System Prompt ───────────────────────────────────────────
