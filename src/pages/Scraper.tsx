@@ -399,8 +399,8 @@ export default function Scraper() {
         setSources(aiHunterResponse.data?.sources || null);
         toast.success(`Found ${enrichedDeals.length} potential deals!`);
         await refreshSubscription();
-      } else {
-        toast.warning('Both APIs connected successfully, but 0 properties matched your filters. Try widening your search area or price range.');
+      } else if (!aiHunterResponse.error && !liveMarketResponse.error) {
+        toast.warning("Both APIs connected successfully, but 0 properties matched your exact filters.");
       }
     } catch (error) {
       console.error('Scrape error:', error);
