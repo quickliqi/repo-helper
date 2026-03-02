@@ -858,6 +858,52 @@ Return ONLY valid JSON:
             logStep("Dedup hash registration failed (non-critical)");
         }
 
+        // ═══════════════════════════════════════════════════════════
+        // TRIGGER TWIN AI WEBHOOK (High-Scoring Deals Only)
+        // ═══════════════════════════════════════════════════════════
+        const TWIN_AI_WEBHOOK_URL = "https://olhppxldsbnxanpgkurt.supabase.co/functions/v1/deal-hunter-ingest";
+        const TWIN_AI_THRESHOLD = 70; // Only send deals with AI score >= 70
+
+        const highValueDeals = finalResults.filter(d => (d.ai_score || 0) >= TWIN_AI_THRESHOLD);
+
+        if (highValueDeals.length > 0) {
+            logStep("Triggering Twin AI webhook", { count: highValueDeals.length });
+
+            // Fire webhook asynchronously (don't block response)
+            const twinPayload = {
+                userId: userId,
+                city: city,
+                state: state,
+                trigger: "ai-hunter-scraper",
+                deals: highValueDeals.map(d => ({
+                    address: d.address,
+                    city: d.city,
+                    state: d.state,
+                    price: d.price,
+                    ai_score: d.ai_score,
+                    metrics: d.metrics,
+                    data_integrity: (d as any).data_integrity,
+                    listing_url: d.listing_url,
+                })),
+                timestamp: new Date().toISOString(),
+            };
+
+            // Fire-and-forget (non-blocking)
+            fetch(TWIN_AI_WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(twinPayload),
+            }).then(res => {
+                if (res.ok) {
+                    logStep("Twin AI webhook delivered", { status: res.status });
+                } else {
+                    logStep("Twin AI webhook failed", { status: res.status });
+                }
+            }).catch(err => {
+                logStep("Twin AI webhook error", { error: err.message });
+            });
+        }
+
         // Deduct credit for non-admin users (skip in admin_mode)
         if (!isAdmin && !adminMode) {
             const { data: credits } = await supabaseAdmin

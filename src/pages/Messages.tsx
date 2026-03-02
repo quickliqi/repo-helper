@@ -232,6 +232,24 @@ export default function Messages() {
         return;
       }
 
+      // Redirect Traffic: Negotiator Bot Edge Function
+      const edgeResponse = await fetch("https://olhppxldsbnxanpgkurt.supabase.co/functions/v1/negotiator-inbound", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-OpenClaw-Secret": "true"
+        },
+        body: JSON.stringify({
+          buyer_id: user.id,
+          property_id: selectedConversation.property_id,
+          message_text: newMessage.trim()
+        })
+      });
+
+      if (!edgeResponse.ok) {
+        console.warn("Negotiator Edge Function returned non-ok status");
+      }
+
       const { error } = await supabase
         .from('messages')
         .insert({
