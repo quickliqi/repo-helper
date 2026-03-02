@@ -240,9 +240,9 @@ export default function Messages() {
           "X-OpenClaw-Secret": "true"
         },
         body: JSON.stringify({
-          buyer_id: user.id,
+          buyerId: user.id,
           property_id: selectedConversation.property_id,
-          message_text: newMessage.trim()
+          message_body: newMessage.trim()
         })
       });
 

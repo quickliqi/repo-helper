@@ -13,15 +13,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { property_id, buyer_id, message_text } = await req.json()
+    const { property_id, buyerId, message_body } = await req.json()
     
     // Log the message for 40% commission enforcement
     const { error: logError } = await supabaseClient
       .from('secure_messages')
       .insert({
         deal_id: property_id,
-        buyer_id: buyer_id,
-        message: message_text,
+        buyerId: buyerId,
+        message: message_body,
         sender_type: 'buyer',
         timestamp: new Date().toISOString()
       })
@@ -29,7 +29,7 @@ serve(async (req) => {
     if (logError) throw logError
 
     // Trigger Negotiator Bot / Contract Generator
-    const textUpper = message_text.toUpperCase();
+    const textUpper = message_body.toUpperCase();
     if (textUpper.includes('YES') || textUpper.includes('SEND CONTRACT')) {
       // 1. Log intent for QuickLiqi 40% commission enforcement
       await supabaseClient
@@ -43,7 +43,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ status: "success", received: message_text }),
+      JSON.stringify({ status: "success", received: message_body }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
