@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import AIHunter from '../components/AIHunter'; // Assuming AIHunter is used here
+import AIHunter from '../components/AIHunter'; 
 
 export default function Scraper() {
   const [status, setStatus] = useState('Idle');
 
-  // Direct Swarm Connection Logic
+  // Direct Swarm Connection Logic (Localhost Tunnel)
   const triggerScrape = async (e) => {
     e.preventDefault();
-    console.log("Transmitting coordinates to AWS Swarm...");
+    console.log("Transmitting coordinates to AWS Swarm via Tunnel...");
     setStatus('Deploying Swarm...');
     
     try {
-      // Connecting directly to the AWS Python Swarm
-      const response = await fetch('http://54.213.177.197:8000', {
+      // Connecting via localhost SSH tunnel
+      const response = await fetch('http://localhost:8000', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -56,7 +56,6 @@ export default function Scraper() {
         </div>
       </div>
 
-      {/* Render the AI Hunter component if it exists */}
       <AIHunter />
     </div>
   );
