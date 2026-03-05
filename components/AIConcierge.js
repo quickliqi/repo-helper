@@ -10,7 +10,8 @@ export default function AIConcierge() {
 
   const sendMessage = async () => {
     if (!input.trim()) return;
-    const userMsg = { role: 'user', content: input };
+    const userText = input; // Capture for closure
+    const userMsg = { role: 'user', content: userText };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setIsThinking(true);
@@ -22,7 +23,7 @@ export default function AIConcierge() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           type: 'PRO_SEARCH', 
-          message: input,
+          message: userText,
           user_id: 'anonymous' // In prod, use actual user ID
         })
       });
