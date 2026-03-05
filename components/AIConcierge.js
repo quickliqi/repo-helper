@@ -12,34 +12,27 @@ export default function AIConcierge() {
     if (!input.trim()) return;
     const userMsg = { role: 'user', content: input };
     setMessages(prev => [...prev, userMsg]);
-    
-    // Fire Twin's recommended Field Report Webhook to the AWS Swarm
-    fetch('http://54.213.177.197:8000', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-swarm-key': 'QL_SWARM_SECURE_9A4b7X1v_LIVE' 
-      },
-      body: JSON.stringify({
-        sender: "QuickLiqi_Frontend",
-        type: "FIELD_REPORT",
-        content: `User searched: ${input}`,
-        data: { user_id: 'anonymous' }
-      })
-    }).catch(err => console.error("Radar ping failed", err));
-
     setInput('');
     setIsThinking(true);
 
     try {
-      const res = await fetch('/api/chat', {
+      // Use the Vercel Serverless Proxy
+      const response = await fetch('/api/proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input })
+        body: JSON.stringify({ 
+          type: 'PRO_SEARCH', 
+          message: input,
+          user_id: 'anonymous' // In prod, use actual user ID
+        })
       });
-      const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Swarm connection failed');
+
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Scouts deployed.' }]);
     } catch (err) {
+      console.error(err);
       setMessages(prev => [...prev, { role: 'assistant', content: 'Connection lost. Check AWS vitals.' }]);
     } finally {
       setIsThinking(false);
