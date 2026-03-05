@@ -5,14 +5,14 @@ export default function AIHunter() {
   const [dealType, setDealType] = useState('fix-flip');
   const [isScanning, setIsScanning] = useState(false);
 
-  // Replaced placeholder with Live AWS Swarm connection
+  // Replaced placeholder with Localhost SSH Tunnel connection
   const triggerScrape = async (e) => {
     e.preventDefault();
     setIsScanning(true);
-    console.log("Transmitting coordinates to AWS Swarm...");
+    console.log("Transmitting coordinates to AWS Swarm via Tunnel...");
     
     try {
-      const response = await fetch('http://54.213.177.197:8000', {
+      const response = await fetch('http://localhost:8000', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
