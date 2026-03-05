@@ -310,56 +310,12 @@ export default function Scraper() {
     setSources(null);
 
     try {
-      // 1. Fire both scrapers concurrently
-      const [aiHunterResponse, liveMarketResponse] = await Promise.all([
-        supabase.functions.invoke('ai-hunter', {
-          body: {
-            city,
-            state,
-            min_price: minPrice ? Number(minPrice) : undefined,
-            max_price: maxPrice ? Number(maxPrice) : undefined,
-            property_type: propertyType !== 'any' ? propertyType : undefined,
-            max_days_on_market: maxDaysOnMarket ? Number(maxDaysOnMarket) : undefined
-          }
-        }),
-        supabase.functions.invoke('live-market-scan', {
-          body: {
-            location: `${city}, ${state}`,
-            max_price: maxPrice ? Number(maxPrice) : undefined,
-            min_beds: undefined,
-            max_dom: maxDaysOnMarket ? Number(maxDaysOnMarket) : undefined,
-          }
-        })
-      ]);
+      // Legacy edge functions (ai-hunter, live-market-scan) have been removed.
+      // TODO: Replace with new scraping backend when ready.
+      toast.info('Scraper engine is being upgraded. Check back soon.');
 
-      // ─── PHASE 2: Aggressive Error Telemetry ──────────────────────────
-      // Surface every failure to the UI immediately — no silent swallowing.
-
-      if (aiHunterResponse.error) {
-        const errDetail = aiHunterResponse.error.message || aiHunterResponse.error.context?.message || 'Unknown error';
-        console.error('[SCRAPER] AI Hunter invocation error:', aiHunterResponse.error);
-        toast.error(`AI Hunter Error: ${errDetail}`);
-      } else if (aiHunterResponse.data?.error) {
-        // Business logic error returned inside a 2xx response
-        console.error('[SCRAPER] AI Hunter business error:', aiHunterResponse.data.error);
-        toast.error(`AI Hunter Error: ${aiHunterResponse.data.error}`);
-      }
-
-      if (liveMarketResponse.error) {
-        const errDetail = liveMarketResponse.error.message || liveMarketResponse.error.context?.message || 'Unknown error';
-        console.error('[SCRAPER] Live Market invocation error:', liveMarketResponse.error);
-        toast.error(`Live Market API Error: ${errDetail}`);
-      } else if (liveMarketResponse.data && liveMarketResponse.data.error) {
-        // Business logic error returned inside a 2xx response (e.g. missing API key)
-        console.error('[SCRAPER] Live Market business error:', liveMarketResponse.data.error, liveMarketResponse.data.details);
-        toast.error(`Live Market API Error: ${liveMarketResponse.data.error}${liveMarketResponse.data.details ? ' — ' + liveMarketResponse.data.details : ''}`);
-      }
-
-      let rawDeals = aiHunterResponse.data?.deals || [];
-      // Safely handle structured error objects returned by the hardened Edge Function
-      const liveDeals: any[] = Array.isArray(liveMarketResponse.data)
-        ? liveMarketResponse.data
-        : liveMarketResponse.data?.deals ?? [];
+      let rawDeals: any[] = [];
+      const liveDeals: any[] = [];
       if (liveDeals && liveDeals.length > 0) {
         const mappedLive = liveDeals.map((d: any) => ({
           title: d.address,
@@ -418,11 +374,11 @@ export default function Scraper() {
         });
 
         setResults(enrichedDeals);
-        setSources(aiHunterResponse.data?.sources || null);
-        toast.success(`Found ${enrichedDeals.length} potential deals!`);
+        setSources(null);
+        if (enrichedDeals.length > 0) {
+          toast.success(`Found ${enrichedDeals.length} potential deals!`);
+        }
         await refreshSubscription();
-      } else if (!aiHunterResponse.error && !liveMarketResponse.error) {
-        toast.warning("Both APIs connected successfully, but 0 properties matched your exact filters.");
       }
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : String(error);

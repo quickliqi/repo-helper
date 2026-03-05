@@ -317,21 +317,8 @@ export function ScraperCommandCenter() {
     // ─── Scraper Run ─────────────────────────────────────────
 
     const handleRunScraper = async (city: string, state: string) => {
-        setIsRunning(true);
-        try {
-            const { data, error } = await supabase.functions.invoke('ai-hunter', {
-                body: { city, state, admin_mode: true },
-            });
-            if (error) throw error;
-            toast.success(`Scrape complete: ${data?.deals?.length || 0} deals found`);
-            queryClient.invalidateQueries({ queryKey: ['scraper_audit_logs_admin'] });
-            queryClient.invalidateQueries({ queryKey: ['scraper_rejected_items'] });
-        } catch (err) {
-            toast.error('Scrape failed');
-            console.error(err);
-        } finally {
-            setIsRunning(false);
-        }
+        // Legacy ai-hunter edge function removed — scraper engine being upgraded
+        toast.info('Scraper engine is being upgraded. Check back soon.');
     };
 
     // ─── Stats ───────────────────────────────────────────────
