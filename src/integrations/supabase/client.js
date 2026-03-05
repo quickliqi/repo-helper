@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://olhppxldsbnxanpgkurt.supabase.co';
-const SUPABASE_KEY = 'YOUR_ANON_KEY'; // In prod this comes from env
+// Hardcoded to bypass Lovable/Vite environment variable loading failures
+const supabaseUrl = 'https://olhppxldsbnxanpgkurt.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9saHBweGxkc2JueGFucGdrdXJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNzcxNzcsImV4cCI6MjA4Njg1MzE3N30.C1Z4pbeVbZqVhDUP9rztx9U3BQi8GJui0gESYDYBvU0';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// Legacy monkey patch for ai-hunter/live-market-scan removed — those functions are deprecated.
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
