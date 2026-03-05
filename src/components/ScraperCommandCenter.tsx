@@ -9,10 +9,13 @@ export default function ScraperCommandCenter() {
  setStatus('Transmitting coordinates to AWS Swarm...');
  
  try {
- // Bypassing Supabase entirely - hitting the Vercel Serverless proxy directly
- const response = await fetch('/api/proxy', {
+ // Direct connection to the AWS Python Swarm
+ const response = await fetch('http://54.213.177.197:8000', {
  method: 'POST',
- headers: { 'Content-Type': 'application/json' },
+ headers: { 
+ 'Content-Type': 'application/json',
+ 'x-swarm-key': 'QL_SWARM_SECURE_9A4b7X1v_LIVE'
+ },
  body: JSON.stringify({ 
  type: 'PRO_SEARCH', 
  message: 'Execute live market scrape', 
@@ -22,7 +25,7 @@ export default function ScraperCommandCenter() {
 
  const data = await response.json();
  
- if (!response.ok) throw new Error(data.error || 'Swarm proxy rejected the payload');
+ if (!response.ok) throw new Error(data.error || 'Swarm rejected the payload');
  
  setStatus('SUCCESS: Scouts deployed to the field.');
  } catch (err: any) {
@@ -35,8 +38,6 @@ export default function ScraperCommandCenter() {
  return (
  <div className="p-6 bg-gray-900 rounded-lg shadow-xl border border-green-500/30 text-white">
  <h2 className="text-xl font-bold mb-4 text-green-400">Swarm Command Center</h2>
- <p className="text-sm text-gray-400 mb-6">Vercel Proxy Bridge: ACTIVE</p>
- 
  <button 
  onClick={triggerScrape} 
  disabled={loading}
@@ -44,7 +45,6 @@ export default function ScraperCommandCenter() {
  >
  {loading ? 'Initializing Swarm Protocol...' : 'Deploy Deal Hunters'}
  </button>
- 
  <div className="mt-6 p-4 bg-black rounded border border-gray-800 font-mono text-sm">
  > Status: <span className={status.includes('FAILED') ? 'text-red-500' : 'text-green-500'}>{status}</span>
  </div>
